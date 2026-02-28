@@ -1,0 +1,88 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SorveteriaMaui.View.DetalhesComandaView"
+             Title="Resumo da Comanda">
+
+    <Grid RowDefinitions="Auto, *, Auto" Padding="20">
+
+        <HorizontalStackLayout Grid.Row="0" Spacing="10" Margin="0,0,0,20">
+            <VerticalStackLayout>
+                <Label Text="{Binding ComandaAtual.NomeCliente, TargetNullValue='Cliente s/ Nome'}" FontSize="24" FontAttributes="Bold"/>
+                <Label Text="{Binding ComandaAtual.Numero, StringFormat='Comanda #{0}'}" TextColor="Gray"/>
+            </VerticalStackLayout>
+            <ImageButton Source="edit_icon.png" Command="{Binding EditarNomeCommand}" VerticalOptions="Start" HeightRequest="30"/>
+        </HorizontalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Itens}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems>
+                                <SwipeItem Text="Remover" 
+                                           BackgroundColor="Red" 
+                                           Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemoverItemCommand}"
+                                           CommandParameter="{Binding .}"/>
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+
+                        <Frame Margin="0,0,0,10" Padding="15" CornerRadius="12">
+                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+
+                                <!-- Nome -->
+                                <Label Grid.Row="0" 
+               Grid.Column="0"
+               Text="{Binding ProdutoNome}" 
+               FontAttributes="Bold"  TextColor="Gray" />
+
+                                <!-- Total -->
+                                <Label Grid.Row="0" 
+               Grid.Column="1"
+               Text="{Binding Total, StringFormat='R$ {0:F2}'}" 
+               FontAttributes="Bold"
+               VerticalOptions="Center" TextColor="Gray"/>
+
+                                <!-- Controle de quantidade -->
+                                <HorizontalStackLayout Grid.Row="1" 
+                               Grid.ColumnSpan="2"
+                               Spacing="10"
+                               Margin="0,10,0,0">
+
+                                    <Button Text="−"
+                    WidthRequest="40"
+                    HeightRequest="40"
+                    CornerRadius="20"
+                    BackgroundColor="#EEEEEE"
+                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DiminuirQuantidadeCommand}"
+                    CommandParameter="{Binding .}" />
+
+                                    <Label Text="{Binding Quantidade}"
+                   VerticalOptions="Center"
+                   FontSize="16"
+                   HorizontalOptions="CenterAndExpand" TextColor="Gray"/>
+
+                                    <Button Text="+"
+                    WidthRequest="40"
+                    HeightRequest="40"
+                    CornerRadius="20"
+                    BackgroundColor="#EEEEEE"
+                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AumentarQuantidadeCommand}"
+                    CommandParameter="{Binding .}" />
+
+                                </HorizontalStackLayout>
+
+                            </Grid>
+                        </Frame>
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Frame Grid.Row="2" BackgroundColor="#6200EE" CornerRadius="15">
+            <HorizontalStackLayout HorizontalOptions="FillAndExpand" Spacing="50">
+                <Label Text="TOTAL" TextColor="White" VerticalOptions="Center" FontAttributes="Bold"/>
+                <Label Text="{Binding ComandaAtual.Total, StringFormat='R$ {0:F2}'}" TextColor="White" FontSize="24" FontAttributes="Bold"/>
+            </HorizontalStackLayout>
+        </Frame>
+    </Grid>
+</ContentPage>

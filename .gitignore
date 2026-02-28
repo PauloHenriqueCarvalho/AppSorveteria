@@ -1,0 +1,48 @@
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+# ----------------------------------------------------------------------------
+## Ignore Visual Studio temporary files, build results, and user specific files
+#
+[Bb]in/
+[Oo]bj/
+.vs/
+.user file
+*.user
+*.suo
+
+## Ignore NuGet packages and caches
+#
+# The packages folder can be ignored because of Package Restore
+**/[Pp]ackages/*
+# except build/, which is used as an MSBuild target.
+!**/[Pp]ackages/build/
+*.nupkg
+*.snupkg
+**/[Pp]ackages/repositories.config
+# NuGet v3's project.json files produces more ignoreable files
+*.nuget.props
+*.nuget.targets
+
+## Ignore Visual Studio cache files
+# files ending in .cache can be ignored
+*.[Cc]ache
+# but keep track of directories ending in .cache
+!*.[Cc]ache/
+
+## Ignore generated files from various platforms/tools
+#
+# Windows Store app package directories and files
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+
+# Miscellaneous
+PublishScripts/
+orleans.codegen.cs
+node_modules/
+
+# Mac
+.DS_Store
+
+# Cross-platform
+Generated_Code/
