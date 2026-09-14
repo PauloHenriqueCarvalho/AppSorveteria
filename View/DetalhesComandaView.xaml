@@ -78,11 +78,22 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Frame Grid.Row="2" BackgroundColor="#6200EE" CornerRadius="15">
-            <HorizontalStackLayout HorizontalOptions="FillAndExpand" Spacing="50">
-                <Label Text="TOTAL" TextColor="White" VerticalOptions="Center" FontAttributes="Bold"/>
-                <Label Text="{Binding ComandaAtual.Total, StringFormat='R$ {0:F2}'}" TextColor="White" FontSize="24" FontAttributes="Bold"/>
-            </HorizontalStackLayout>
+        <Frame Grid.Row="2" BackgroundColor="#6200EE" CornerRadius="15" Padding="15">
+            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+                <HorizontalStackLayout Grid.Row="0" Grid.Column="0" HorizontalOptions="StartAndExpand">
+                    <Label Text="TOTAL" TextColor="White" VerticalOptions="Center" FontAttributes="Bold"/>
+                    <Label Text="{Binding ComandaAtual.Total, StringFormat='R$ {0:F2}'}" TextColor="White" FontSize="24" FontAttributes="Bold" Margin="10,0,0,0"/>
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="10" HorizontalOptions="End">
+                    <Button Text="Pagar" 
+                            BackgroundColor="#FF9800" 
+                            TextColor="White" 
+                            CornerRadius="10"
+                            HeightRequest="48"
+                            Command="{Binding FinalizarComandaCommand}"/>
+                </HorizontalStackLayout>
+            </Grid>
         </Frame>
     </Grid>
 </ContentPage>

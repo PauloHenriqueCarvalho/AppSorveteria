@@ -1,0 +1,17 @@
+{
+	"nodes":[
+		{"id":"529d1870612b2be7","type":"text","text":"PDV Android","x":-80,"y":-300,"width":250,"height":60},
+		{"id":"ce3984e8383089d7","type":"text","text":"Painel Web","x":-80,"y":-60,"width":250,"height":50},
+		{"id":"9fd73fb714c66e5d","type":"text","text":"Banco de dados","x":-480,"y":-10,"width":250,"height":50,"color":"3"},
+		{"id":"0d1ee0e43b403a36","type":"text","text":"VPS de $5 por mes","x":-380,"y":-160,"width":250,"height":50,"color":"3"}
+	],
+	"edges":[
+		{"id":"fc86cff6404ba01b","fromNode":"9fd73fb714c66e5d","fromSide":"top","toNode":"0d1ee0e43b403a36","toSide":"bottom"},
+		{"id":"4fc9e86d98ad7b24","fromNode":"0d1ee0e43b403a36","fromSide":"top","toNode":"529d1870612b2be7","toSide":"left"},
+		{"id":"c74416dae7870d67","fromNode":"0d1ee0e43b403a36","fromSide":"bottom","toNode":"ce3984e8383089d7","toSide":"bottom"}
+	],
+	"metadata":{
+		"version":"1.0-1.0",
+		"frontmatter":{}
+	}
+}

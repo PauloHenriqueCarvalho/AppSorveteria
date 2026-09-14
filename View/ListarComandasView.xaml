@@ -6,7 +6,7 @@
              Title="Comandas Abertas"
              BackgroundColor="#F5F5F5">
 
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, Auto, *">
 
         <Frame Grid.Row="0" Margin="10" BackgroundColor="#6200EE" CornerRadius="10" HasShadow="True" BorderColor="Transparent">
             <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
@@ -15,7 +15,30 @@
             </HorizontalStackLayout>
         </Frame>
 
-        <CollectionView Grid.Row="1" 
+        <!-- Topo fixo com Nova Comanda e Venda Rápida -->
+        <Grid Grid.Row="1" ColumnDefinitions="*, *" Padding="10" ColumnSpacing="10">
+            <Button Grid.Column="0"
+                    Text="➕  Nova Comanda"
+                    FontSize="18"
+                    HeightRequest="56"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="10"
+                    FontAttributes="Bold"
+                    Command="{Binding NovaComandaCommand}" />
+
+            <Button Grid.Column="1"
+                    Text="⚡  Venda Rápida"
+                    FontSize="18"
+                    HeightRequest="56"
+                    BackgroundColor="#FF5722"
+                    TextColor="White"
+                    CornerRadius="10"
+                    FontAttributes="Bold"
+                    Command="{Binding VendaRapidaCommand}" />
+        </Grid>
+
+        <CollectionView Grid.Row="2" 
                         ItemsSource="{Binding Comandas}"
                         Margin="10">
             <CollectionView.ItemTemplate>
@@ -86,18 +109,6 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Button Grid.Row="1"
-                Text="+"
-                FontSize="30"
-                BackgroundColor="#6200EE"
-                TextColor="White"
-                HeightRequest="65"
-                WidthRequest="65"
-                CornerRadius="32"
-                HorizontalOptions="End"
-                VerticalOptions="End"
-                Margin="25"
-                Shadow="{Shadow Brush=Black, Offset='0,3', Opacity=0.3}"
-                Command="{Binding NovaComandaCommand}"/>
+        <!-- Floating button removed; use fixed buttons on topo -->
     </Grid>
 </ContentPage>

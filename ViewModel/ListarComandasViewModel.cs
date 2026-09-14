@@ -1,5 +1,5 @@
 ﻿using SorveteriaMaui.Model;
-using SuaSorveteria.Services;
+using SorveteriaMaui.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,6 +11,7 @@ namespace SorveteriaMaui.ViewModel
     public class ListarComandasViewModel : BindableObject
     {
         private readonly DatabaseService _dbService;
+        private readonly IPaymentService _paymentService;
 
         public ObservableCollection<Comanda> Comandas { get; set; } = new();
 
@@ -24,14 +25,17 @@ namespace SorveteriaMaui.ViewModel
         public ICommand NovaComandaCommand { get; }
         public ICommand AdicionarProdutoCommand { get; }
         public ICommand FinalizarComandaCommand { get; }
+        public ICommand VendaRapidaCommand { get; }
 
-        public ListarComandasViewModel(DatabaseService dbService)
+        public ListarComandasViewModel(DatabaseService dbService, IPaymentService paymentService)
         {
             _dbService = dbService;
+            _paymentService = paymentService;
 
             NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
             AdicionarProdutoCommand = new Command<Comanda>(async (c) => await IrParaAdicionarProduto(c));
             FinalizarComandaCommand = new Command<Comanda>(async (c) => await FecharComanda(c));
+            VendaRapidaCommand = new Command(async () => await ExecutarVendaRapida());
 
             Task.Run(CarregarComandas);
         }
@@ -88,9 +92,49 @@ namespace SorveteriaMaui.ViewModel
             bool confirm = await Application.Current.MainPage.DisplayAlert("Finalizar", $"Deseja fechar a comanda {comanda.Numero}?", "Sim", "Não");
             if (confirm)
             {
-                await _dbService.FinalizarComanda(comanda.Id);
-                await CarregarComandas();
+                var sucesso = await _paymentService.ProcessarPagamentoAsync(comanda);
+                if (sucesso)
+                {
+                    await CarregarComandas();
+                }
             }
+        }
+
+        private async Task ExecutarVendaRapida()
+        {
+            string resultado = await Application.Current.MainPage.DisplayPromptAsync(
+                "Venda Rápida",
+                "Valor da Venda:",
+                "Confirmar",
+                "Cancelar",
+                keyboard: Keyboard.Telephone);
+
+            if (string.IsNullOrWhiteSpace(resultado)) return;
+
+            string valorTratado = resultado.Replace(",", ".");
+            if (!double.TryParse(valorTratado, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double valor))
+            {
+                await Application.Current.MainPage.DisplayAlert("Erro", "Valor inválido", "OK");
+                return;
+            }
+
+            int novoNumero = Comandas.Count + 1;
+            var comanda = await _dbService.CriarComanda(novoNumero, "Venda Rápida");
+
+            var produtoRapido = new Produto
+            {
+                Id = "RAPIDA_" + Guid.NewGuid().ToString(),
+                Nome = "Venda Rápida",
+                Preco = valor,
+                Ativo = 1
+            };
+
+            await _dbService.AdicionarProdutoNaComanda(comanda.Id, produtoRapido, 1);
+
+            // Iniciar fluxo de pagamento imediatamente via PaymentService
+            await _paymentService.ProcessarPagamentoAsync(comanda);
+
+            await CarregarComandas();
         }
     }
 }

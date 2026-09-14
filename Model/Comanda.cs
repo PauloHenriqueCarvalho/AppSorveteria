@@ -32,5 +32,8 @@ namespace SorveteriaMaui.Model
 
         [Indexed(Name = "idx_comanda_sincronizado")]
         public int Sincronizado { get; set; } = 0;
+
+        // Indica se a comanda fechada ainda precisa ser sincronizada com o servidor
+        public bool PendenteSincronizacao { get; set; } = false;
     }
 }

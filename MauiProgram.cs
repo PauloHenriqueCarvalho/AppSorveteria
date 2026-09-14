@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SorveteriaMaui.View;
 using SorveteriaMaui.ViewModel;
-using SuaSorveteria.Services;
+using SorveteriaMaui.Services;
 
 namespace SorveteriaMaui
 {
@@ -19,14 +19,18 @@ namespace SorveteriaMaui
                 });
             // Registrar o Banco
             builder.Services.AddSingleton<DatabaseService>();
-
-            // Registrar as Views e ViewModels
-            // No MauiProgram.cs
-            builder.Services.AddSingleton<DatabaseService>();
+            // Registrar serviço de pagamento (via interface)
+            builder.Services.AddSingleton<IPaymentService, PaymentService>();
 
             // Listagem
             builder.Services.AddTransient<ListarComandasView>();
             builder.Services.AddTransient<ListarComandasViewModel>();
+
+            // Produtos
+            builder.Services.AddTransient<ListarProdutosView>();
+            builder.Services.AddTransient<ListarProdutosViewModel>();
+            builder.Services.AddTransient<CadastroProdutoView>();
+            builder.Services.AddTransient<CadastroProdutoViewModel>();
 
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();

@@ -1,0 +1,24 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SorveteriaMaui.View.CadastroProdutoView"
+             Title="Cadastro de Produto"
+             BackgroundColor="#F5F5F5">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <Label Text="Nome" FontAttributes="Bold" />
+            <Entry Text="{Binding Nome}" Placeholder="Nome do produto" />
+
+            <Label Text="Preço" FontAttributes="Bold" />
+            <Entry Text="{Binding PrecoString}" Keyboard="Numeric" Placeholder="0.00" />
+
+            <Label Text="Categoria" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding Categorias}" SelectedIndex="{Binding CategoriaIndex}" />
+
+            <Button Text="Salvar" BackgroundColor="#4CAF50" TextColor="White" FontAttributes="Bold" HeightRequest="56" Command="{Binding SalvarCommand}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

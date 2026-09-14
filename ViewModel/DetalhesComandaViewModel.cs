@@ -1,16 +1,20 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SorveteriaMaui.Model;
-using SuaSorveteria.Services;
+using SorveteriaMaui.Services;
+using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SorveteriaMaui.ViewModel;
 
-[QueryProperty(nameof(ComandaAtual), "ComandaSelecionada")] // ...tem que ser igual a este nome aqui!
-public class DetalhesComandaViewModel : BindableObject 
+[QueryProperty(nameof(ComandaAtual), "ComandaSelecionada")]
+public class DetalhesComandaViewModel : BindableObject
 {
     private readonly DatabaseService _dbService;
+    private readonly IPaymentService _paymentService;
     private Comanda _comandaAtual;
-     
+
     public Comanda ComandaAtual
     {
         get => _comandaAtual;
@@ -20,22 +24,25 @@ public class DetalhesComandaViewModel : BindableObject
             OnPropertyChanged();
         }
     }
+
     public ICommand AumentarQuantidadeCommand { get; }
     public ICommand DiminuirQuantidadeCommand { get; }
-
     public ObservableCollection<ItemComanda> Itens { get; set; } = new();
-
     public ICommand RemoverItemCommand { get; }
     public ICommand EditarNomeCommand { get; }
+    public ICommand FinalizarComandaCommand { get; }
 
-    public DetalhesComandaViewModel(DatabaseService dbService)
+    public DetalhesComandaViewModel(DatabaseService dbService, IPaymentService paymentService)
     {
         _dbService = dbService;
+        _paymentService = paymentService;
         RemoverItemCommand = new Command<ItemComanda>(async (item) => await RemoverItem(item));
         EditarNomeCommand = new Command(async () => await EditarNome());
         AumentarQuantidadeCommand = new Command<ItemComanda>(async (item) => await AumentarQuantidade(item));
         DiminuirQuantidadeCommand = new Command<ItemComanda>(async (item) => await DiminuirQuantidade(item));
+        FinalizarComandaCommand = new Command(async () => await FinalizarComanda());
     }
+
     private async Task DiminuirQuantidade(ItemComanda item)
     {
         if (item.Quantidade > 1)
@@ -60,9 +67,10 @@ public class DetalhesComandaViewModel : BindableObject
                 await CarregarItens();
             }
         }
-        RecalcularTotal();
 
+        RecalcularTotal();
     }
+
     private void RecalcularTotal()
     {
         ComandaAtual.Subtotal = Itens.Sum(i => i.Total);
@@ -71,6 +79,7 @@ public class DetalhesComandaViewModel : BindableObject
 
         OnPropertyChanged(nameof(ComandaAtual));
     }
+
     private async Task AumentarQuantidade(ItemComanda item)
     {
         item.Quantidade++;
@@ -79,8 +88,8 @@ public class DetalhesComandaViewModel : BindableObject
         await _dbService.SalvarComandaCompleta(ComandaAtual, Itens.ToList());
         await CarregarItens();
         RecalcularTotal();
-
     }
+
     public async Task CarregarItens()
     {
         if (ComandaAtual == null) return;
@@ -92,7 +101,6 @@ public class DetalhesComandaViewModel : BindableObject
             foreach (var i in lista) Itens.Add(i);
         });
 
-        // Atualiza os dados da comanda (como o Total) caso tenha mudado
         var atualizada = await _dbService.GetComandaPorId(ComandaAtual.Id);
         if (atualizada != null) ComandaAtual = atualizada;
     }
@@ -105,7 +113,7 @@ public class DetalhesComandaViewModel : BindableObject
         if (confirm)
         {
             await _dbService.RemoverProdutoDaComanda(item);
-            await CarregarItens(); // Recarrega a lista e o total
+            await CarregarItens();
         }
     }
 
@@ -119,6 +127,18 @@ public class DetalhesComandaViewModel : BindableObject
             await _dbService.AtualizarNomeComanda(ComandaAtual.Id, novoNome);
             ComandaAtual.NomeCliente = novoNome;
             OnPropertyChanged(nameof(ComandaAtual));
+        }
+    }
+
+    private async Task FinalizarComanda()
+    {
+        if (ComandaAtual == null) return;
+
+        var sucesso = await _paymentService.ProcessarPagamentoAsync(ComandaAtual);
+        if (sucesso)
+        {
+            var atualizada = await _dbService.GetComandaPorId(ComandaAtual.Id);
+            if (atualizada != null) ComandaAtual = atualizada;
         }
     }
 }

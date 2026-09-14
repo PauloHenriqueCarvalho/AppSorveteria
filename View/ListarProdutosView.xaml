@@ -1,0 +1,31 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SorveteriaMaui.View.ListarProdutosView"
+             Title="Produtos"
+             BackgroundColor="#F5F5F5">
+
+    <Grid RowDefinitions="Auto, *">
+
+        <Grid Grid.Row="0" Padding="10" ColumnDefinitions="*, Auto" ColumnSpacing="10">
+            <Button Grid.Column="0" Text="➕  Novo Produto" BackgroundColor="#4CAF50" TextColor="White" HeightRequest="56" Command="{Binding NovoProdutoCommand}" />
+        </Grid>
+
+        <CollectionView x:Name="ProdutosCollectionView" Grid.Row="1" ItemsSource="{Binding Produtos}" SelectionMode="Single" SelectionChanged="CollectionView_SelectionChanged">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Margin="10,6" Padding="12" CornerRadius="10" HasShadow="True">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Nome}" FontAttributes="Bold" FontSize="16"/>
+                                <Label Text="{Binding Tipo}" FontSize="12" TextColor="Gray"/>
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="{Binding Preco, StringFormat='R$ {0:F2}'}" VerticalOptions="Center" FontAttributes="Bold"/>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>

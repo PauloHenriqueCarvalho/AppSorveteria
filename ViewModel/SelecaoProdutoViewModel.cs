@@ -1,5 +1,5 @@
 ﻿using SorveteriaMaui.Model;
-using SuaSorveteria.Services;
+using SorveteriaMaui.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
