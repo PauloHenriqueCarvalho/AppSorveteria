@@ -42,7 +42,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-CX-06 | No fechamento: `esperado = fundo + vendas em dinheiro + suprimentos − sangrias`; `diferença = contado − esperado`. Os três valores ficam gravados | F1 | Domain (`Caixa.Fechar`) |
 | RN-CX-07 | Caixa fechado é imutável. Erro no fechamento → Admin registra ajuste no próximo caixa (com motivo), nunca edita o anterior. Venda recebida depois do fechamento **não altera** vendas em dinheiro, esperado, contado nem diferença gravados; só é marcada para conferência (RN-CX-08) | F1 | Domain |
 | RN-CX-08 | Vendas sincronizadas depois do fechamento do caixa a que pertencem são **aceitas** e marcadas `recebida após fechamento` para conferência. A comanda remontada no servidor dispensa o caixa aberto (RN-CX-03), mas passa pelas mesmas conferências da RN-SY-06; se não bater, é rejeitada no resultado do lote | F1 | Domain + Application |
-| RN-CX-09 | Admin pode forçar o fechamento pelo painel (ex.: atendente esqueceu), informando valor contado 0 e motivo; a diferença fica registrada. Se depois chegar o fechamento feito no celular, ele é **rejeitado** com motivo (o caixa não muda, RN-CX-07; o valor contado no celular aparece no motivo) e a dona registra o ajuste no próximo caixa. Vendas feitas no celular depois do fechamento forçado são aceitas e marcadas (RN-CX-08) | F1 | Application |
+| RN-CX-09 | **(Sprint 4 — decisão de 30/09/2026)** Admin pode forçar o fechamento pelo painel (ex.: atendente esqueceu), informando valor contado 0 e motivo; a diferença fica registrada. Se depois chegar o fechamento feito no celular, ele é **rejeitado** com motivo (o caixa não muda, RN-CX-07; o valor contado no celular aparece no motivo) e a dona registra o ajuste no próximo caixa. Vendas feitas no celular depois do fechamento forçado são aceitas e marcadas (RN-CX-08) | F1 | Application |
 | RN-CX-10 | Caixa fechado no celular e sincronizado: o servidor recalcula vendas em dinheiro (comandas já recebidas daquele caixa), esperado e diferença com a RN-CX-06 e **grava os valores do servidor**. Se as vendas em dinheiro ou o esperado calculados no celular forem diferentes, grava também os valores do celular e marca o caixa com `divergência na sincronização` para a dona conferir. O caixa nunca é rejeitado por essa diferença. Caixa que chega já fechado sem ter vindo aberto antes é aceito do mesmo jeito: as vendas dele ainda não chegaram, então fica marcado com divergência e as comandas que chegarem depois são marcadas pela RN-CX-08 | F1 | Domain + Application |
 
 ## 4. Comanda (venda)
@@ -57,7 +57,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-CM-06 | Enquanto **aberta**, itens podem ser adicionados, alterados e removidos; observação pode ser editada | F1 | Domain |
 | RN-CM-07 | **Fechar** = registrar pagamentos cuja soma seja **exatamente** o total (total > 0). Ao fechar, a comanda vira imutável e o estoque baixa (F2) | F1 | Domain |
 | RN-CM-08 | Comanda aberta pode ser **cancelada** pelo atendente (motivo opcional). Nada é apagado | F1 | Domain |
-| RN-CM-09 | Comanda fechada só pode ser **estornada** por Admin, com motivo obrigatório; vira `Cancelada`, entra nos relatórios como estorno e devolve o estoque (F2) | F1 | Domain + Application |
+| RN-CM-09 | Comanda fechada só pode ser **estornada** por Admin, com motivo obrigatório; vira `Estornada` (status próprio, diferente da `Cancelada` da RN-CM-08), guarda quem estornou, quando e o motivo, entra nos relatórios como estorno e devolve o estoque (F2). O estorno **não altera caixa nenhum**: caixa fechado continua imutável (RN-CX-07) e o dinheiro devolvido ao cliente, se houver, é uma sangria registrada no caixa aberto pelo app (decisão de 30/09/2026) | F1 | Domain + Application |
 | RN-CM-10 | **Venda rápida por valor**: uma única operação cria a comanda com um item livre "Venda avulsa" no valor informado e já fecha com o pagamento | F1 | Application |
 | RN-CM-11 | Delivery na F1 é só marcação + observação (nome/endereço). Taxa de entrega e iFood ficam na F4 | F1 | — |
 | RN-CM-12 | Cada comanda guarda `CriadaEm` (hora do celular) e `RecebidaEm` (hora do servidor) — a diferença mostra quanto tempo ficou offline | F1 | Domain |
@@ -89,7 +89,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 
 | ID | Regra | Fase |
 |---|---|---|
-| RN-RL-01 | Faturamento = soma das comandas **fechadas** (estornos ficam à parte) | F3 |
+| RN-RL-01 | Faturamento = soma das comandas **fechadas** (as `Estornada` ficam à parte, somadas como estornos no dia da venda) | F3 |
 | RN-RL-02 | Períodos (dia/semana/mês) usam o dia comercial em `America/Sao_Paulo` | F3 |
 | RN-RL-03 | Ranking por quantidade e por valor; itens livres agrupados como "Self-service / venda avulsa" | F3 |
 | RN-RL-04 | Margem estimada = preço praticado − custo estimado (RN-PR-07); sem custo → "n/d", nunca zero | F3 |

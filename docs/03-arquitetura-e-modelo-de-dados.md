@@ -279,7 +279,8 @@ record ComandaResumoDto(Guid Id, int Numero, Guid CaixaId, string Tipo, string S
     bool RecebidaAposFechamentoCaixa);
 record ComandaDetalheDto(Guid Id, int Numero, Guid CaixaId, string Tipo, string Status, decimal Total,
     string? Observacao, DateTime CriadaEm, DateTime RecebidaEm, DateTime? FechadaEm,
-    DateTime? CanceladaEm, string? MotivoCancelamento, bool RecebidaAposFechamentoCaixa, string AtendenteNome,
+    DateTime? CanceladaEm, string? MotivoCancelamento, DateTime? EstornadaEm, string? EstornadaPorNome, string? MotivoEstorno,
+    bool RecebidaAposFechamentoCaixa, string AtendenteNome,
     IReadOnlyList<ItemComandaDto> Itens, IReadOnlyList<PagamentoDto> Pagamentos);
 record ItemComandaDto(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal);
 record PagamentoDto(Guid Id, string Forma, decimal Valor, decimal ValorRecebido, decimal Troco);
@@ -289,17 +290,19 @@ record EstornarComandaRequest([Required, StringLength(300, MinimumLength = 3)] s
 record CaixaResumoDto(Guid Id, string Status, DateTime AbertoEm, string AbertoPorNome, decimal FundoTroco,
     DateTime? FechadoEm, string? FechadoPorNome,
     decimal TotalVendas, int QuantidadeComandas,            // todas as formas, calculado na API
-    decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca);
+    decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca,
+    bool DivergenciaSincronizacao, int VendasRecebidasAposFechamento);   // RN-CX-10 e RN-CX-08: pontos para a dona conferir
 record CaixaDetalheDto(CaixaResumoDto Resumo, IReadOnlyList<MovimentoCaixaDto> Movimentos,
     IReadOnlyList<TotalPorFormaDto> PorFormaPagamento, string? Observacao);
 record MovimentoCaixaDto(Guid Id, string Tipo, decimal Valor, string Motivo, string UsuarioNome, DateTime Em);
 ```
 
-Pontos a decidir antes de implementar:
-1. **Estorno × cancelamento:** RN-CM-09 diz que a comanda estornada "vira `Cancelada`", mas o relatório precisa separá-la da comanda cancelada ainda aberta (RN-CM-08). Proposta: status próprio `Estornada` ou colunas `estornada_em` / `estornada_por_usuario_id` / `motivo_estorno` (migração).
-2. **Estorno depois do caixa fechado** (RN-CX-07): o estorno entra no caixa original (só relatório) ou vira ajuste no caixa aberto? Afeta "esperado" se a venda foi em dinheiro.
-3. **Fechamento forçado pelo painel** (RN-CX-09): `POST /api/caixas/{id}/forcar-fechamento` entra no Sprint 3 ou fica para o Sprint 4?
-4. `CaixaAtual` no dashboard depende de o app já ter sincronizado o caixa aberto (`POST /api/sync/caixas` — docs/03 §8): sem sincronização recente, o painel mostra o último estado recebido e a hora dele.
+Decidido em 30/09/2026 (Paulo):
+1. **Estorno × cancelamento:** status próprio `Estornada` + colunas `estornada_em`, `estornada_por_usuario_id`, `motivo_estorno` (migração). `Cancelada` fica só para a comanda aberta cancelada (RN-CM-08).
+2. **Estorno depois do caixa fechado:** só no relatório — o caixa não muda (RN-CX-07). Dinheiro devolvido ao cliente = sangria no caixa aberto, pelo app.
+3. **Fechamento forçado pelo painel** (RN-CX-09): Sprint 4.
+4. `CaixaAtual` no dashboard mostra o último estado recebido do app (depende de `POST /api/sync/caixas`).
+5. Os endpoints de leitura são implementados na frente do painel, com uma consulta própria (`Application/Painel`, implementada com projeções do EF em `Infrastructure`), sem mexer nos repositórios usados pela sincronização.
 
 ## 7. Autenticação
 
