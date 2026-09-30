@@ -22,9 +22,10 @@ Fase 4 — Expansões ................. a combinar
 - [x] JWT + `POST /api/auth/login` + `GET /api/auth/me`, rate limit no login, Swagger com botão Authorize, ProblemDetails
 - [x] Testes de domínio e aplicação (xUnit v3) — regras de comanda, pagamento/troco, caixa, política de senha, dia comercial
 - [x] `docker-compose.yml` (PostgreSQL local), `Dockerfile`, CI no GitHub Actions, `.gitignore`, `.editorconfig`
-- [ ] **Você:** rodar `dotnet ef migrations add InitialCreate` e `dotnet ef database update` (ver README) e conferir as 7 tabelas no DBeaver
+- [x] Migração `InitialCreate` gerada e aplicada no PostgreSQL local (7 tabelas conferidas); login e `/api/auth/me` testados com a API rodando (29/09/2026)
 - [x] Repositório único `AppSorveteria` com o MVP em `src/GestaoSorveteria.Mobile` (histórico preservado) + solução do Sprint 0 + docs — branch `develop`
-- [ ] **Você:** `git push -u origin develop` e proteger a `main`
+- [x] `git push -u origin develop`
+- [ ] **Você:** proteger a `main` no GitHub
 
 **Pronto quando:** `POST /api/auth/login` devolve token no Swagger e `dotnet test` está verde.
 
