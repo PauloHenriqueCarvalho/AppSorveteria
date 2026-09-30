@@ -137,6 +137,17 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
     public Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.EstaFechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
 
+    public Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
+        DateTime deUtc, DateTime ateUtc, StatusComanda? status, int pular, int quantidade, CancellationToken cancellationToken = default)
+    {
+        var filtradas = Comandas
+            .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc)
+            .Where(c => status is null || c.Status == status)
+            .OrderByDescending(c => c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm)
+            .ToList();
+        return Task.FromResult<(IReadOnlyList<Comanda>, int)>((filtradas.Skip(pular).Take(quantidade).ToList(), filtradas.Count));
+    }
+
     public Task<int> ProximoNumeroAsync(Guid caixaId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Comandas.Where(c => c.CaixaId == caixaId).Select(c => c.Numero).DefaultIfEmpty(0).Max() + 1);
 
