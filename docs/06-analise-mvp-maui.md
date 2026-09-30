@@ -79,12 +79,12 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 **Repositório:** usar o `AppSorveteria` como repositório único. Mover o app para `src/GestaoSorveteria.Mobile/` com `git mv` (mantém o histórico) e adicionar a solução do Sprint 0 ao lado. Resolve também o "git init" pendente.
 
 ### Etapa A — Base sólida (2–3 dias)
-- [ ] Monorepo: `src/GestaoSorveteria.Mobile` na `GestaoSorveteria.slnx`; só `net10.0-android` (+ `net10.0-windows` para testar no PC); `ApplicationId = br.com.<sorveteria>.atendente`
-- [ ] Referenciar `Domain` e `Contracts`
+- [x] Monorepo: `src/GestaoSorveteria.Mobile` na `GestaoSorveteria.slnx`; só `net10.0-android` (+ `net10.0-windows` para testar no PC); `ApplicationId = br.com.sorveteria.atendente`
+- [x] Referenciar `Domain` e `Contracts`
 - [ ] Modelos SQLite com `decimal`, datas UTC, enums em vez de `int` mágico, `ProdutoId` nulo para item livre (B6, B9, B13, B14)
 - [ ] Substituir `DatabaseService` por repositórios pequenos + `ComandaAppService` que carrega → chama o domínio → grava tudo numa transação (B1, B4, B5)
 - [ ] Erros visíveis: gravação que falha mostra alerta e não segue (B7)
-- [ ] Mover `Contexto/` para `docs/` (uma cópia só)
+- [x] Mover `Contexto/` para `docs/contexto-mvp/` (uma cópia só)
 
 ### Etapa B — Corrigir fluxos de venda (2 dias)
 - [ ] Pagamento pelo domínio: `Valor` + `ValorRecebido` + `Troco`, recusa dinheiro insuficiente, pagamento dividido (B2, B3)
