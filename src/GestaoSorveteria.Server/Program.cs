@@ -5,6 +5,7 @@ using GestaoSorveteria.Application.Auth;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Infrastructure;
 using GestaoSorveteria.Infrastructure.Seed;
+using GestaoSorveteria.Server.Configuracao;
 using GestaoSorveteria.Server.Middleware;
 using GestaoSorveteria.Server.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,6 +46,11 @@ builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection(SeedOpt
 // ---------- Aplicação ----------
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProdutoService>();
+
+// ---------- Versão mínima do app (GET /api/versao) ----------
+var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();
+appVersao.Validar();
+builder.Services.AddSingleton(appVersao);
 
 // ---------- Autenticação JWT (app do atendente) ----------
 var jwt = builder.Configuration.GetSection(JwtOptions.Secao).Get<JwtOptions>() ?? new JwtOptions();

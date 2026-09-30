@@ -41,6 +41,8 @@
 | `ConnectionStrings__Default` | string do Neon no formato Npgsql, com `SSL Mode=Require` |
 | `Jwt__Key` | segredo aleatório com 32+ caracteres |
 | `Seed__AdminSenha` | senha inicial da dona (trocar no 1º acesso) |
+| `App__VersaoMinima` / `App__VersaoAtual` | versão mínima e atual do app (formato `1.0`); o app compara com a própria em `GET /api/versao`. Padrão `1.0` |
+| `App__LinkApk` | link fixo do APK assinado, mostrado no aviso de atualização. Vazio até publicar o APK |
 | `Cors__PainelOrigem` | URL do painel no Cloudflare Pages, só esquema e domínio (ex.: `https://sorveteria-painel.pages.dev`). Várias origens: separar por `;`. Vazio = nenhum site chama a API pelo navegador |
 | `Database__MigrateOnStartup` | `true` **só no piloto** (um único serviço, sem réplicas); em produção paga voltar a `false` e rodar `dotnet ef database update` no deploy |
 

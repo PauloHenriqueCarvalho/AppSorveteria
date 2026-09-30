@@ -94,3 +94,6 @@ Content-Type: application/json
   "permiteValorLivre": false,
   "ordem": 2
 }
+
+### Versão da API e versão mínima do app (público)
+GET {{host}}/api/versao
