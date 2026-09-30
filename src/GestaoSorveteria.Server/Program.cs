@@ -92,6 +92,18 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+// ---------- CORS: só o painel da dona chama a API pelo navegador (docs/07) ----------
+var origensPainel = CorsPainel.LerOrigens(builder.Configuration);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPainel.Politica, policy => policy
+        .WithOrigins(origensPainel)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        // A API gratuita demora a acordar: evita repetir a pré-verificação (OPTIONS) a cada chamada.
+        .SetPreflightMaxAge(TimeSpan.FromMinutes(10)));
+});
+
 // ---------- API ----------
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -139,6 +151,8 @@ if (app.Configuration.GetValue<bool>("Swagger:Habilitado"))
     });
 }
 
+// Antes do rate limit e da autenticação: a pré-verificação do navegador não conta como tentativa de login.
+app.UseCors(CorsPainel.Politica);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
