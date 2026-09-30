@@ -102,21 +102,24 @@ public class PaymentService : IPaymentService
         }
 
         var pagina = Shell.Current;
-        var recebido = await pagina.DisplayPromptAsync($"Dinheiro — R$ {valor:F2}", "Valor recebido:", "Confirmar", "Cancelar",
-            keyboard: Keyboard.Telephone, initialValue: Formatar(valor));
-        if (recebido is null)
+        while (true)
         {
-            return null;
-        }
+            var recebido = await pagina.DisplayPromptAsync($"Dinheiro — R$ {valor:F2}", "Valor recebido:", "Confirmar", "Cancelar",
+                keyboard: Keyboard.Telephone, initialValue: Formatar(valor));
+            if (recebido is null)
+            {
+                return null;
+            }
 
-        if (!Conversoes.TentarLerDinheiro(recebido, out var valorRecebido))
-        {
-            await pagina.DisplayAlertAsync("Atenção", "Valor recebido inválido.", "OK");
-            return null;
-        }
+            // RN-PG-03 (B3): recebido menor é recusado aqui para perguntar de novo só esta forma, sem perder a divisão;
+            // o Domain confere de novo ao fechar e calcula o troco.
+            if (Conversoes.TentarLerDinheiro(recebido, out var valorRecebido) && valorRecebido >= valor)
+            {
+                return new DadosPagamento(FormaPagamento.Dinheiro, valor, valorRecebido);
+            }
 
-        // RN-PG-03 (B2/B3): Valor abate da comanda; o Domain recusa recebido menor e calcula o troco
-        return new DadosPagamento(FormaPagamento.Dinheiro, valor, valorRecebido);
+            await pagina.DisplayAlertAsync("Atenção", $"Informe quanto o cliente entregou: pelo menos R$ {valor:F2}.", "OK");
+        }
     }
 
     private static string Formatar(decimal valor) => valor.ToString("F2", CultureInfo.InvariantCulture);
