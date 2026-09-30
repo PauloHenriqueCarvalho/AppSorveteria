@@ -1,3 +1,4 @@
+using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
 using System.Collections.ObjectModel;
@@ -8,11 +9,11 @@ namespace SorveteriaMaui.ViewModel
     [QueryProperty(nameof(ProdutoId), "ProdutoId")]
     public class CadastroProdutoViewModel : BindableObject
     {
-        private readonly DatabaseService _dbService;
+        private readonly ProdutoRepository _produtos;
 
-        public CadastroProdutoViewModel(DatabaseService dbService)
+        public CadastroProdutoViewModel(ProdutoRepository produtos)
         {
-            _dbService = dbService;
+            _produtos = produtos;
             Categorias = new ObservableCollection<string>(Produto.Categorias);
             SalvarCommand = new Command(async () => await Salvar());
         }
@@ -44,8 +45,13 @@ namespace SorveteriaMaui.ViewModel
         {
             if (string.IsNullOrEmpty(ProdutoId)) return;
 
-            var lista = await _dbService.GetProdutosAtivos();
-            var p = Guid.TryParse(ProdutoId, out var id) ? lista.FirstOrDefault(x => x.Id == id) : null;
+            Produto? p = null;
+            if (!Guid.TryParse(ProdutoId, out var id)
+                || !await Operacao.CarregarAsync(async () => p = await _produtos.ObterAsync(id)))
+            {
+                return;
+            }
+
             if (p != null)
             {
                 _existente = p;
@@ -77,7 +83,8 @@ namespace SorveteriaMaui.ViewModel
             produto.Categoria = Categoria;
             if (_existente != null) produto.AtualizadoEm = DateTime.UtcNow;
 
-            await _dbService.SalvarProduto(produto);
+            // B7: se não gravou, fica na tela com o que foi digitado
+            if (!await Operacao.GravarAsync(() => _produtos.SalvarAsync(produto))) return;
             await Shell.Current.GoToAsync("..");
         }
     }

@@ -1,48 +1,51 @@
-﻿using SorveteriaMaui.Model;
-using SorveteriaMaui.Services;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
 using System.Windows.Input;
+using SorveteriaMaui.Data;
+using SorveteriaMaui.Model;
+using SorveteriaMaui.Services;
 
-namespace SorveteriaMaui.ViewModel
+namespace SorveteriaMaui.ViewModel;
+
+public class ListarComandasViewModel : BindableObject
 {
-    public class ListarComandasViewModel : BindableObject
+    private readonly ComandaAppService _comandas;
+    private readonly ComandaRepository _repositorio;
+    private readonly IPaymentService _paymentService;
+
+    public ObservableCollection<Comanda> Comandas { get; set; } = new();
+
+    private int _totalComandasAbertas;
+    public int TotalComandasAbertas
     {
-        private readonly DatabaseService _dbService;
-        private readonly IPaymentService _paymentService;
+        get => _totalComandasAbertas;
+        set { _totalComandasAbertas = value; OnPropertyChanged(); }
+    }
 
-        public ObservableCollection<Comanda> Comandas { get; set; } = new();
+    public ICommand NovaComandaCommand { get; }
+    public ICommand AdicionarProdutoCommand { get; }
+    public ICommand FinalizarComandaCommand { get; }
+    public ICommand VendaRapidaCommand { get; }
+    public ICommand VerDetalhesCommand { get; }
 
-        private int _totalComandasAbertas;
-        public int TotalComandasAbertas
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService)
+    {
+        _comandas = comandas;
+        _repositorio = repositorio;
+        _paymentService = paymentService;
+
+        NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
+        AdicionarProdutoCommand = new Command<Comanda>(async (c) => await Navegar("SelecaoProdutoView", c));
+        FinalizarComandaCommand = new Command<Comanda>(async (c) => await FecharComanda(c));
+        VendaRapidaCommand = new Command(async () => await ExecutarVendaRapida());
+        VerDetalhesCommand = new Command<Comanda>(async (c) => await Navegar("DetalhesComandaView", c));
+        // A lista é carregada no OnAppearing da tela.
+    }
+
+    public async Task CarregarComandas()
+    {
+        await Operacao.CarregarAsync(async () =>
         {
-            get => _totalComandasAbertas;
-            set { _totalComandasAbertas = value; OnPropertyChanged(); }
-        }
-
-        public ICommand NovaComandaCommand { get; }
-        public ICommand AdicionarProdutoCommand { get; }
-        public ICommand FinalizarComandaCommand { get; }
-        public ICommand VendaRapidaCommand { get; }
-
-        public ListarComandasViewModel(DatabaseService dbService, IPaymentService paymentService)
-        {
-            _dbService = dbService;
-            _paymentService = paymentService;
-
-            NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
-            AdicionarProdutoCommand = new Command<Comanda>(async (c) => await IrParaAdicionarProduto(c));
-            FinalizarComandaCommand = new Command<Comanda>(async (c) => await FecharComanda(c));
-            VendaRapidaCommand = new Command(async () => await ExecutarVendaRapida());
-
-            Task.Run(CarregarComandas);
-        }
-
-        public async Task CarregarComandas()
-        {
-            var lista = await _dbService.GetComandasAbertas();
+            var lista = await _repositorio.ListarAbertasAsync();
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
@@ -50,83 +53,81 @@ namespace SorveteriaMaui.ViewModel
                 foreach (var c in lista) Comandas.Add(c);
                 TotalComandasAbertas = Comandas.Count;
             });
-        }
-        public ICommand VerDetalhesCommand => new Command<Comanda>(async (comanda) =>
-        {
-            if (comanda == null) return;
-
-            var navigationParameter = new Dictionary<string, object>
-    {
-        { "ComandaSelecionada", comanda } // O nome aqui...
-    };
-
-            await Shell.Current.GoToAsync("DetalhesComandaView", navigationParameter);
         });
-        private async Task AbrirNovaComanda()
-        {
-            // Exemplo simples: pegando o próximo número de comanda
-            string nome = await Application.Current.MainPage.DisplayPromptAsync("Nova Comanda", "Nome do Cliente (Opcional):", "Abrir", "Cancelar");
+    }
 
-            if (nome != null) // Se não cancelou
-            {
-                int novoNumero = Comandas.Count + 1;
-                await _dbService.CriarComanda(novoNumero, nome);
-                await CarregarComandas();
-            }
-        }
-
-        private async Task IrParaAdicionarProduto(Comanda comanda)
-        {
-            // Prepara o parâmetro para a SelecaoProdutoViewModel
-            var navigationParameter = new Dictionary<string, object>
+    private static async Task Navegar(string rota, Comanda? comanda)
     {
-        { "ComandaSelecionada", comanda }
-    };
+        if (comanda == null) return;
 
-            // Navega para a rota que registraremos no próximo passo
-            await Shell.Current.GoToAsync("SelecaoProdutoView", navigationParameter);
-        }
+        await Shell.Current.GoToAsync(rota, new Dictionary<string, object> { { "ComandaSelecionada", comanda } });
+    }
 
-        private async Task FecharComanda(Comanda comanda)
+    private async Task AbrirNovaComanda()
+    {
+        string nome = await Shell.Current.DisplayPromptAsync("Nova Comanda", "Nome do Cliente (Opcional):", "Abrir", "Cancelar");
+
+        if (nome != null) // Se não cancelou
         {
-            bool confirm = await Application.Current.MainPage.DisplayAlert("Finalizar", $"Deseja fechar a comanda {comanda.Numero}?", "Sim", "Não");
-            if (confirm)
-            {
-                var sucesso = await _paymentService.ProcessarPagamentoAsync(comanda);
-                if (sucesso)
-                {
-                    await CarregarComandas();
-                }
-            }
+            // RN-CM-02 / B8: número sequencial no caixa, calculado ao gravar
+            await Executar(() => _comandas.AbrirAsync(nome));
         }
+    }
 
-        private async Task ExecutarVendaRapida()
+    private async Task FecharComanda(Comanda comanda)
+    {
+        bool confirm = await Shell.Current.DisplayAlertAsync("Finalizar", $"Deseja fechar a comanda {comanda.Numero}?", "Sim", "Não");
+        if (!confirm) return;
+
+        // Total vem do banco, não do objeto da lista (B4)
+        Comanda? atual = null;
+        if (!await Operacao.CarregarAsync(async () => atual = await _repositorio.ObterLinhaAsync(comanda.Id)) || atual == null) return;
+
+        var pagamento = await _paymentService.PerguntarPagamentoAsync(atual.Total);
+        if (pagamento is null) return;
+
+        GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
+        if (await Executar(async () => fechada = await _comandas.FecharAsync(atual.Id, pagamento.Value))
+            && fechada is { TotalTroco: > 0 })
         {
-            string resultado = await Application.Current.MainPage.DisplayPromptAsync(
-                "Venda Rápida",
-                "Valor da Venda:",
-                "Confirmar",
-                "Cancelar",
-                keyboard: Keyboard.Telephone);
-
-            if (string.IsNullOrWhiteSpace(resultado)) return;
-
-            if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor) || valor <= 0) // RN-CM-03: item livre > 0
-            {
-                await Application.Current.MainPage.DisplayAlert("Erro", "Valor inválido", "OK");
-                return;
-            }
-
-            int novoNumero = Comandas.Count + 1;
-            var comanda = await _dbService.CriarComanda(novoNumero, "Venda Rápida");
-
-            // RN-CM-10 / B9: item livre "Venda avulsa", sem produto inventado
-            await _dbService.AdicionarItemLivreNaComanda(comanda.Id, GestaoSorveteria.Domain.Comandas.Comanda.DescricaoVendaAvulsa, valor);
-
-            // Iniciar fluxo de pagamento imediatamente via PaymentService
-            await _paymentService.ProcessarPagamentoAsync(comanda);
-
-            await CarregarComandas();
+            await _paymentService.MostrarTrocoAsync(fechada.TotalTroco); // B7: só depois de gravado
         }
+    }
+
+    private async Task ExecutarVendaRapida()
+    {
+        string resultado = await Shell.Current.DisplayPromptAsync(
+            "Venda Rápida",
+            "Valor da Venda:",
+            "Confirmar",
+            "Cancelar",
+            keyboard: Keyboard.Telephone);
+
+        if (string.IsNullOrWhiteSpace(resultado)) return;
+
+        if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor) || valor <= 0) // RN-CM-03: item livre > 0
+        {
+            await Shell.Current.DisplayAlertAsync("Atenção", "Valor inválido.", "OK");
+            return;
+        }
+
+        var pagamento = await _paymentService.PerguntarPagamentoAsync(valor);
+        if (pagamento is null) return;
+
+        // RN-CM-10 / B1: abre, lança "Venda avulsa" e fecha numa gravação só
+        GestaoSorveteria.Domain.Comandas.Comanda? venda = null;
+        if (await Executar(async () => venda = await _comandas.VendaRapidaAsync(valor, pagamento.Value))
+            && venda is { TotalTroco: > 0 })
+        {
+            await _paymentService.MostrarTrocoAsync(venda.TotalTroco); // B7: só depois de gravado
+        }
+    }
+
+    /// <summary>Falha aparece para o atendente (B7); depois recarrega a lista com o que está gravado.</summary>
+    private async Task<bool> Executar(Func<Task> acao)
+    {
+        var gravou = await Operacao.GravarAsync(acao);
+        await CarregarComandas();
+        return gravou;
     }
 }
