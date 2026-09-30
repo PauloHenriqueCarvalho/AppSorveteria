@@ -253,9 +253,9 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09, já previsto) | `ComandaDetalheDto` |
-| GET | `/api/caixas?de=&ate=` | Caixas (histórico) | `IReadOnlyList<CaixaResumoDto>` |
-| GET | `/api/caixas/atual` | Dashboard (caixa aberto) | `CaixaResumoDto` ou 204 sem caixa aberto |
-| GET | `/api/caixas/{id}` | Caixas (detalhe) | `CaixaDetalheDto` |
+| GET | `/api/caixas?de=&ate=` | Caixas (histórico) — **pronto** (sem datas: 30 dias; máx. 93; hoje faz 1 consulta por caixa — agregar no repositório se pesar) | `IReadOnlyList<CaixaResumoDto>` |
+| GET | `/api/caixas/atual` | Dashboard (caixa aberto) — **pronto** | `CaixaResumoDto` ou 204 sem caixa aberto |
+| GET | `/api/caixas/{id}` | Caixas (detalhe) — **pronto** | `CaixaDetalheDto` |
 
 DTOs (namespace `Contracts.Relatorios`, `Contracts.Comandas`, `Contracts.Caixas`; enums como texto, dinheiro `decimal` 2 casas, datas UTC):
 
@@ -285,12 +285,12 @@ record ItemComandaDto(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade
 record PagamentoDto(Guid Id, string Forma, decimal Valor, decimal ValorRecebido, decimal Troco);
 record EstornarComandaRequest([Required, StringLength(300, MinimumLength = 3)] string Motivo);
 
-// Caixas — RN-CX-06: esperado e diferença gravados no fechamento; aberto → null.
+// Caixas — RN-CX-06: fechado → valores gravados no fechamento; aberto → vendas em dinheiro e esperado "até agora", contado/diferença null.
 record CaixaResumoDto(Guid Id, string Status, DateTime AbertoEm, string AbertoPorNome, decimal FundoTroco,
     DateTime? FechadoEm, string? FechadoPorNome,
     decimal TotalVendas, int QuantidadeComandas,            // todas as formas, calculado na API
     decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca,
-    bool DivergenciaSincronizacao, int VendasRecebidasAposFechamento);   // RN-CX-10 e RN-CX-08: pontos para a dona conferir
+    bool DivergenciaSincronizacao, int VendasRecebidasAposFechamento, decimal DinheiroRecebidoAposFechamento);   // RN-CX-10 e RN-CX-08: pontos para a dona conferir
 record CaixaDetalheDto(CaixaResumoDto Resumo, IReadOnlyList<MovimentoCaixaDto> Movimentos,
     IReadOnlyList<TotalPorFormaDto> PorFormaPagamento, string? Observacao);
 record MovimentoCaixaDto(Guid Id, string Tipo, decimal Valor, string Motivo, string UsuarioNome, DateTime Em);
