@@ -70,7 +70,8 @@ AppSorveteria/                   ← repositório único (GitHub)
 │   │   ├── Comandas/            Comanda, ItemComanda, Pagamento, enums
 │   │   └── Repositories/        IUsuarioRepository, IProdutoRepository, ICaixaRepository, IComandaRepository, IUnitOfWork
 │   ├── GestaoSorveteria.Contracts/
-│   │   └── Auth/                LoginRequest, LoginResponse, UsuarioDto
+│   │   ├── Auth/                LoginRequest, LoginResponse, UsuarioDto
+│   │   └── Sync/                SyncCaixasRequest, SyncComandasRequest, SyncResponse (+ DTOs de caixa, movimento, comanda, item, pagamento)
 │   ├── GestaoSorveteria.Application/
 │   │   ├── Abstractions/        IClock, IPasswordHasher, ITokenService
 │   │   ├── Auth/                AuthService
@@ -152,6 +153,9 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | valor_esperado | numeric(12,2) null | RN-CX-06 |
 | valor_contado | numeric(12,2) null | |
 | diferenca | numeric(12,2) null | contado − esperado |
+| total_vendas_dinheiro_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
+| valor_esperado_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
+| divergencia_sincronizacao | boolean | RN-CX-10 |
 | observacao | varchar(500) null | |
 
 ### `movimentos_caixa`
@@ -226,9 +230,10 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 |---|---|---|---|
 | POST | `/api/auth/login` | público | rate limit; devolve JWT + usuário (pronto no Sprint 0) |
 | GET | `/api/auth/me` | qualquer | valida token (pronto no Sprint 0) |
-| GET | `/api/produtos?desde=` | qualquer | o app baixa o catálogo (alterados desde a última sincronização) |
-| POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel |
-| POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | |
+| GET | `/api/produtos?desde=` | qualquer | o app baixa o catálogo. Sem `desde`: tudo. Com `desde` (data/hora com fuso): só os criados/alterados a partir dali, **inclusive desativados** (o app esconde o botão, RN-PR-03). A resposta traz `geradoEmUtc`, que o app guarda e manda como próximo `desde`. A API recua `desde` em 5 min (margem contra gravação concorrente); repetir produto é inofensivo |
+| GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
+| POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
+| POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
 | POST | `/api/sync/caixas` | qualquer | lote de caixas (abertos/fechados) com movimentos; idempotente pelo `id` |
 | POST | `/api/sync/comandas` | qualquer | lote de comandas **fechadas ou canceladas** com itens e pagamentos; idempotente pelo `id`; a API reconstrói o agregado com as regras do Domain e devolve, por comanda, `aceita`/`já recebida`/`rejeitada` + motivo |
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |
@@ -238,11 +243,68 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 
 Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainException`), 401/403 acesso, 404 não encontrado, 409 conflito (violação de unicidade), 429 rate limit. No sync em lote, rejeição de uma comanda **não** derruba o lote: vem no resultado daquela comanda.
 
+### 6.1 Endpoints do painel — proposta (Sprint 3, a validar pelo Paulo)
+
+O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado × contado e somas por forma de pagamento vêm prontos da API, calculados com o Domain. "Hoje/de/até" são **datas do dia comercial** (`yyyy-MM-dd`, America/Sao_Paulo — `DiaComercial`); a API converte para o intervalo UTC. Todos `[Authorize(Roles = "Admin")]`.
+
+| Método | Rota | Tela | Resposta |
+|---|---|---|---|
+| GET | `/api/relatorios/dia?data=` | Dashboard | `ResumoDiaDto` |
+| GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) | `PaginaDto<ComandaResumoDto>` |
+| GET | `/api/comandas/{id}` | Vendas (detalhe) | `ComandaDetalheDto` |
+| POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09, já previsto) | `ComandaDetalheDto` |
+| GET | `/api/caixas?de=&ate=` | Caixas (histórico) | `IReadOnlyList<CaixaResumoDto>` |
+| GET | `/api/caixas/atual` | Dashboard (caixa aberto) | `CaixaResumoDto` ou 204 sem caixa aberto |
+| GET | `/api/caixas/{id}` | Caixas (detalhe) | `CaixaDetalheDto` |
+
+DTOs (namespace `Contracts.Relatorios`, `Contracts.Comandas`, `Contracts.Caixas`; enums como texto, dinheiro `decimal` 2 casas, datas UTC):
+
+```csharp
+// Dashboard — RN-RL-01: faturamento = comandas fechadas; estornos à parte.
+record ResumoDiaDto(
+    DateOnly Data,                              // dia comercial consultado
+    decimal TotalVendido, int QuantidadeComandas, decimal TicketMedio,   // ticket médio calculado na API (0 sem vendas)
+    IReadOnlyList<TotalPorFormaDto> PorFormaPagamento,
+    decimal TotalEstornado, int QuantidadeEstornos,
+    int QuantidadeCanceladas,
+    int VendasRecebidasAposFechamento,          // RN-CX-08: para conferência
+    CaixaResumoDto? CaixaAtual);                // caixa aberto agora (ou o último do dia)
+record TotalPorFormaDto(string Forma, decimal Total, int Quantidade);
+
+// Vendas
+record PaginaDto<T>(IReadOnlyList<T> Itens, int Pagina, int Tamanho, int TotalItens);
+record ComandaResumoDto(Guid Id, int Numero, Guid CaixaId, string Tipo, string Status, decimal Total,
+    DateTime CriadaEm, DateTime? FechadaEm, string AtendenteNome, IReadOnlyList<string> FormasPagamento,
+    bool RecebidaAposFechamentoCaixa);
+record ComandaDetalheDto(Guid Id, int Numero, Guid CaixaId, string Tipo, string Status, decimal Total,
+    string? Observacao, DateTime CriadaEm, DateTime RecebidaEm, DateTime? FechadaEm,
+    DateTime? CanceladaEm, string? MotivoCancelamento, bool RecebidaAposFechamentoCaixa, string AtendenteNome,
+    IReadOnlyList<ItemComandaDto> Itens, IReadOnlyList<PagamentoDto> Pagamentos);
+record ItemComandaDto(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal);
+record PagamentoDto(Guid Id, string Forma, decimal Valor, decimal ValorRecebido, decimal Troco);
+record EstornarComandaRequest([Required, StringLength(300, MinimumLength = 3)] string Motivo);
+
+// Caixas — RN-CX-06: esperado e diferença gravados no fechamento; aberto → null.
+record CaixaResumoDto(Guid Id, string Status, DateTime AbertoEm, string AbertoPorNome, decimal FundoTroco,
+    DateTime? FechadoEm, string? FechadoPorNome,
+    decimal TotalVendas, int QuantidadeComandas,            // todas as formas, calculado na API
+    decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca);
+record CaixaDetalheDto(CaixaResumoDto Resumo, IReadOnlyList<MovimentoCaixaDto> Movimentos,
+    IReadOnlyList<TotalPorFormaDto> PorFormaPagamento, string? Observacao);
+record MovimentoCaixaDto(Guid Id, string Tipo, decimal Valor, string Motivo, string UsuarioNome, DateTime Em);
+```
+
+Pontos a decidir antes de implementar:
+1. **Estorno × cancelamento:** RN-CM-09 diz que a comanda estornada "vira `Cancelada`", mas o relatório precisa separá-la da comanda cancelada ainda aberta (RN-CM-08). Proposta: status próprio `Estornada` ou colunas `estornada_em` / `estornada_por_usuario_id` / `motivo_estorno` (migração).
+2. **Estorno depois do caixa fechado** (RN-CX-07): o estorno entra no caixa original (só relatório) ou vira ajuste no caixa aberto? Afeta "esperado" se a venda foi em dinheiro.
+3. **Fechamento forçado pelo painel** (RN-CX-09): `POST /api/caixas/{id}/forcar-fechamento` entra no Sprint 3 ou fica para o Sprint 4?
+4. `CaixaAtual` no dashboard depende de o app já ter sincronizado o caixa aberto (`POST /api/sync/caixas` — docs/03 §8): sem sincronização recente, o painel mostra o último estado recebido e a hora dele.
+
 ## 7. Autenticação
 
 - **App e painel** usam o mesmo `POST /api/auth/login` → JWT (claims `sub`, `name`, `role`), validade 12 h, assinado com `Jwt:Key` (mín. 32 caracteres, variável de ambiente em produção). Enviado em `Authorization: Bearer`.
 - **App:** o primeiro login com PIN exige internet; o token fica no `SecureStorage`. Se expirar sem internet, o app continua vendendo e pede o PIN de novo quando a conexão voltar (as vendas pendentes esperam na fila).
-- **Painel:** token guardado na sessão do navegador; perfil Admin obrigatório.
+- **Painel:** token guardado no navegador (`localStorage`) até o `ExpiraEmUtc` do login; vencido ou recusado pela API (401) → volta para o login. Perfil Admin obrigatório (conferido no login e no `GET /api/auth/me` ao abrir). Enquanto a API acorda, o painel mostra "Conectando ao servidor…" e tenta de novo (até 5 tentativas de 70 s).
 - **CORS:** a API libera apenas a origem do painel (`Cors:PainelOrigem`).
 - Autorização por perfil: `[Authorize(Roles = "Admin")]` nos endpoints de gestão.
 
@@ -253,8 +315,9 @@ Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainExceptio
 3. **Comanda:** criada, alterada e fechada só no SQLite. `Id` (UUID) e `Numero` (sequencial no caixa) gerados no celular.
 4. **Ao fechar ou cancelar** uma comanda, ela entra na fila de envio (`pendente_envio = true`). O `SyncService` tenta enviar na hora e depois a cada 1 min.
 5. **Resposta da API por comanda:** `aceita` ou `já recebida` → marca como enviada; `rejeitada` → fica visível para o atendente com o motivo (nunca some em silêncio); erro de rede ou API dormindo → tenta de novo (timeout de 90 s — docs/07).
-6. **Fechar o caixa** exige fila vazia (RN-CX-05). Se não houver internet, o atendente fecha localmente e o caixa sobe quando a conexão voltar (RN-CX-08 marca vendas tardias).
+6. **Fechar o caixa** exige só que não haja comanda aberta (RN-CX-05); pode ser sem internet (RN-SY-04). O caixa fechado sobe depois das comandas dele; o servidor grava os próprios valores e marca divergência com os do celular (RN-CX-10). Venda que chega depois do fechamento é aceita e marcada, sem mudar os valores do caixa (RN-CX-07/08).
 7. **Servidor:** mesmo `Id` recebido de novo → responde `já recebida` sem duplicar (idempotência).
+8. **Formato (`Contracts/Sync`):** lote de 1 a 100 itens; resposta `{ resultados: [ { id, status: "aceita" | "ja_recebida" | "rejeitada", motivo? } ] }` na ordem do lote. Só o lote é validado por atributo (400 se vazio ou grande demais); os itens não, para que um item inválido vire `rejeitada` sem derrubar os outros. Enums como texto com os nomes do Domain; datas UTC. O app manda também os valores que calculou (total, subtotal, troco, esperado, diferença) para a API conferir com as mesmas regras do Domain. Ordem: caixa aberto → comandas → caixa com fechamento (RN-SY-03). Reenvio de caixa só acrescenta: movimento/fechamento novo = `aceita`, nada novo = `ja_recebida`, nada é apagado, e caixa já fechado no servidor não muda (`rejeitada`, RN-CX-07).
 
 ## 9. Configuração e ambientes
 

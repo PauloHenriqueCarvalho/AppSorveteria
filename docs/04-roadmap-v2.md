@@ -31,11 +31,16 @@ Fase 4 — Expansões ................. a combinar
 
 ### Sprint 1 — API de sincronização (semana 1)
 
-- [ ] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento)
+- [x] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento) — `Contracts/Sync/SyncContracts.cs`
 - [ ] `SyncService` + `SyncController`: `POST /api/sync/caixas` e `POST /api/sync/comandas` (lote, idempotente pelo `Id`, resultado por item: aceita / já recebida / rejeitada)
 - [ ] Reconstruir os agregados com as regras do Domain; marcar vendas recebidas após o fechamento do caixa (RN-CX-08)
-- [ ] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app; criar, editar, ativar/desativar (Admin)
-- [ ] `POST /api/comandas/{id}/estornar` (Admin) e `GET /api/versao`
+  - [x] Regras RN-CX-05/07/08/10 e RN-SY-01/03/04/05/06 no docs/02; Domain: `Comanda.Remontar` (preço da venda, caixa fechado), troco conferido, `Caixa.FecharSincronizado` + migração `CaixaDivergenciaSincronizacao`
+  - [ ] `POST /api/sync/caixas` (SyncService + SyncController)
+  - [ ] `POST /api/sync/comandas` (SyncService + SyncController)
+- [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
+- [x] `ProdutosController`: criar, editar, ativar/desativar (Admin)
+- [ ] `POST /api/comandas/{id}/estornar` (Admin)
+- [ ] `GET /api/versao`
 - [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida
 - [ ] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas
 
@@ -55,14 +60,15 @@ Plano detalhado em docs/06, seção 4.
 ### Sprint 3 — Painel da dona (site estático) (semana 3)
 
 - [x] Decidir a tecnologia: **React + Vite + TypeScript** em `src/GestaoSorveteria.Painel` (ADR 018, docs/01)
-- [ ] Projeto do painel no repositório; publicação no Cloudflare Pages; CORS na API
-- [ ] Login da dona pela API (JWT, perfil Admin)
+- [x] Projeto do painel no repositório (Vite + React + TS, React Router, TanStack Query, ESLint, CI `Painel`); configuração do Cloudflare Pages documentada (docs/07)
+- [x] CORS na API com a origem do painel vinda de configuração (`Cors:PainelOrigem`)
+- [x] Login da dona pela API (JWT, perfil Admin; sai sozinho quando o token vence ou a API responde 401)
 - [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
 - [ ] Vendas por data com itens e pagamentos; estorno
 - [ ] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões
 - [ ] Caixas: histórico de fechamentos com diferenças
 - [ ] Usuários: criar atendente, redefinir PIN
-- [ ] Tela "Conectando ao servidor…" enquanto a API acorda
+- [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 
 **Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu.
 

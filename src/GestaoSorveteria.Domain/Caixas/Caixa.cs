@@ -30,6 +30,15 @@ public sealed class Caixa : Entity
 
     public string? Observacao { get; private set; }
 
+    /// <summary>RN-CX-10: vendas em dinheiro calculadas no celular, gravadas só quando divergem do servidor.</summary>
+    public decimal? TotalVendasDinheiroApp { get; private set; }
+
+    /// <summary>RN-CX-10: esperado calculado no celular, gravado só quando diverge do servidor.</summary>
+    public decimal? ValorEsperadoApp { get; private set; }
+
+    /// <summary>RN-CX-10: o fechamento feito no celular não bateu com o recalculado no servidor; a dona confere.</summary>
+    public bool DivergenciaSincronizacao { get; private set; }
+
     public IReadOnlyCollection<MovimentoCaixa> Movimentos => _movimentos.AsReadOnly();
 
     public bool EstaAberto => Status == StatusCaixa.Aberto;
@@ -91,6 +100,32 @@ public sealed class Caixa : Entity
         FechadoPorUsuarioId = usuarioId;
         FechadoEm = agoraUtc;
         Status = StatusCaixa.Fechado;
+    }
+
+    /// <summary>
+    /// RN-CX-10: fechamento feito no celular e recebido na sincronização. Grava os valores do servidor
+    /// (<paramref name="totalVendasDinheiro"/> vem das comandas já recebidas); se os do celular forem diferentes,
+    /// guarda-os e marca a divergência. Nunca recusa o caixa por essa diferença.
+    /// </summary>
+    public void FecharSincronizado(
+        decimal valorContado,
+        decimal totalVendasDinheiro,
+        decimal totalVendasDinheiroApp,
+        decimal valorEsperadoApp,
+        Guid usuarioId,
+        DateTime fechadoEmUtc,
+        string? observacao = null)
+    {
+        Guard.Dinheiro(totalVendasDinheiroApp, "o total de vendas em dinheiro do celular", permiteZero: true);
+        Guard.Contra(!Moeda.TemNoMaximoDuasCasas(valorEsperadoApp), "O valor esperado do celular deve ter no máximo 2 casas decimais.");
+        Fechar(valorContado, totalVendasDinheiro, usuarioId, fechadoEmUtc, observacao);
+
+        if (totalVendasDinheiroApp != TotalVendasDinheiro || valorEsperadoApp != ValorEsperado)
+        {
+            TotalVendasDinheiroApp = totalVendasDinheiroApp;
+            ValorEsperadoApp = valorEsperadoApp;
+            DivergenciaSincronizacao = true;
+        }
     }
 
     private MovimentoCaixa RegistrarMovimento(TipoMovimentoCaixa tipo, decimal valor, string motivo, Guid usuarioId, DateTime agoraUtc, Guid? id)

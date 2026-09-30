@@ -6,6 +6,12 @@ namespace GestaoSorveteria.Domain.Comandas;
 public readonly record struct DadosItem(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario);
 
 /// <summary>
+/// Item de uma comanda recebida na sincronização, usado em <see cref="Comanda.Remontar"/>: descrição e preço
+/// praticados na venda e o subtotal calculado no app, conferido no servidor (RN-SY-06).
+/// </summary>
+public readonly record struct DadosItemRecebido(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal);
+
+/// <summary>
 /// Linha da comanda. Guarda descrição e preço praticado no momento (snapshot, RN-PR-04).
 /// ProdutoId nulo = item livre (self-service / venda avulsa, RN-CM-03).
 /// Criado e alterado somente pela <see cref="Comanda"/>.

@@ -41,6 +41,10 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("diferenca");
 
+                    b.Property<bool>("DivergenciaSincronizacao")
+                        .HasColumnType("boolean")
+                        .HasColumnName("divergencia_sincronizacao");
+
                     b.Property<DateTime?>("FechadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fechado_em");
@@ -70,6 +74,11 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("total_vendas_dinheiro");
 
+                    b.Property<decimal?>("TotalVendasDinheiroApp")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("total_vendas_dinheiro_app");
+
                     b.Property<decimal?>("ValorContado")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
@@ -79,6 +88,11 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("valor_esperado");
+
+                    b.Property<decimal?>("ValorEsperadoApp")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor_esperado_app");
 
                     b.HasKey("Id")
                         .HasName("pk_caixas");

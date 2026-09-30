@@ -98,7 +98,7 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [ ] Telas de abrir caixa (fundo de troco), sangria/suprimento, fechar caixa com conferência
 - [ ] Login com PIN (valida online na 1ª vez, guarda token em `SecureStorage`)
 - [ ] `SyncService`: envia comandas fechadas/canceladas e caixas pendentes; baixa produtos
-- [ ] Indicador "X vendas aguardando envio"; bloqueio de fechar caixa com envio pendente
+- [ ] Indicador "X vendas aguardando envio"; fechar caixa com envio pendente é permitido, com aviso (RN-CX-05, RN-SY-05)
 - [ ] Teste no celular real com internet desligada
 
 Total: ~1,5 semana de trabalho — encaixa no Sprint 2 original.
