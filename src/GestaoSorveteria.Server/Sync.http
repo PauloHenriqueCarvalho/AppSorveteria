@@ -204,3 +204,21 @@ Content-Type: application/json
 ### 10. O caixa continua com os mesmos valores; o resumo mostra 1 venda recebida após o fechamento
 GET {{host}}/api/caixas/{{caixaId}}
 Authorization: Bearer {{token}}
+
+### 11. Estorno pela dona (RN-CM-09) → "Estornada"; o caixa não muda (a devolução em dinheiro é uma sangria no caixa aberto, pelo app)
+POST {{host}}/api/comandas/5a1c0000-0000-4000-8000-0000000000c2/estornar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "motivo": "cobrado em duplicidade"
+}
+
+### 12. Estornar de novo → 400 "Esta comanda já foi estornada."
+POST {{host}}/api/comandas/5a1c0000-0000-4000-8000-0000000000c2/estornar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "motivo": "de novo"
+}
