@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestaoSorveteria.Server.Controllers;
 
-/// <summary>Vendas para o painel da dona (leitura). O app envia as vendas por POST /api/sync/comandas.</summary>
+/// <summary>Vendas para o painel da dona (leitura e estorno). O app envia as vendas por POST /api/sync/comandas.</summary>
 [ApiController]
 [Route("api/comandas")]
 [Produces("application/json")]
@@ -14,10 +14,12 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class ComandasController : ControllerBase
 {
     private readonly ComandaConsultaService _comandas;
+    private readonly EstornoService _estorno;
 
-    public ComandasController(ComandaConsultaService comandas)
+    public ComandasController(ComandaConsultaService comandas, EstornoService estorno)
     {
         _comandas = comandas;
+        _estorno = estorno;
     }
 
     /// <summary>
@@ -46,4 +48,25 @@ public sealed class ComandasController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ComandaDetalheDto>> Obter(Guid id, CancellationToken cancellationToken) =>
         Ok(await _comandas.ObterAsync(id, cancellationToken));
+
+    /// <summary>
+    /// RN-CM-09: estorna uma venda fechada (motivo obrigatório). Vira "Estornada"; o caixa não muda — dinheiro devolvido
+    /// ao cliente é uma sangria registrada no caixa aberto, pelo app.
+    /// </summary>
+    [HttpPost("{id:guid}/estornar")]
+    [ProducesResponseType(typeof(EstornoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EstornoResponse>> Estornar(Guid id, EstornarComandaRequest request, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirst(JwtTokenService.ClaimId)?.Value, out var usuarioId))
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await _estorno.EstornarAsync(id, request, usuarioId, cancellationToken));
+    }
 }

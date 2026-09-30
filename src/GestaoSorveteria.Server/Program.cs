@@ -4,7 +4,6 @@ using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
 using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Caixas;
-using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Sync;
 using GestaoSorveteria.Infrastructure;

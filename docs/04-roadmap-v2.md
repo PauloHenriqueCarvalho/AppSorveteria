@@ -39,7 +39,7 @@ Fase 4 — Expansões ................. a combinar
   - [x] `POST /api/sync/comandas` (SyncService + SyncController): `Comanda.Remontar`, número/Ids/produto conferidos antes (rejeição em vez de 409/500), reenvio → `ja_recebida`
 - [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
 - [x] `ProdutosController`: criar, editar, ativar/desativar (Admin)
-- [ ] `POST /api/comandas/{id}/estornar` (Admin)
+- [x] `POST /api/comandas/{id}/estornar` (Admin): status `Estornada` com quem/quando/motivo; caixa não muda (RN-CM-09)
 - [x] `GET /api/versao`
 - [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida
 - [x] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas — `src/GestaoSorveteria.Server/Sync.http` (falta rodar contra o PostgreSQL local)
