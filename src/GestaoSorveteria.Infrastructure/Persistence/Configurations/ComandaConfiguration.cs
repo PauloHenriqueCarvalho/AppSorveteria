@@ -50,7 +50,7 @@ internal sealed class ComandaConfiguration : IEntityTypeConfiguration<Comanda>
         builder.HasMany(c => c.Itens)
             .WithOne()
             .HasForeignKey(i => i.ComandaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade); // banco sem cascade; EF ainda apaga o item removido da comanda aberta (RN-CM-06)
 
         builder.Navigation(c => c.Itens)
             .HasField("_itens")
@@ -59,7 +59,7 @@ internal sealed class ComandaConfiguration : IEntityTypeConfiguration<Comanda>
         builder.HasMany(c => c.Pagamentos)
             .WithOne()
             .HasForeignKey(p => p.ComandaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict); // nada de pagamento é apagado
 
         builder.Navigation(c => c.Pagamentos)
             .HasField("_pagamentos")

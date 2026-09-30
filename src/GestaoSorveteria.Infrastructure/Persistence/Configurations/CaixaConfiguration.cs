@@ -50,7 +50,7 @@ internal sealed class CaixaConfiguration : IEntityTypeConfiguration<Caixa>
         builder.HasMany(c => c.Movimentos)
             .WithOne()
             .HasForeignKey(m => m.CaixaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict); // nada de caixa ou movimento é apagado
 
         builder.Navigation(c => c.Movimentos)
             .HasField("_movimentos")
