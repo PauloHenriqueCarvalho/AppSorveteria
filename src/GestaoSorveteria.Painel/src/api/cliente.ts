@@ -79,9 +79,6 @@ async function lerErro(resposta: Response): Promise<ErroApi> {
   if (resposta.status === 429) {
     return new ErroApi(429, 'Muitas tentativas seguidas. Espere um minuto e tente de novo.')
   }
-  if (resposta.status === 403) {
-    return new ErroApi(403, 'Você não tem permissão para fazer isso.')
-  }
 
   let problema: ProblemDetails = {}
   try {
@@ -90,8 +87,14 @@ async function lerErro(resposta: Response): Promise<ErroApi> {
     // Resposta sem corpo JSON: fica a mensagem padrão.
   }
 
-  // Erro de validação (400): a primeira mensagem já diz o que corrigir.
+  // Validação (400): a primeira mensagem já diz o que corrigir.
   const primeiraValidacao = problema.errors ? Object.values(problema.errors).flat()[0] : undefined
-  const mensagem = primeiraValidacao ?? problema.title ?? 'O servidor não conseguiu atender o pedido. Tente de novo.'
-  return new ErroApi(resposta.status, mensagem)
+  // DomainExceptionHandler: título genérico ("Regra de negócio") e a mensagem da regra no detail.
+  // Login recusado (401): a mensagem está no título.
+  const doServidor = resposta.status === 401 ? problema.title : (problema.detail ?? problema.title)
+  const padrao =
+    resposta.status === 403
+      ? 'Você não tem permissão para fazer isso.'
+      : 'O servidor não conseguiu atender o pedido. Tente de novo.'
+  return new ErroApi(resposta.status, primeiraValidacao ?? doServidor ?? padrao)
 }

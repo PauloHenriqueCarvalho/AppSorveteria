@@ -1,4 +1,4 @@
-# Lint e build do painel da dona (React + Vite) quando o painel muda.
+# Lint, testes e build do painel da dona (React + Vite) quando o painel muda.
 # O deploy é feito pelo Cloudflare Pages a partir do repositório (docs/07), não por este workflow.
 name: Painel
 
@@ -37,6 +37,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Testes
+        run: npm test
 
       - name: Build
         run: npm run build

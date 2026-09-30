@@ -2,7 +2,10 @@ import { NavLink, Outlet } from 'react-router'
 import { useSessao } from '../sessao/contexto.ts'
 
 // Itens do menu. Cada tela nova do painel entra aqui.
-const MENU = [{ para: '/', texto: 'Início' }]
+const MENU = [
+  { para: '/', texto: 'Início', fim: true },
+  { para: '/produtos', texto: 'Produtos', fim: false },
+]
 
 export default function Layout() {
   const { usuario, sair } = useSessao()
@@ -25,7 +28,7 @@ export default function Layout() {
 
       <nav className="menu" aria-label="Menu principal">
         {MENU.map((item) => (
-          <NavLink key={item.para} to={item.para} end className="menu-item">
+          <NavLink key={item.para} to={item.para} end={item.fim} className="menu-item">
             {item.texto}
           </NavLink>
         ))}

@@ -6,6 +6,8 @@ import RotaProtegida from './componentes/RotaProtegida.tsx'
 import Inicio from './paginas/Inicio.tsx'
 import Login from './paginas/Login.tsx'
 import NaoEncontrada from './paginas/NaoEncontrada.tsx'
+import EditarProduto from './paginas/produtos/EditarProduto.tsx'
+import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
 import SessaoProvider from './sessao/SessaoProvider.tsx'
 
 const queryClient = new QueryClient({
@@ -29,6 +31,9 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Inicio /> },
+          { path: 'produtos', element: <ListaProdutos /> },
+          { path: 'produtos/novo', element: <EditarProduto /> },
+          { path: 'produtos/:id', element: <EditarProduto /> },
           { path: '*', element: <NaoEncontrada /> },
         ],
       },

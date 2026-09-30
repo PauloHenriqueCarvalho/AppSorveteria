@@ -65,7 +65,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] Login da dona pela API (JWT, perfil Admin; sai sozinho quando o token vence ou a API responde 401)
 - [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
 - [ ] Vendas por data com itens e pagamentos; estorno
-- [ ] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões
+- [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
 - [ ] Caixas: histórico de fechamentos com diferenças
 - [ ] Usuários: criar atendente, redefinir PIN
 - [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
