@@ -43,7 +43,7 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 
 | # | Problema |
 |---|---|
-| B8 | Número da comanda = `Comandas.Count + 1` (só as abertas) → números repetidos depois de fechar uma |
+| ~~B8~~ | ~~Número da comanda = `Comandas.Count + 1` (só as abertas) → números repetidos depois de fechar uma~~ — corrigido em c93fddd (#15): sequencial dentro do caixa, contando as fechadas (RN-CM-02) |
 | B9 | Self-service e venda rápida criam `ProdutoId = "MANUAL_..."/"RAPIDA_..."` que não existe → vai quebrar a sincronização (chave estrangeira) |
 | B10 | Não existe cancelar comanda (status 2 existe, mas nenhuma tela usa) — comanda aberta por engano fica para sempre |
 | B11 | `DisplayAlert("Sucesso")` a cada item adicionado → um toque extra por item (contra a meta de rapidez) |
@@ -84,6 +84,7 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [x] Modelos SQLite com `decimal`, datas UTC, enums em vez de `int` mágico, `ProdutoId` nulo para item livre (B6, B9, B13, B14)
 - [x] Substituir `DatabaseService` por repositórios pequenos + `ComandaAppService` que carrega → chama o domínio → grava tudo numa transação (B1, B4, B5)
 - [x] Erros visíveis: gravação que falha mostra alerta e não segue (B7)
+- [x] Numeração da comanda sequencial dentro do caixa, contando as fechadas (B8, RN-CM-02)
 - [x] Mover `Contexto/` para `docs/contexto-mvp/` (uma cópia só)
 
 ### Etapa B — Corrigir fluxos de venda (2 dias)
