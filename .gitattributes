@@ -1,0 +1,6 @@
+# Normaliza fins de linha: LF no repositório, conversão automática no checkout de cada máquina
+* text=auto
+
+*.png binary
+*.ttf binary
+*.jpg binary
