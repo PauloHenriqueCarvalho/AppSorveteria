@@ -1,0 +1,43 @@
+# Compila o app MAUI (Android) quando o app ou as camadas que ele usa mudam.
+# Roda em Windows porque o workload do .NET MAUI é instalado lá sem configuração extra.
+name: App Android
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/GestaoSorveteria.Mobile/**"
+      - "src/GestaoSorveteria.Domain/**"
+      - "src/GestaoSorveteria.Contracts/**"
+      - "Directory.Build.props"
+      - "global.json"
+      - ".github/workflows/app.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/GestaoSorveteria.Mobile/**"
+      - "src/GestaoSorveteria.Domain/**"
+      - "src/GestaoSorveteria.Contracts/**"
+      - "Directory.Build.props"
+      - "global.json"
+      - ".github/workflows/app.yml"
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Instalar workload do MAUI (Android)
+        run: dotnet workload install maui-android
+
+      # TargetFrameworks forçado para só Android: evita exigir os workloads de iOS/Mac/Windows no restore.
+      - name: Compilar o app (Android)
+        run: dotnet build src/GestaoSorveteria.Mobile/GestaoSorveteria.Mobile.csproj -c Release -p:TargetFrameworks=net10.0-android

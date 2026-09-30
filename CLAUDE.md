@@ -102,6 +102,14 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - Commit: `tipo(escopo): descrição` em português — tipos `feat`, `fix`, `refactor`, `test`, `docs`, `chore`; escopos `app`, `api`, `domain`, `infra`, `painel`, `repo`, `docs`. Ex.: `fix(app): recusa dinheiro insuficiente no pagamento (B3)`.
 - Antes de commitar: `dotnet build` + `dotnet test` verdes; nenhum segredo no diff.
 
+## Desenvolvimento automático (Claude Code)
+
+- **Ciclo:** a skill `proximo-passo` pega a próxima tarefa do `docs/04`, cria a branch, implementa com os agentes, roda build/testes, passa pelo `revisor-dominio`, abre PR para a `develop`, acompanha o CI e faz o merge quando verde. PR de app que precisa de teste no celular fica aberto para o Paulo.
+- **Permissões:** `.claude/settings.json` libera build/test/ef/docker/git/gh sem perguntar e **bloqueia** push na `main`, `--force`, `reset --hard`, `rm -rf` e apagar o banco.
+- **Duas frentes em paralelo:** use `git worktree` (ex.: `../AppSorveteria-app` na branch do app) e uma sessão do Claude Code em cada pasta, para API e app não se atropelarem.
+- **CI:** `CI` (API + testes, Ubuntu) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam.
+- **Merge na `main`:** só o Paulo, por PR da `develop`.
+
 ## Como trabalhar aqui (para o Claude)
 
 - Comece lendo o doc relevante (tabela acima) e o cartão do Trello da tarefa.
@@ -109,5 +117,5 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - Mudança de schema: gere migração (skill `migracao-ef`), nunca edite migração já aplicada.
 - Ao terminar uma tarefa: use a skill `fechar-tarefa` (build/test, commit, docs, Trello).
 - Agentes disponíveis em `.claude/agents/`: `dev-api`, `dev-mobile`, `revisor-dominio`, `testador`.
-- Skills em `.claude/skills/`: `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
+- Skills em `.claude/skills/`: `proximo-passo` (ciclo automático), `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
 - Linguagem com a dona (docs, guias, mensagens do app): sem jargão técnico.
