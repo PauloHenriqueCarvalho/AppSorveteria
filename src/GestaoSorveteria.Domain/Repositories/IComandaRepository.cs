@@ -12,6 +12,19 @@ public interface IComandaRepository
     /// <summary>Comandas fechadas num intervalo (para relatórios e "vendas do dia").</summary>
     Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Vendas para o painel: comandas cuja data da venda (fechamento, senão cancelamento, senão criação) está em
+    /// [<paramref name="deUtc"/>, <paramref name="ateUtc"/>), mais recente primeiro, paginadas. Devolve também o total sem paginação.
+    /// Só para leitura: as comandas vêm <b>sem os itens</b> (só pagamentos) e não rastreadas — não altere nem salve.
+    /// </summary>
+    Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
+        DateTime deUtc,
+        DateTime ateUtc,
+        StatusComanda? status,
+        int pular,
+        int quantidade,
+        CancellationToken cancellationToken = default);
+
     /// <summary>RN-CM-02: próximo número sequencial dentro do caixa.</summary>
     Task<int> ProximoNumeroAsync(Guid caixaId, CancellationToken cancellationToken = default);
 

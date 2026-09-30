@@ -2,7 +2,10 @@ using System.Text;
 using System.Threading.RateLimiting;
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
+using GestaoSorveteria.Application.Caixas;
+using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Produtos;
+using GestaoSorveteria.Application.Sync;
 using GestaoSorveteria.Infrastructure;
 using GestaoSorveteria.Infrastructure.Seed;
 using GestaoSorveteria.Server.Configuracao;
@@ -46,6 +49,9 @@ builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection(SeedOpt
 // ---------- Aplicação ----------
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProdutoService>();
+builder.Services.AddScoped<SyncService>();
+builder.Services.AddScoped<CaixaConsultaService>();
+builder.Services.AddScoped<ComandaConsultaService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------
 var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();
