@@ -38,7 +38,7 @@ Fase 4 — Expansões ................. a combinar
   - [ ] `POST /api/sync/caixas` (SyncService + SyncController)
   - [ ] `POST /api/sync/comandas` (SyncService + SyncController)
 - [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
-- [ ] `ProdutosController`: criar, editar, ativar/desativar (Admin)
+- [x] `ProdutosController`: criar, editar, ativar/desativar (Admin)
 - [ ] `POST /api/comandas/{id}/estornar` (Admin)
 - [ ] `GET /api/versao`
 - [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida

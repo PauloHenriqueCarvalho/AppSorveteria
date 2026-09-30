@@ -231,8 +231,9 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | POST | `/api/auth/login` | público | rate limit; devolve JWT + usuário (pronto no Sprint 0) |
 | GET | `/api/auth/me` | qualquer | valida token (pronto no Sprint 0) |
 | GET | `/api/produtos?desde=` | qualquer | o app baixa o catálogo. Sem `desde`: tudo. Com `desde` (data/hora com fuso): só os criados/alterados a partir dali, **inclusive desativados** (o app esconde o botão, RN-PR-03). A resposta traz `geradoEmUtc`, que o app guarda e manda como próximo `desde`. A API recua `desde` em 5 min (margem contra gravação concorrente); repetir produto é inofensivo |
-| POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel |
-| POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | |
+| GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
+| POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
+| POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
 | POST | `/api/sync/caixas` | qualquer | lote de caixas (abertos/fechados) com movimentos; idempotente pelo `id` |
 | POST | `/api/sync/comandas` | qualquer | lote de comandas **fechadas ou canceladas** com itens e pagamentos; idempotente pelo `id`; a API reconstrói o agregado com as regras do Domain e devolve, por comanda, `aceita`/`já recebida`/`rejeitada` + motivo |
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |

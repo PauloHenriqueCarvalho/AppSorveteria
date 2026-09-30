@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Contracts.Produtos;
+using GestaoSorveteria.Server.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,4 +33,56 @@ public sealed class ProdutosController : ControllerBase
         var catalogo = await _produtos.ListarAsync(desde, cancellationToken);
         return Ok(catalogo);
     }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProdutoDto>> Obter(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _produtos.ObterAsync(id, cancellationToken));
+
+    /// <summary>Cadastro pelo painel (RN-PR-01: nome único).</summary>
+    [HttpPost]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ProdutoDto>> Criar(SalvarProdutoRequest request, CancellationToken cancellationToken)
+    {
+        var produto = await _produtos.CriarAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(Obter), new { id = produto.Id }, produto);
+    }
+
+    /// <summary>Edição pelo painel. Alterar o preço não muda vendas passadas (RN-PR-04).</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ProdutoDto>> Atualizar(Guid id, SalvarProdutoRequest request, CancellationToken cancellationToken) =>
+        Ok(await _produtos.AtualizarAsync(id, request, cancellationToken));
+
+    [HttpPost("{id:guid}/ativar")]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProdutoDto>> Ativar(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _produtos.AtivarAsync(id, cancellationToken));
+
+    /// <summary>RN-PR-03: produto nunca é apagado, só desativado (some do app na próxima sincronização).</summary>
+    [HttpPost("{id:guid}/desativar")]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProdutoDto>> Desativar(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _produtos.DesativarAsync(id, cancellationToken));
 }

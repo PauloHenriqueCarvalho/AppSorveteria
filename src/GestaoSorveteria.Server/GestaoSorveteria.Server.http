@@ -46,3 +46,51 @@ Authorization: Bearer {{token}}
 ### Só o que mudou desde a última sincronização (use o geradoEmUtc da resposta anterior)
 GET {{host}}/api/produtos?desde=2026-09-30T00:00:00Z
 Authorization: Bearer {{token}}
+
+### Criar produto (Admin) → 201
+POST {{host}}/api/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Picolé de uva",
+  "categoria": "Picolés",
+  "preco": 5.00,
+  "permiteValorLivre": false,
+  "ordem": 1
+}
+
+### Editar produto (Admin) — troque o id
+@produtoId = COLE_O_ID_AQUI
+PUT {{host}}/api/produtos/{{produtoId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Picolé de uva",
+  "categoria": "Picolés",
+  "preco": 5.50,
+  "permiteValorLivre": false,
+  "ordem": 1
+}
+
+### Desativar / ativar (Admin)
+POST {{host}}/api/produtos/{{produtoId}}/desativar
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/produtos/{{produtoId}}/ativar
+Authorization: Bearer {{token}}
+
+### Nome repetido → 400 ProblemDetails (RN-PR-01)
+POST {{host}}/api/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "PICOLÉ DE UVA",
+  "categoria": "Picolés",
+  "preco": 5.00,
+  "permiteValorLivre": false,
+  "ordem": 2
+}
