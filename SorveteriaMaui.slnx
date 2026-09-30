@@ -1,5 +1,0 @@
-<Solution>
-  <Project Path="SorveteriaMaui.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
-</Solution>
