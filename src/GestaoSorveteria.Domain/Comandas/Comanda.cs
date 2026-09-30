@@ -89,6 +89,65 @@ public sealed class Comanda : Entity
     }
 
     /// <summary>
+    /// RN-SY-06 / RN-CX-08: remonta no servidor a comanda que o app já fechou ou cancelou.
+    /// Usa a descrição e o preço praticados na venda (RN-PR-04), mesmo que o produto tenha mudado depois,
+    /// e dispensa o caixa aberto (exceção à RN-CX-03): comanda de caixa já fechado é aceita e marcada
+    /// para conferência, sem mudar os valores do caixa (RN-CX-07). Confere o total enviado pelo app.
+    /// Depois, chame <see cref="Fechar"/> ou <see cref="Cancelar"/> com os dados do app.
+    /// </summary>
+    public static Comanda Remontar(
+        Caixa caixa,
+        Guid id,
+        Guid usuarioId,
+        int numero,
+        TipoComanda tipo,
+        DateTime criadaEmUtc,
+        DateTime recebidaEmUtc,
+        string? observacao,
+        IEnumerable<DadosItemRecebido> itens,
+        decimal totalInformado)
+    {
+        Guard.Contra(caixa is null, "Informe o caixa da comanda.");
+        Guard.NaoVazio(id, "o Id da comanda");
+        Guard.NaoVazio(usuarioId, "o usuário");
+        Guard.Contra(numero < 1, "O número da comanda deve ser maior que zero.");
+        Guard.Contra(!Enum.IsDefined(tipo), "Tipo de comanda desconhecido.");
+        Guard.Utc(criadaEmUtc, "a data de criação");
+        // Abertura do caixa e criação da comanda vêm do mesmo relógio (o celular): venda antes da abertura não existe.
+        Guard.Contra(criadaEmUtc < caixa!.AbertoEm, "A comanda foi criada antes da abertura do caixa (RN-CX-03).");
+
+        var comanda = new Comanda(
+            id,
+            caixa!.Id,
+            usuarioId,
+            numero,
+            tipo,
+            Guard.Utc(criadaEmUtc, "a data de criação"),
+            Guard.Utc(recebidaEmUtc, "a data de recebimento"),
+            Guard.TextoOpcional(observacao, "a observação", 300))
+        {
+            RecebidaAposFechamentoCaixa = !caixa.EstaAberto,
+        };
+
+        foreach (var dados in itens ?? Enumerable.Empty<DadosItemRecebido>())
+        {
+            Guard.NaoVazio(dados.Id, "o Id do item");
+            Guard.Contra(dados.ProdutoId == Guid.Empty, "Item livre deve vir sem produto (RN-CM-03).");
+            Guard.Contra(comanda._itens.Any(i => i.Id == dados.Id), "A comanda tem dois itens com o mesmo Id.");
+
+            var item = new ItemComanda(comanda.Id, dados.ProdutoId, dados.Descricao, dados.Quantidade, dados.PrecoUnitario, dados.Id);
+            Guard.Contra(item.Subtotal != dados.Subtotal,
+                $"O subtotal de \"{item.Descricao}\" enviado ({dados.Subtotal:N2}) não confere com o calculado ({item.Subtotal:N2}) (RN-CM-05).");
+            comanda._itens.Add(item);
+        }
+
+        comanda.RecalcularTotal();
+        Guard.Contra(comanda.Total != totalInformado,
+            $"O total enviado ({totalInformado:N2}) não confere com a soma dos itens ({comanda.Total:N2}) (RN-CM-05).");
+        return comanda;
+    }
+
+    /// <summary>
     /// RN-CM-03/04: produto cadastrado. Para produto com valor livre, <paramref name="valorInformado"/> é obrigatório.
     /// Mesmo produto (mesmo preço) soma na linha existente.
     /// </summary>

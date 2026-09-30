@@ -153,6 +153,9 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | valor_esperado | numeric(12,2) null | RN-CX-06 |
 | valor_contado | numeric(12,2) null | |
 | diferenca | numeric(12,2) null | contado − esperado |
+| total_vendas_dinheiro_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
+| valor_esperado_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
+| divergencia_sincronizacao | boolean | RN-CX-10 |
 | observacao | varchar(500) null | |
 
 ### `movimentos_caixa`
@@ -254,9 +257,9 @@ Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainExceptio
 3. **Comanda:** criada, alterada e fechada só no SQLite. `Id` (UUID) e `Numero` (sequencial no caixa) gerados no celular.
 4. **Ao fechar ou cancelar** uma comanda, ela entra na fila de envio (`pendente_envio = true`). O `SyncService` tenta enviar na hora e depois a cada 1 min.
 5. **Resposta da API por comanda:** `aceita` ou `já recebida` → marca como enviada; `rejeitada` → fica visível para o atendente com o motivo (nunca some em silêncio); erro de rede ou API dormindo → tenta de novo (timeout de 90 s — docs/07).
-6. **Fechar o caixa** exige fila vazia (RN-CX-05). Se não houver internet, o atendente fecha localmente e o caixa sobe quando a conexão voltar (RN-CX-08 marca vendas tardias).
+6. **Fechar o caixa** exige só que não haja comanda aberta (RN-CX-05); pode ser sem internet (RN-SY-04). O caixa fechado sobe depois das comandas dele; o servidor grava os próprios valores e marca divergência com os do celular (RN-CX-10). Venda que chega depois do fechamento é aceita e marcada, sem mudar os valores do caixa (RN-CX-07/08).
 7. **Servidor:** mesmo `Id` recebido de novo → responde `já recebida` sem duplicar (idempotência).
-8. **Formato (`Contracts/Sync`):** lote de 1 a 100 itens; resposta `{ resultados: [ { id, status: "aceita" | "ja_recebida" | "rejeitada", motivo? } ] }` na ordem do lote. Só o lote é validado por atributo (400 se vazio ou grande demais); os itens não, para que um item inválido vire `rejeitada` sem derrubar os outros. Enums como texto com os nomes do Domain; datas UTC. O app manda também os valores que calculou (total, subtotal, troco, esperado, diferença) para a API conferir com as mesmas regras do Domain. Ordem: caixa aberto → comandas → caixa com fechamento (fila vazia). Reenvio de caixa só acrescenta: movimento/fechamento novo = `aceita`, nada novo = `ja_recebida`, nada é apagado, e caixa já fechado no servidor não muda (`rejeitada`, RN-CX-07).
+8. **Formato (`Contracts/Sync`):** lote de 1 a 100 itens; resposta `{ resultados: [ { id, status: "aceita" | "ja_recebida" | "rejeitada", motivo? } ] }` na ordem do lote. Só o lote é validado por atributo (400 se vazio ou grande demais); os itens não, para que um item inválido vire `rejeitada` sem derrubar os outros. Enums como texto com os nomes do Domain; datas UTC. O app manda também os valores que calculou (total, subtotal, troco, esperado, diferença) para a API conferir com as mesmas regras do Domain. Ordem: caixa aberto → comandas → caixa com fechamento (RN-SY-03). Reenvio de caixa só acrescenta: movimento/fechamento novo = `aceita`, nada novo = `ja_recebida`, nada é apagado, e caixa já fechado no servidor não muda (`rejeitada`, RN-CX-07).
 
 ## 9. Configuração e ambientes
 

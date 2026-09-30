@@ -5,8 +5,13 @@ namespace GestaoSorveteria.Domain.Comandas;
 /// <summary>
 /// Dados de um pagamento informados no fechamento da comanda.
 /// <paramref name="ValorRecebido"/> só faz sentido em dinheiro (quanto o cliente entregou).
+/// <paramref name="TrocoInformado"/>: troco calculado no app, conferido na sincronização (RN-SY-06); nunca é gravado.
+/// Nulo = sem conferência; o SyncService sempre repassa o troco recebido do app.
 /// </summary>
-public readonly record struct DadosPagamento(FormaPagamento Forma, decimal Valor, decimal? ValorRecebido = null, Guid? Id = null);
+public readonly record struct DadosPagamento(FormaPagamento Forma, decimal Valor, decimal? ValorRecebido = null, Guid? Id = null, decimal? TrocoInformado = null);
+
+/// <summary>Item de uma comanda recebida na sincronização: descrição e preço praticados na venda (RN-SY-06).</summary>
+public readonly record struct DadosItemRecebido(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal);
 
 /// <summary>
 /// RN-PG-03/04: Valor abate da comanda; em dinheiro, Troco = ValorRecebido − Valor, calculado aqui, nunca digitado.
@@ -45,5 +50,8 @@ public sealed class Pagamento : Entity
             ValorRecebido = Valor;
             Troco = 0m;
         }
+
+        Guard.Contra(dados.TrocoInformado is { } informado && informado != Troco,
+            $"O troco enviado ({dados.TrocoInformado:N2}) não confere com o calculado ({Troco:N2}) (RN-PG-04).");
     }
 }

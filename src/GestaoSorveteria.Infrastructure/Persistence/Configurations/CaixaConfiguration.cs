@@ -23,6 +23,9 @@ internal sealed class CaixaConfiguration : IEntityTypeConfiguration<Caixa>
         builder.Property(c => c.ValorContado).HasPrecision(12, 2);
         builder.Property(c => c.Diferenca).HasPrecision(12, 2);
         builder.Property(c => c.Observacao).HasMaxLength(500);
+        builder.Property(c => c.TotalVendasDinheiroApp).HasPrecision(12, 2);
+        builder.Property(c => c.ValorEsperadoApp).HasPrecision(12, 2);
+        builder.Property(c => c.DivergenciaSincronizacao).IsRequired();
 
         // Propriedades calculadas: não viram coluna.
         builder.Ignore(c => c.EstaAberto);

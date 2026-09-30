@@ -41,7 +41,8 @@ public sealed record ResultadoSyncDto(Guid Id, string Status, string? Motivo = n
 
 /// <summary>
 /// POST /api/sync/caixas. Ordem de envio: (1) o caixa aberto, sem fechamento; (2) as comandas dele;
-/// (3) o caixa de novo, com <see cref="CaixaSyncDto.Fechamento"/>, só quando a fila de comandas estiver vazia (RN-CX-05).
+/// (3) o caixa de novo, com <see cref="CaixaSyncDto.Fechamento"/> (RN-SY-03). Venda que chegar depois do fechamento
+/// é aceita e marcada para conferência, sem mudar os valores do caixa (RN-CX-07/08).
 /// </summary>
 public sealed record SyncCaixasRequest(
     [Required(ErrorMessage = "Informe os caixas.")]
@@ -78,7 +79,8 @@ public sealed record MovimentoCaixaSyncDto(
 
 /// <summary>
 /// RN-CX-06: fechamento feito no celular com <c>Caixa.Fechar</c>. Os valores calculados
-/// (vendas em dinheiro, esperado, diferença) vão junto para a API conferir com as mesmas regras.
+/// (vendas em dinheiro, esperado, diferença) vão junto para comparação: a API grava os valores dela
+/// e, se forem diferentes, guarda os do celular e marca divergência — o caixa nunca é rejeitado por isso (RN-CX-10).
 /// </summary>
 public sealed record FechamentoCaixaSyncDto(
     Guid FechadoPorUsuarioId,

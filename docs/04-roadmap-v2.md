@@ -34,6 +34,9 @@ Fase 4 — Expansões ................. a combinar
 - [x] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento) — `Contracts/Sync/SyncContracts.cs`
 - [ ] `SyncService` + `SyncController`: `POST /api/sync/caixas` e `POST /api/sync/comandas` (lote, idempotente pelo `Id`, resultado por item: aceita / já recebida / rejeitada)
 - [ ] Reconstruir os agregados com as regras do Domain; marcar vendas recebidas após o fechamento do caixa (RN-CX-08)
+  - [x] Regras RN-CX-05/07/08/10 e RN-SY-01/03/04/05/06 no docs/02; Domain: `Comanda.Remontar` (preço da venda, caixa fechado), troco conferido, `Caixa.FecharSincronizado` + migração `CaixaDivergenciaSincronizacao`
+  - [ ] `POST /api/sync/caixas` (SyncService + SyncController)
+  - [ ] `POST /api/sync/comandas` (SyncService + SyncController)
 - [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
 - [ ] `ProdutosController`: criar, editar, ativar/desativar (Admin)
 - [ ] `POST /api/comandas/{id}/estornar` (Admin)

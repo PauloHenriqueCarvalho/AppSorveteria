@@ -36,13 +36,14 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 |---|---|---|---|
 | RN-CX-01 | Só existe **um caixa aberto por vez**. Abrir um novo exige fechar o anterior | F1 | Application + índice único parcial no banco |
 | RN-CX-02 | Abrir caixa informa o **fundo de troco** (≥ 0) e quem abriu | F1 | Domain (`Caixa.Abrir`) |
-| RN-CX-03 | Toda comanda pertence ao caixa aberto no momento da criação. **Não há venda sem caixa aberto** | F1 | Application |
+| RN-CX-03 | Toda comanda pertence ao caixa aberto no momento da criação. **Não há venda sem caixa aberto**. Exceção: a comanda sincronizada, remontada no servidor depois do fechamento do caixa (RN-CX-08) | F1 | Domain + Application |
 | RN-CX-04 | **Sangria** (retirada de dinheiro) e **suprimento** (entrada de dinheiro) exigem valor > 0 e motivo; só em caixa aberto | F1 | Domain |
-| RN-CX-05 | Fechar caixa exige que **não haja comanda aberta** (fechar ou cancelar antes) e que a fila offline do app esteja vazia | F1 | Application / App |
+| RN-CX-05 | Fechar caixa exige que **não haja comanda aberta** (fechar ou cancelar antes). **Não** exige que as vendas já tenham sido enviadas: as que ainda não subiram chegam depois e vão para conferência (RN-CX-08, RN-CX-10) | F1 | Application / App |
 | RN-CX-06 | No fechamento: `esperado = fundo + vendas em dinheiro + suprimentos − sangrias`; `diferença = contado − esperado`. Os três valores ficam gravados | F1 | Domain (`Caixa.Fechar`) |
-| RN-CX-07 | Caixa fechado é imutável. Erro no fechamento → Admin registra ajuste no próximo caixa (com motivo), nunca edita o anterior | F1 | Domain |
-| RN-CX-08 | Vendas sincronizadas depois do fechamento do caixa a que pertencem são **aceitas** e marcadas `recebida após fechamento` para conferência | F1 | Application |
+| RN-CX-07 | Caixa fechado é imutável. Erro no fechamento → Admin registra ajuste no próximo caixa (com motivo), nunca edita o anterior. Venda recebida depois do fechamento **não altera** vendas em dinheiro, esperado, contado nem diferença gravados; só é marcada para conferência (RN-CX-08) | F1 | Domain |
+| RN-CX-08 | Vendas sincronizadas depois do fechamento do caixa a que pertencem são **aceitas** e marcadas `recebida após fechamento` para conferência. A comanda remontada no servidor dispensa o caixa aberto (RN-CX-03), mas passa pelas mesmas conferências da RN-SY-06; se não bater, é rejeitada no resultado do lote | F1 | Domain + Application |
 | RN-CX-09 | Admin pode forçar o fechamento pelo painel (ex.: atendente esqueceu), informando valor contado 0 e motivo; a diferença fica registrada | F1 | Application |
+| RN-CX-10 | Caixa fechado no celular e sincronizado: o servidor recalcula vendas em dinheiro (comandas já recebidas daquele caixa), esperado e diferença com a RN-CX-06 e **grava os valores do servidor**. Se as vendas em dinheiro ou o esperado calculados no celular forem diferentes, grava também os valores do celular e marca o caixa com `divergência na sincronização` para a dona conferir. O caixa nunca é rejeitado por essa diferença | F1 | Domain + Application |
 
 ## 4. Comanda (venda)
 
@@ -98,11 +99,12 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 
 | ID | Regra | Fase |
 |---|---|---|
-| RN-SY-01 | O app guarda em SQLite: cache de produtos, caixa aberto conhecido e a **fila de operações** (abrir comanda, itens, fechar, cancelar) | F1 (Sprint 2) |
-| RN-SY-02 | Toda operação leva um `Id` UUID gerado no celular. A API é **idempotente**: repetir a mesma operação devolve o mesmo resultado sem duplicar | F1 |
-| RN-SY-03 | A fila é enviada em ordem, uma operação por vez; falha de rede pausa a fila (não descarta) | F1 (Sprint 2) |
-| RN-SY-04 | Só há venda offline se o app conhece um caixa aberto. Abrir/fechar caixa exige conexão | F1 |
-| RN-SY-05 | O app mostra um indicador "X vendas aguardando envio" e impede fechar o caixa com fila pendente (RN-CX-05) | F1 (Sprint 2) |
+| RN-SY-01 | O app guarda em SQLite: cache de produtos, o caixa atual e as comandas. A comanda vive só no celular enquanto está aberta; ao fechar ou cancelar, vira um **documento pronto** (comanda + itens + pagamentos) marcado `pendente de envio`. O caixa também é documento (abertura + movimentos + fechamento). Não existe fila de operações (docs/06, seção 3) | F1 (Sprint 2) |
+| RN-SY-02 | Todo documento (caixa, movimento, comanda, item, pagamento) leva um `Id` UUID gerado no celular. A API é **idempotente**: reenviar o mesmo documento devolve o mesmo resultado sem duplicar | F1 |
+| RN-SY-03 | Os documentos pendentes são enviados em lote (até 100), nesta ordem: caixa aberto → comandas do caixa → caixa fechado. Envio logo após fechar/cancelar, a cada 1 min e ao abrir o app. Falha de rede pausa o envio sem descartar nada; documento `rejeitado` fica visível com o motivo | F1 (Sprint 2) |
+| RN-SY-04 | Só há venda offline se o app conhece um caixa aberto. **Abrir** caixa exige conexão (garante um só caixa aberto, RN-CX-01); **fechar** pode ser sem internet — o caixa fechado sobe depois (RN-CX-10) | F1 |
+| RN-SY-05 | O app mostra um indicador "X vendas aguardando envio". Fechar o caixa com envio pendente é permitido (RN-CX-05), com o aviso de que essas vendas sobem depois | F1 (Sprint 2) |
+| RN-SY-06 | Comanda sincronizada é remontada no servidor com a **descrição e o preço praticados na venda** (RN-PR-04), mesmo que o produto tenha mudado de preço ou sido desativado depois. O servidor confere subtotal, total, pagamentos somando **exatamente** o total e troco calculado (RN-PG-04); qualquer diferença → `rejeitada` no resultado do lote, com motivo | F1 |
 
 ## 9. Tempo, dinheiro e auditoria
 
