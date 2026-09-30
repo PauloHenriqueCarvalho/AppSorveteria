@@ -4,6 +4,7 @@ using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace GestaoSorveteria.Infrastructure.Persistence;
 

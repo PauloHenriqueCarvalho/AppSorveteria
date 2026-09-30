@@ -18,7 +18,7 @@ public static class DatabaseStartup
 
         try
         {
-            var todas = (await db.Database.GetMigrationsAsync()).ToList();
+            var todas = db.Database.GetMigrations().ToList();
             if (todas.Count == 0)
             {
                 logger.LogWarning(

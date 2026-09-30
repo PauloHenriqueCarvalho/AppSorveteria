@@ -36,7 +36,7 @@ builder.Services.AddInfrastructure(connectionString);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
 builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection(SeedOptions.Secao));
