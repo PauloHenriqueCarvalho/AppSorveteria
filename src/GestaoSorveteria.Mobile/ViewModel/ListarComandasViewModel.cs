@@ -83,11 +83,11 @@ public class ListarComandasViewModel : BindableObject
         Comanda? atual = null;
         if (!await Operacao.CarregarAsync(async () => atual = await _repositorio.ObterLinhaAsync(comanda.Id)) || atual == null) return;
 
-        var pagamento = await _paymentService.PerguntarPagamentoAsync(atual.Total);
-        if (pagamento is null) return;
+        var pagamentos = await _paymentService.PerguntarPagamentosAsync(atual.Total);
+        if (pagamentos is null) return;
 
         GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
-        if (await Executar(async () => fechada = await _comandas.FecharAsync(atual.Id, pagamento.Value))
+        if (await Executar(async () => fechada = await _comandas.FecharAsync(atual.Id, pagamentos))
             && fechada is { TotalTroco: > 0 })
         {
             await _paymentService.MostrarTrocoAsync(fechada.TotalTroco); // B7: só depois de gravado
@@ -111,12 +111,12 @@ public class ListarComandasViewModel : BindableObject
             return;
         }
 
-        var pagamento = await _paymentService.PerguntarPagamentoAsync(valor);
-        if (pagamento is null) return;
+        var pagamentos = await _paymentService.PerguntarPagamentosAsync(valor);
+        if (pagamentos is null) return;
 
         // RN-CM-10 / B1: abre, lança "Venda avulsa" e fecha numa gravação só
         GestaoSorveteria.Domain.Comandas.Comanda? venda = null;
-        if (await Executar(async () => venda = await _comandas.VendaRapidaAsync(valor, pagamento.Value))
+        if (await Executar(async () => venda = await _comandas.VendaRapidaAsync(valor, pagamentos))
             && venda is { TotalTroco: > 0 })
         {
             await _paymentService.MostrarTrocoAsync(venda.TotalTroco); // B7: só depois de gravado

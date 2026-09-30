@@ -69,11 +69,11 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return true;
         });
 
-    /// <summary>RN-CM-07 / RN-PG-03: pagamento soma exatamente o total; troco calculado pelo Domain.</summary>
-    public Task<Comanda> FecharAsync(Guid comandaId, DadosPagamento pagamento) =>
+    /// <summary>RN-CM-07 / RN-PG-02/03: pagamentos (um ou vários) somam exatamente o total; troco calculado pelo Domain.</summary>
+    public Task<Comanda> FecharAsync(Guid comandaId, IReadOnlyList<DadosPagamento> pagamentos) =>
         AlterarAsync(comandaId, comanda =>
         {
-            comanda.Fechar([pagamento], DateTime.UtcNow);
+            comanda.Fechar(pagamentos, DateTime.UtcNow);
             return Task.CompletedTask;
         });
 
@@ -81,12 +81,12 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     /// RN-CM-10 / B1: abre a comanda, lança "Venda avulsa" e fecha com o pagamento numa única gravação.
     /// Se o pagamento for recusado, nada é gravado (não sobra comanda aberta).
     /// </summary>
-    public Task<Comanda> VendaRapidaAsync(decimal valor, DadosPagamento pagamento) =>
+    public Task<Comanda> VendaRapidaAsync(decimal valor, IReadOnlyList<DadosPagamento> pagamentos) =>
         UmaPorVezAsync(async () =>
         {
             var comanda = await NovaComandaAsync();
             comanda.AdicionarItemLivre(Comanda.DescricaoVendaAvulsa, valor);
-            comanda.Fechar([pagamento], DateTime.UtcNow);
+            comanda.Fechar(pagamentos, DateTime.UtcNow);
             await comandas.GravarAsync(comanda);
             return comanda;
         });

@@ -117,11 +117,11 @@ public class DetalhesComandaViewModel : BindableObject
         if (ComandaAtual == null) return;
 
         var comandaId = ComandaAtual.Id;
-        var pagamento = await _paymentService.PerguntarPagamentoAsync(ComandaAtual.Total);
-        if (pagamento is null) return;
+        var pagamentos = await _paymentService.PerguntarPagamentosAsync(ComandaAtual.Total);
+        if (pagamentos is null) return;
 
         GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
-        var fechou = await Executar(async () => fechada = await _comandas.FecharAsync(comandaId, pagamento.Value));
+        var fechou = await Executar(async () => fechada = await _comandas.FecharAsync(comandaId, pagamentos));
 
         // B7: troco e saída da tela só depois de gravado
         if (fechou && fechada is not null)
