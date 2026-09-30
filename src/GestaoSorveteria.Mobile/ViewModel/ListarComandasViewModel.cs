@@ -111,8 +111,7 @@ namespace SorveteriaMaui.ViewModel
 
             if (string.IsNullOrWhiteSpace(resultado)) return;
 
-            string valorTratado = resultado.Replace(",", ".");
-            if (!double.TryParse(valorTratado, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double valor))
+            if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor) || valor <= 0) // RN-CM-03: item livre > 0
             {
                 await Application.Current.MainPage.DisplayAlert("Erro", "Valor inválido", "OK");
                 return;
@@ -121,15 +120,8 @@ namespace SorveteriaMaui.ViewModel
             int novoNumero = Comandas.Count + 1;
             var comanda = await _dbService.CriarComanda(novoNumero, "Venda Rápida");
 
-            var produtoRapido = new Produto
-            {
-                Id = "RAPIDA_" + Guid.NewGuid().ToString(),
-                Nome = "Venda Rápida",
-                Preco = valor,
-                Ativo = 1
-            };
-
-            await _dbService.AdicionarProdutoNaComanda(comanda.Id, produtoRapido, 1);
+            // RN-CM-10 / B9: item livre "Venda avulsa", sem produto inventado
+            await _dbService.AdicionarItemLivreNaComanda(comanda.Id, GestaoSorveteria.Domain.Comandas.Comanda.DescricaoVendaAvulsa, valor);
 
             // Iniciar fluxo de pagamento imediatamente via PaymentService
             await _paymentService.ProcessarPagamentoAsync(comanda);

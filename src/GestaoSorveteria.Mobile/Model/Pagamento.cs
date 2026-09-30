@@ -1,36 +1,56 @@
-﻿using SQLite;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using GestaoSorveteria.Domain.Comandas;
+using SQLite;
+using static SorveteriaMaui.Model.Conversoes;
 
-namespace SorveteriaMaui.Model
+namespace SorveteriaMaui.Model;
+
+/// <summary>Linha da tabela local de pagamentos. Espelha o <c>Pagamento</c> do Domain (RN-PG-03).</summary>
+[Table("pagamentos")]
+public class Pagamento
 {
-    [Table("Pagamento")]
-    public class Pagamento
+    private DateTime _pagoEm;
+
+    [PrimaryKey, Column("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Indexed, Column("comanda_id")]
+    public Guid ComandaId { get; set; }
+
+    [Column("forma")]
+    public FormaPagamento Forma { get; set; }
+
+    [Column("valor_centavos")]
+    public long ValorCentavos { get; set; }
+
+    [Column("valor_recebido_centavos")]
+    public long ValorRecebidoCentavos { get; set; }
+
+    [Column("troco_centavos")]
+    public long TrocoCentavos { get; set; }
+
+    [Column("pago_em")]
+    public DateTime PagoEm { get => _pagoEm; set => _pagoEm = ComoUtc(value); }
+
+    /// <summary>Quanto abate da comanda.</summary>
+    [Ignore]
+    public decimal Valor
     {
-        [PrimaryKey]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Indexed(Name = "idx_pagamento_comanda")]
-        public string ComandaId { get; set; }
-
-        public int Tipo { get; set; } // 0 = Dinheiro, 1 = Cartão, 2 = Pix
-
-        public double Valor { get; set; }
-
-        public DateTime DataPagamento { get; set; }
+        get => ParaReais(ValorCentavos);
+        set => ValorCentavos = ParaCentavos(value);
     }
 
-    [Table("LogSincronizacao")]
-    public class LogSincronizacao
+    /// <summary>Quanto o cliente entregou (só difere de <see cref="Valor"/> em dinheiro).</summary>
+    [Ignore]
+    public decimal ValorRecebido
     {
-        [PrimaryKey]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        get => ParaReais(ValorRecebidoCentavos);
+        set => ValorRecebidoCentavos = ParaCentavos(value);
+    }
 
-        public DateTime DataExecucao { get; set; }
-
-        public int Sucesso { get; set; }
-
-        public string Mensagem { get; set; }
+    [Ignore]
+    public decimal Troco
+    {
+        get => ParaReais(TrocoCentavos);
+        set => TrocoCentavos = ParaCentavos(value);
     }
 }
