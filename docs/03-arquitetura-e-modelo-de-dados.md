@@ -250,8 +250,8 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
 | GET | `/api/relatorios/dia?data=` | Dashboard | `ResumoDiaDto` |
-| GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) | `PaginaDto<ComandaResumoDto>` |
-| GET | `/api/comandas/{id}` | Vendas (detalhe) | `ComandaDetalheDto` |
+| GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
+| GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09, já previsto) | `ComandaDetalheDto` |
 | GET | `/api/caixas?de=&ate=` | Caixas (histórico) — **pronto** (sem datas: 30 dias; máx. 93; hoje faz 1 consulta por caixa — agregar no repositório se pesar) | `IReadOnlyList<CaixaResumoDto>` |
 | GET | `/api/caixas/atual` | Dashboard (caixa aberto) — **pronto** | `CaixaResumoDto` ou 204 sem caixa aberto |

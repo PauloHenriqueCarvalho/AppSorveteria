@@ -44,6 +44,39 @@ internal sealed class ComandaRepository : IComandaRepository
             .OrderBy(c => c.FechadaEm)
             .ToListAsync(cancellationToken);
 
+    public async Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
+        DateTime deUtc,
+        DateTime ateUtc,
+        StatusComanda? status,
+        int pular,
+        int quantidade,
+        CancellationToken cancellationToken = default)
+    {
+        // Data da venda: COALESCE(fechada_em, cancelada_em, criada_em).
+        IQueryable<Comanda> query = _db.Comandas
+            .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc);
+
+        if (status is { } filtro)
+        {
+            query = query.Where(c => c.Status == filtro);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        // Só leitura: sem rastreamento e sem itens (a lista usa só os pagamentos).
+        // Id no fim desempata a ordem — com split query cada consulta repete ORDER BY + OFFSET.
+        var itens = await query
+            .AsNoTracking()
+            .Include(c => c.Pagamentos)
+            .OrderByDescending(c => c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm)
+            .ThenByDescending(c => c.Numero)
+            .ThenByDescending(c => c.Id)
+            .Skip(pular)
+            .Take(quantidade)
+            .ToListAsync(cancellationToken);
+
+        return (itens, total);
+    }
+
     /// <summary>
     /// RN-CM-02: próximo número sequencial dentro do caixa.
     /// Dois celulares abrindo comanda no mesmo instante podem receber o mesmo número: o índice único
