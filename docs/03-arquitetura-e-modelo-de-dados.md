@@ -239,6 +239,63 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 
 Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainException`), 401/403 acesso, 404 não encontrado, 409 conflito (violação de unicidade), 429 rate limit. No sync em lote, rejeição de uma comanda **não** derruba o lote: vem no resultado daquela comanda.
 
+### 6.1 Endpoints do painel — proposta (Sprint 3, a validar pelo Paulo)
+
+O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado × contado e somas por forma de pagamento vêm prontos da API, calculados com o Domain. "Hoje/de/até" são **datas do dia comercial** (`yyyy-MM-dd`, America/Sao_Paulo — `DiaComercial`); a API converte para o intervalo UTC. Todos `[Authorize(Roles = "Admin")]`.
+
+| Método | Rota | Tela | Resposta |
+|---|---|---|---|
+| GET | `/api/relatorios/dia?data=` | Dashboard | `ResumoDiaDto` |
+| GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) | `PaginaDto<ComandaResumoDto>` |
+| GET | `/api/comandas/{id}` | Vendas (detalhe) | `ComandaDetalheDto` |
+| POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09, já previsto) | `ComandaDetalheDto` |
+| GET | `/api/caixas?de=&ate=` | Caixas (histórico) | `IReadOnlyList<CaixaResumoDto>` |
+| GET | `/api/caixas/atual` | Dashboard (caixa aberto) | `CaixaResumoDto` ou 204 sem caixa aberto |
+| GET | `/api/caixas/{id}` | Caixas (detalhe) | `CaixaDetalheDto` |
+
+DTOs (namespace `Contracts.Relatorios`, `Contracts.Comandas`, `Contracts.Caixas`; enums como texto, dinheiro `decimal` 2 casas, datas UTC):
+
+```csharp
+// Dashboard — RN-RL-01: faturamento = comandas fechadas; estornos à parte.
+record ResumoDiaDto(
+    DateOnly Data,                              // dia comercial consultado
+    decimal TotalVendido, int QuantidadeComandas, decimal TicketMedio,   // ticket médio calculado na API (0 sem vendas)
+    IReadOnlyList<TotalPorFormaDto> PorFormaPagamento,
+    decimal TotalEstornado, int QuantidadeEstornos,
+    int QuantidadeCanceladas,
+    int VendasRecebidasAposFechamento,          // RN-CX-08: para conferência
+    CaixaResumoDto? CaixaAtual);                // caixa aberto agora (ou o último do dia)
+record TotalPorFormaDto(string Forma, decimal Total, int Quantidade);
+
+// Vendas
+record PaginaDto<T>(IReadOnlyList<T> Itens, int Pagina, int Tamanho, int TotalItens);
+record ComandaResumoDto(Guid Id, int Numero, Guid CaixaId, string Tipo, string Status, decimal Total,
+    DateTime CriadaEm, DateTime? FechadaEm, string AtendenteNome, IReadOnlyList<string> FormasPagamento,
+    bool RecebidaAposFechamentoCaixa);
+record ComandaDetalheDto(Guid Id, int Numero, Guid CaixaId, string Tipo, string Status, decimal Total,
+    string? Observacao, DateTime CriadaEm, DateTime RecebidaEm, DateTime? FechadaEm,
+    DateTime? CanceladaEm, string? MotivoCancelamento, bool RecebidaAposFechamentoCaixa, string AtendenteNome,
+    IReadOnlyList<ItemComandaDto> Itens, IReadOnlyList<PagamentoDto> Pagamentos);
+record ItemComandaDto(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal);
+record PagamentoDto(Guid Id, string Forma, decimal Valor, decimal ValorRecebido, decimal Troco);
+record EstornarComandaRequest([Required, StringLength(300, MinimumLength = 3)] string Motivo);
+
+// Caixas — RN-CX-06: esperado e diferença gravados no fechamento; aberto → null.
+record CaixaResumoDto(Guid Id, string Status, DateTime AbertoEm, string AbertoPorNome, decimal FundoTroco,
+    DateTime? FechadoEm, string? FechadoPorNome,
+    decimal TotalVendas, int QuantidadeComandas,            // todas as formas, calculado na API
+    decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca);
+record CaixaDetalheDto(CaixaResumoDto Resumo, IReadOnlyList<MovimentoCaixaDto> Movimentos,
+    IReadOnlyList<TotalPorFormaDto> PorFormaPagamento, string? Observacao);
+record MovimentoCaixaDto(Guid Id, string Tipo, decimal Valor, string Motivo, string UsuarioNome, DateTime Em);
+```
+
+Pontos a decidir antes de implementar:
+1. **Estorno × cancelamento:** RN-CM-09 diz que a comanda estornada "vira `Cancelada`", mas o relatório precisa separá-la da comanda cancelada ainda aberta (RN-CM-08). Proposta: status próprio `Estornada` ou colunas `estornada_em` / `estornada_por_usuario_id` / `motivo_estorno` (migração).
+2. **Estorno depois do caixa fechado** (RN-CX-07): o estorno entra no caixa original (só relatório) ou vira ajuste no caixa aberto? Afeta "esperado" se a venda foi em dinheiro.
+3. **Fechamento forçado pelo painel** (RN-CX-09): `POST /api/caixas/{id}/forcar-fechamento` entra no Sprint 3 ou fica para o Sprint 4?
+4. `CaixaAtual` no dashboard depende de o app já ter sincronizado o caixa aberto (`POST /api/sync/caixas` — docs/03 §8): sem sincronização recente, o painel mostra o último estado recebido e a hora dele.
+
 ## 7. Autenticação
 
 - **App e painel** usam o mesmo `POST /api/auth/login` → JWT (claims `sub`, `name`, `role`), validade 12 h, assinado com `Jwt:Key` (mín. 32 caracteres, variável de ambiente em produção). Enviado em `Authorization: Bearer`.
