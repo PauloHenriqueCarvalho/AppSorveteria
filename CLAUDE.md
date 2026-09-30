@@ -57,6 +57,8 @@ dotnet ef migrations add <Nome> -p src/GestaoSorveteria.Infrastructure -s src/Ge
 dotnet ef database update      -p src/GestaoSorveteria.Infrastructure -s src/GestaoSorveteria.Server
 ```
 
+Os testes rodam no **Microsoft Testing Platform** (`"test": { "runner": "Microsoft.Testing.Platform" }` no `global.json`), exigido pelo xUnit v3 4.x no .NET 10 — não adicione `Microsoft.NET.Test.Sdk` nem `xunit.runner.visualstudio`. Filtro: `dotnet test --project tests/GestaoSorveteria.Tests --filter-class "<Namespace.Classe>"`.
+
 O app MAUI compila só com o workload do .NET MAUI (Visual Studio no Windows). No emulador Android a API local fica em `http://10.0.2.2:5080`. O CI (GitHub Actions) compila e testa **só a API**.
 
 ## Arquitetura (regra de ouro)

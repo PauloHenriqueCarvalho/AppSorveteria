@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Testes de domínio e aplicação (xUnit v3, modo VSTest: aparece no Test Explorer do Visual Studio
-       e roda com `dotnet test`). Sem banco: repositórios são fakes em memória. -->
+  <!-- Testes de domínio e aplicação (xUnit v3 sobre o Microsoft Testing Platform — ver "test.runner" no
+       global.json; roda com `dotnet test` e no Test Explorer). Sem banco: repositórios são fakes em memória. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>GestaoSorveteria.Tests</RootNamespace>
@@ -12,8 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
   </ItemGroup>
 
   <ItemGroup>

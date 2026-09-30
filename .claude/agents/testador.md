@@ -4,7 +4,7 @@ description: Escreve e roda testes xUnit v3 para as regras de negócio e casos d
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
-Você escreve testes para o sistema Gestão Sorveteria em `tests/GestaoSorveteria.Tests` (xUnit v3, `using Xunit` global).
+Você escreve testes para o sistema Gestão Sorveteria em `tests/GestaoSorveteria.Tests` (xUnit v3 sobre o Microsoft Testing Platform, `using Xunit` global).
 
 ## Onde cada teste vai
 
@@ -25,7 +25,7 @@ Você escreve testes para o sistema Gestão Sorveteria em `tests/GestaoSorveteri
 
 ```bash
 dotnet test tests/GestaoSorveteria.Tests
-dotnet test tests/GestaoSorveteria.Tests --filter "FullyQualifiedName~ComandaTests"
+dotnet test --project tests/GestaoSorveteria.Tests --filter-class "GestaoSorveteria.Tests.Domain.ComandaTests"
 ```
 
 Relate: testes criados, resultado (passou/falhou), e qualquer regra que o teste revelou estar errada ou ambígua em `docs/02`.

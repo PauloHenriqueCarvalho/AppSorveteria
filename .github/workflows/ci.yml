@@ -24,7 +24,25 @@ jobs:
         run: dotnet build src/GestaoSorveteria.Server/GestaoSorveteria.Server.csproj -c Release
 
       - name: Testar
-        run: dotnet test tests/GestaoSorveteria.Tests/GestaoSorveteria.Tests.csproj -c Release --logger "trx;LogFileName=resultados.trx"
+        # Microsoft Testing Platform (global.json). xUnit v3 gera o TRX com --report-xunit-trx.
+        run: dotnet test --project tests/GestaoSorveteria.Tests/GestaoSorveteria.Tests.csproj -c Release --results-directory TestResults --report-xunit-trx --report-xunit-trx-filename resultados.trx
+
+      - name: Anotar testes que falharam
+        # Transforma cada teste reprovado em anotação visível na página do run (sem precisar abrir o log).
+        if: failure()
+        shell: python
+        run: |
+          import glob, xml.etree.ElementTree as ET
+          ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+          arquivos = glob.glob("**/TestResults/*.trx", recursive=True)
+          if not arquivos:
+              print("::error title=Testes::Nenhum TRX gerado - falha de compilação ou do runner; veja o log do passo Testar.")
+          for arquivo in arquivos:
+              for r in ET.parse(arquivo).getroot().iterfind(".//t:UnitTestResult", ns):
+                  if r.get("outcome") == "Failed":
+                      msg = r.find(".//t:Message", ns)
+                      texto = (msg.text or "").strip().replace("\n", " ")[:300] if msg is not None else ""
+                      print(f"::error title=Teste falhou::{r.get('testName')} - {texto}")
 
       - name: Publicar resultados dos testes
         if: always()
