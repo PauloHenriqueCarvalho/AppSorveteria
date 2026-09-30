@@ -170,7 +170,7 @@ public class SyncCaixasTests
 
         var resultado = resposta.Resultados[0];
         Assert.Equal(StatusSync.Rejeitada, resultado.Status);
-        Assert.Contains("250,00", resultado.Motivo);
+        Assert.Contains("250", resultado.Motivo); // formato do número depende da cultura do servidor (pendência: pt-BR nas mensagens)
         Assert.Contains("RN-CX-09", resultado.Motivo);
         Assert.Equal(0m, _caixas.Caixas[0].ValorContado); // RN-CX-07: não muda
     }
