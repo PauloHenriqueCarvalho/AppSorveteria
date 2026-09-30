@@ -38,3 +38,11 @@ Content-Type: application/json
   "login": "ab",
   "senha": ""
 }
+
+### Catálogo inteiro (app na primeira abertura / painel)
+GET {{host}}/api/produtos
+Authorization: Bearer {{token}}
+
+### Só o que mudou desde a última sincronização (use o geradoEmUtc da resposta anterior)
+GET {{host}}/api/produtos?desde=2026-09-30T00:00:00Z
+Authorization: Bearer {{token}}
