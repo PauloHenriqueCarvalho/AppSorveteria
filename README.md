@@ -9,6 +9,12 @@ Sistema de gestão para sorveteria, tudo num repositório só:
 | Testes | `tests/GestaoSorveteria.Tests` — xUnit v3 | 100 casos de domínio/aplicação |
 | Painel da dona | site estático (Sprint 3) | a criar |
 
+## Trabalhando com o Claude
+
+- [`CLAUDE.md`](CLAUDE.md): tudo sobre o projeto em uma página (decisões, invariantes, comandos, convenções). Leia antes de mexer.
+- `.claude/agents/`: `dev-api`, `dev-mobile`, `revisor-dominio`, `testador`.
+- `.claude/skills/`: `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
+
 ## Documentação
 
 | Documento | O que tem |
