@@ -64,7 +64,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] CORS na API com a origem do painel vinda de configuração (`Cors:PainelOrigem`)
 - [x] Login da dona pela API (JWT, perfil Admin; sai sozinho quando o token vence ou a API responde 401)
 - [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
-- [ ] Vendas por data com itens e pagamentos; estorno
+- [ ] Vendas por data com itens e pagamentos; estorno (status `Estornada` — RN-CM-09)
 - [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
 - [ ] Caixas: histórico de fechamentos com diferenças
 - [ ] Usuários: criar atendente, redefinir PIN
@@ -80,6 +80,7 @@ Detalhes em docs/07.
 - [ ] Painel no Cloudflare Pages apontando para a API
 - [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app
+- [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3)
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel
