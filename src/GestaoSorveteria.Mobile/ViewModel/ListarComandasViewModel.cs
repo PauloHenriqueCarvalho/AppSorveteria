@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
@@ -44,13 +43,16 @@ public class ListarComandasViewModel : BindableObject
 
     public async Task CarregarComandas()
     {
-        var lista = await _repositorio.ListarAbertasAsync();
-
-        MainThread.BeginInvokeOnMainThread(() =>
+        await Operacao.CarregarAsync(async () =>
         {
-            Comandas.Clear();
-            foreach (var c in lista) Comandas.Add(c);
-            TotalComandasAbertas = Comandas.Count;
+            var lista = await _repositorio.ListarAbertasAsync();
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Comandas.Clear();
+                foreach (var c in lista) Comandas.Add(c);
+                TotalComandasAbertas = Comandas.Count;
+            });
         });
     }
 
@@ -78,20 +80,18 @@ public class ListarComandasViewModel : BindableObject
         if (!confirm) return;
 
         // Total vem do banco, não do objeto da lista (B4)
-        var atual = await _repositorio.ObterLinhaAsync(comanda.Id);
-        if (atual == null) return;
+        Comanda? atual = null;
+        if (!await Operacao.CarregarAsync(async () => atual = await _repositorio.ObterLinhaAsync(comanda.Id)) || atual == null) return;
 
         var pagamento = await _paymentService.PerguntarPagamentoAsync(atual.Total);
         if (pagamento is null) return;
 
-        await Executar(async () =>
+        GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
+        if (await Executar(async () => fechada = await _comandas.FecharAsync(atual.Id, pagamento.Value))
+            && fechada is { TotalTroco: > 0 })
         {
-            var fechada = await _comandas.FecharAsync(atual.Id, pagamento.Value);
-            if (fechada.TotalTroco > 0)
-            {
-                await _paymentService.MostrarTrocoAsync(fechada.TotalTroco);
-            }
-        });
+            await _paymentService.MostrarTrocoAsync(fechada.TotalTroco); // B7: só depois de gravado
+        }
     }
 
     private async Task ExecutarVendaRapida()
@@ -115,28 +115,19 @@ public class ListarComandasViewModel : BindableObject
         if (pagamento is null) return;
 
         // RN-CM-10 / B1: abre, lança "Venda avulsa" e fecha numa gravação só
-        await Executar(async () =>
+        GestaoSorveteria.Domain.Comandas.Comanda? venda = null;
+        if (await Executar(async () => venda = await _comandas.VendaRapidaAsync(valor, pagamento.Value))
+            && venda is { TotalTroco: > 0 })
         {
-            var venda = await _comandas.VendaRapidaAsync(valor, pagamento.Value);
-            if (venda.TotalTroco > 0)
-            {
-                await _paymentService.MostrarTrocoAsync(venda.TotalTroco);
-            }
-        });
+            await _paymentService.MostrarTrocoAsync(venda.TotalTroco); // B7: só depois de gravado
+        }
     }
 
-    /// <summary>Regra recusada pelo Domain aparece para o atendente; depois recarrega a lista.</summary>
-    private async Task Executar(Func<Task> acao)
+    /// <summary>Falha aparece para o atendente (B7); depois recarrega a lista com o que está gravado.</summary>
+    private async Task<bool> Executar(Func<Task> acao)
     {
-        try
-        {
-            await acao();
-        }
-        catch (DomainException ex)
-        {
-            await Shell.Current.DisplayAlertAsync("Atenção", ex.Message, "OK");
-        }
-
+        var gravou = await Operacao.GravarAsync(acao);
         await CarregarComandas();
+        return gravou;
     }
 }

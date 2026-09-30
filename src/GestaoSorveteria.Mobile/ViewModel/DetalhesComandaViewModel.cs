@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
@@ -72,14 +71,18 @@ public class DetalhesComandaViewModel : BindableObject
     {
         if (ComandaAtual == null) return;
 
-        var atualizada = await _repositorio.ObterLinhaAsync(ComandaAtual.Id);
-        var lista = await _repositorio.ListarItensAsync(ComandaAtual.Id);
-
-        MainThread.BeginInvokeOnMainThread(() =>
+        var comandaId = ComandaAtual.Id;
+        await Operacao.CarregarAsync(async () =>
         {
-            if (atualizada != null) ComandaAtual = atualizada;
-            Itens.Clear();
-            foreach (var i in lista) Itens.Add(i);
+            var atualizada = await _repositorio.ObterLinhaAsync(comandaId);
+            var lista = await _repositorio.ListarItensAsync(comandaId);
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (atualizada != null) ComandaAtual = atualizada;
+                Itens.Clear();
+                foreach (var i in lista) Itens.Add(i);
+            });
         });
     }
 
@@ -117,35 +120,26 @@ public class DetalhesComandaViewModel : BindableObject
         var pagamento = await _paymentService.PerguntarPagamentoAsync(ComandaAtual.Total);
         if (pagamento is null) return;
 
-        var fechou = false;
-        await Executar(async () =>
+        GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
+        var fechou = await Executar(async () => fechada = await _comandas.FecharAsync(comandaId, pagamento.Value));
+
+        // B7: troco e saída da tela só depois de gravado
+        if (fechou && fechada is not null)
         {
-            var fechada = await _comandas.FecharAsync(comandaId, pagamento.Value);
-            fechou = true;
             if (fechada.TotalTroco > 0)
             {
                 await _paymentService.MostrarTrocoAsync(fechada.TotalTroco);
             }
-        });
 
-        if (fechou)
-        {
             await Shell.Current.GoToAsync(".."); // comanda fechada não fica na tela de edição
         }
     }
 
-    /// <summary>Regra recusada pelo Domain aparece para o atendente; depois recarrega o que está gravado.</summary>
-    private async Task Executar(Func<Task> acao)
+    /// <summary>Falha aparece para o atendente (B7); depois recarrega o que de fato está gravado.</summary>
+    private async Task<bool> Executar(Func<Task> acao)
     {
-        try
-        {
-            await acao();
-        }
-        catch (DomainException ex)
-        {
-            await Shell.Current.DisplayAlertAsync("Atenção", ex.Message, "OK");
-        }
-
+        var gravou = await Operacao.GravarAsync(acao);
         await CarregarItens();
+        return gravou;
     }
 }

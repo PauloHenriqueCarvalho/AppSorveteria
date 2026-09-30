@@ -25,10 +25,13 @@ namespace SorveteriaMaui.ViewModel
 
         public async Task CarregarProdutos()
         {
-            Produtos.Clear();
-            var lista = await _produtos.ListarAtivosAsync();
-            foreach (var p in lista)
-                Produtos.Add(p);
+            await Operacao.CarregarAsync(async () =>
+            {
+                var lista = await _produtos.ListarAtivosAsync();
+                Produtos.Clear();
+                foreach (var p in lista)
+                    Produtos.Add(p);
+            });
         }
 
         private async Task ItemSelected(SelectionChangedEventArgs e)

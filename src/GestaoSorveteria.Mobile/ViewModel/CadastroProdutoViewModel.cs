@@ -45,7 +45,13 @@ namespace SorveteriaMaui.ViewModel
         {
             if (string.IsNullOrEmpty(ProdutoId)) return;
 
-            var p = Guid.TryParse(ProdutoId, out var id) ? await _produtos.ObterAsync(id) : null;
+            Produto? p = null;
+            if (!Guid.TryParse(ProdutoId, out var id)
+                || !await Operacao.CarregarAsync(async () => p = await _produtos.ObterAsync(id)))
+            {
+                return;
+            }
+
             if (p != null)
             {
                 _existente = p;
@@ -77,7 +83,8 @@ namespace SorveteriaMaui.ViewModel
             produto.Categoria = Categoria;
             if (_existente != null) produto.AtualizadoEm = DateTime.UtcNow;
 
-            await _produtos.SalvarAsync(produto);
+            // B7: se não gravou, fica na tela com o que foi digitado
+            if (!await Operacao.GravarAsync(() => _produtos.SalvarAsync(produto))) return;
             await Shell.Current.GoToAsync("..");
         }
     }

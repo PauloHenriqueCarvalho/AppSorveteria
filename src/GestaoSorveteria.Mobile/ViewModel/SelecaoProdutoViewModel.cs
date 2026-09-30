@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
@@ -59,12 +58,15 @@ public class SelecaoProdutoViewModel : BindableObject
 
     async Task CarregarProdutos()
     {
-        await _produtos.PopularSeVazioAsync();
-        var lista = await _produtos.ListarAtivosAsync();
-        MainThread.BeginInvokeOnMainThread(() =>
+        await Operacao.CarregarAsync(async () =>
         {
-            Produtos.Clear();
-            foreach (var item in lista) Produtos.Add(item);
+            await _produtos.PopularSeVazioAsync();
+            var lista = await _produtos.ListarAtivosAsync();
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Produtos.Clear();
+                foreach (var item in lista) Produtos.Add(item);
+            });
         });
     }
 
@@ -109,18 +111,6 @@ public class SelecaoProdutoViewModel : BindableObject
         }
     }
 
-    /// <summary>Regra recusada pelo Domain aparece para o atendente e o fluxo para.</summary>
-    private static async Task<bool> Executar(Func<Task> acao)
-    {
-        try
-        {
-            await acao();
-            return true;
-        }
-        catch (DomainException ex)
-        {
-            await Shell.Current.DisplayAlertAsync("Atenção", ex.Message, "OK");
-            return false;
-        }
-    }
+    /// <summary>B7: falha aparece para o atendente e o fluxo para (sem "Sucesso").</summary>
+    private static Task<bool> Executar(Func<Task> acao) => Operacao.GravarAsync(acao);
 }
