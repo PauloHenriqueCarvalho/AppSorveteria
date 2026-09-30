@@ -103,6 +103,7 @@ public class SelecaoProdutoViewModel : BindableObject
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 _todos = lista;
+                var categoriaAtual = CategoriaSelecionada; // Clear() zera a seleção da tela
                 Categorias.Clear();
                 Categorias.Add(TodasCategorias);
                 foreach (var categoria in lista.Select(p => p.Categoria).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().Order())
@@ -110,6 +111,8 @@ public class SelecaoProdutoViewModel : BindableObject
                     Categorias.Add(categoria);
                 }
 
+                _categoriaSelecionada = Categorias.Contains(categoriaAtual) ? categoriaAtual : TodasCategorias;
+                OnPropertyChanged(nameof(CategoriaSelecionada));
                 AplicarFiltro();
             });
         });
