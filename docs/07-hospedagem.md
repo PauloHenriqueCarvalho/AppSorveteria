@@ -41,7 +41,7 @@
 | `ConnectionStrings__Default` | string do Neon no formato Npgsql, com `SSL Mode=Require` |
 | `Jwt__Key` | segredo aleatório com 32+ caracteres |
 | `Seed__AdminSenha` | senha inicial da dona (trocar no 1º acesso) |
-| `Cors__PainelOrigem` | URL do painel no Cloudflare Pages (Sprint 3) |
+| `Cors__PainelOrigem` | URL do painel no Cloudflare Pages, só esquema e domínio (ex.: `https://sorveteria-painel.pages.dev`). Várias origens: separar por `;`. Vazio = nenhum site chama a API pelo navegador |
 | `Database__MigrateOnStartup` | `true` **só no piloto** (um único serviço, sem réplicas); em produção paga voltar a `false` e rodar `dotnet ef database update` no deploy |
 
 O `Dockerfile` da raiz já está pronto: o Render faz o build a partir dele e informa a porta pela variável `PORT`, que o `Program.cs` já lê. Health check: `/health`.
