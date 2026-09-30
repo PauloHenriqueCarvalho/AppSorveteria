@@ -128,14 +128,31 @@ public sealed class Comanda : Entity
         {
             Guard.Contra(listaPagamentos.Count > 0 || fechadaEmUtc is not null,
                 "Comanda cancelada no celular não pode ter pagamentos nem fechamento (estorno é só pelo painel, RN-CM-09).");
+            Guard.Contra(canceladaEmUtc is { } cancelada && cancelada < criadaEmUtc,
+                "A data de cancelamento é anterior à criação da comanda.");
+        }
+        else
+        {
+            Guard.Contra(canceladaEmUtc is not null || motivoCancelamento is not null,
+                "Comanda fechada não pode ter cancelamento (estorno é só pelo painel, RN-CM-09).");
+            Guard.Contra(fechadaEmUtc is { } fechada && fechada < criadaEmUtc,
+                "A data de fechamento é anterior à criação da comanda.");
         }
 
+        // Conferências do que o app calculou vêm antes do Restaurar, para o motivo da rejeição apontar o erro certo.
         var listaItens = (itens ?? Enumerable.Empty<DadosItemRecebido>()).ToList();
         foreach (var dados in listaItens)
         {
             Guard.NaoVazio(dados.Id, "o Id do item");
             Guard.Contra(dados.ProdutoId == Guid.Empty, "Item livre deve vir sem produto (RN-CM-03).");
+            var subtotal = Moeda.Arredondar(dados.Quantidade * dados.PrecoUnitario);
+            Guard.Contra(subtotal != dados.Subtotal,
+                $"O subtotal de \"{dados.Descricao}\" enviado ({dados.Subtotal:N2}) não confere com o calculado ({subtotal:N2}) (RN-CM-05).");
         }
+
+        var total = Moeda.Arredondar(listaItens.Sum(d => d.Subtotal));
+        Guard.Contra(total != totalInformado,
+            $"O total enviado ({totalInformado:N2}) não confere com a soma dos itens ({total:N2}) (RN-CM-05).");
 
         var comanda = Restaurar(
             id,
@@ -152,16 +169,6 @@ public sealed class Comanda : Entity
             fechadaEmUtc,
             canceladaEmUtc,
             motivoCancelamento);
-
-        foreach (var dados in listaItens)
-        {
-            var item = comanda._itens.Single(i => i.Id == dados.Id);
-            Guard.Contra(item.Subtotal != dados.Subtotal,
-                $"O subtotal de \"{item.Descricao}\" enviado ({dados.Subtotal:N2}) não confere com o calculado ({item.Subtotal:N2}) (RN-CM-05).");
-        }
-
-        Guard.Contra(comanda.Total != totalInformado,
-            $"O total enviado ({totalInformado:N2}) não confere com a soma dos itens ({comanda.Total:N2}) (RN-CM-05).");
 
         comanda.RecebidaAposFechamentoCaixa = !caixa.EstaAberto;
         return comanda;

@@ -66,7 +66,8 @@ public class SincronizacaoTests
     {
         var item = new DadosItemRecebido(Guid.NewGuid(), null, "Venda avulsa", 3, 3.33m, 10m);
 
-        Assert.Throws<DomainException>(() => RemontarFechada(CaixaAberto(), 9.99m, Pix(9.99m), item));
+        var ex = Assert.Throws<DomainException>(() => RemontarFechada(CaixaAberto(), 10m, Pix(10m), item));
+        Assert.Contains("subtotal", ex.Message);
     }
 
     [Fact]
@@ -123,12 +124,44 @@ public class SincronizacaoTests
             CaixaAberto(), Guid.NewGuid(), Atendente, 1, TipoComanda.Balcao, StatusComanda.Aberta, Criada, Recebida, null, [], 0m));
     }
 
+    // Estorno é só pelo painel (RN-CM-09): o celular não manda comanda cancelada depois de paga.
     [Fact]
-    public void Remontar_CanceladaComPagamentoOuFechamento_Lanca()
+    public void Remontar_CanceladaComPagamento_Lanca()
     {
-        // Estorno é só pelo painel (RN-CM-09): o celular não manda comanda cancelada depois de paga.
-        Assert.Throws<DomainException>(() => RemontarCancelada(CaixaAberto(), pagamentos: Pix(10m)));
-        Assert.Throws<DomainException>(() => RemontarCancelada(CaixaAberto(), fechadaEm: Fechada));
+        var ex = Assert.Throws<DomainException>(() => RemontarCancelada(CaixaAberto(), pagamentos: Pix(10m)));
+        Assert.Contains("RN-CM-09", ex.Message);
+    }
+
+    [Fact]
+    public void Remontar_CanceladaComFechamento_Lanca()
+    {
+        var ex = Assert.Throws<DomainException>(() => RemontarCancelada(CaixaAberto(), fechadaEm: Fechada));
+        Assert.Contains("RN-CM-09", ex.Message);
+    }
+
+    [Fact]
+    public void Remontar_FechadaComCancelamento_Lanca()
+    {
+        var ex = Assert.Throws<DomainException>(() => Comanda.Remontar(
+            CaixaAberto(), Guid.NewGuid(), Atendente, 1, TipoComanda.Balcao, StatusComanda.Fechada, Criada, Recebida, null,
+            [Avulsa(10m)], 10m, Pix(10m), fechadaEmUtc: Fechada, canceladaEmUtc: Fechada));
+        Assert.Contains("RN-CM-09", ex.Message);
+    }
+
+    [Fact]
+    public void Remontar_FechadaAntesDaCriacao_Lanca()
+    {
+        Assert.Throws<DomainException>(() => Comanda.Remontar(
+            CaixaAberto(), Guid.NewGuid(), Atendente, 1, TipoComanda.Balcao, StatusComanda.Fechada, Criada, Recebida, null,
+            [Avulsa(10m)], 10m, Pix(10m), fechadaEmUtc: Criada.AddMinutes(-1)));
+    }
+
+    [Fact]
+    public void Remontar_CanceladaAntesDaCriacao_Lanca()
+    {
+        Assert.Throws<DomainException>(() => Comanda.Remontar(
+            CaixaAberto(), Guid.NewGuid(), Atendente, 1, TipoComanda.Balcao, StatusComanda.Cancelada, Criada, Recebida, null,
+            [], 0m, canceladaEmUtc: Criada.AddMinutes(-1)));
     }
 
     [Fact]
