@@ -75,3 +75,14 @@ internal sealed class ProdutoRepositoryFake : IProdutoRepository
         produtos.OrderBy(p => p.Categoria).ThenBy(p => p.Ordem).ThenBy(p => p.Nome).ToList();
 }
 
+/// <summary>Conta quantas vezes o caso de uso confirmou a transação.</summary>
+internal sealed class UnitOfWorkFake : IUnitOfWork
+{
+    public int Confirmacoes { get; private set; }
+
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        Confirmacoes++;
+        return Task.FromResult(1);
+    }
+}

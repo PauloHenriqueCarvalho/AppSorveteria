@@ -1,5 +1,8 @@
 using GestaoSorveteria.Application.Abstractions;
+using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Contracts.Produtos;
+using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 
 namespace GestaoSorveteria.Application.Produtos;
@@ -15,11 +18,13 @@ public sealed class ProdutoService
     public static readonly TimeSpan MargemSeguranca = TimeSpan.FromMinutes(5);
 
     private readonly IProdutoRepository _produtos;
+    private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
 
-    public ProdutoService(IProdutoRepository produtos, IClock clock)
+    public ProdutoService(IProdutoRepository produtos, IUnitOfWork uow, IClock clock)
     {
         _produtos = produtos;
+        _uow = uow;
         _clock = clock;
     }
 
@@ -37,6 +42,63 @@ public sealed class ProdutoService
             : await _produtos.ListarAlteradosDesdeAsync(ParaUtc(desdeUtc.Value) - MargemSeguranca, cancellationToken);
 
         return new CatalogoProdutosResponse(geradoEm, produtos.Select(p => p.ToDto()).ToList());
+    }
+
+    public async Task<ProdutoDto> ObterAsync(Guid id, CancellationToken cancellationToken = default) =>
+        (await CarregarAsync(id, cancellationToken)).ToDto();
+
+    /// <summary>Cadastro pelo painel (RN-PR-01: nome único sem diferenciar maiúsculas).</summary>
+    public async Task<ProdutoDto> CriarAsync(SalvarProdutoRequest request, CancellationToken cancellationToken = default)
+    {
+        await GarantirNomeLivreAsync(request.Nome, ignorarId: null, cancellationToken);
+
+        var produto = Produto.Criar(request.Nome, request.Categoria, request.Preco, request.PermiteValorLivre, request.Ordem, _clock.UtcNow);
+        await _produtos.AdicionarAsync(produto, cancellationToken);
+        await _uow.SaveChangesAsync(cancellationToken);
+
+        return produto.ToDto();
+    }
+
+    /// <summary>Edição pelo painel. Mudar o preço não mexe nas vendas passadas: o item guarda o preço praticado (RN-PR-04).</summary>
+    public async Task<ProdutoDto> AtualizarAsync(Guid id, SalvarProdutoRequest request, CancellationToken cancellationToken = default)
+    {
+        var produto = await CarregarAsync(id, cancellationToken);
+        await GarantirNomeLivreAsync(request.Nome, ignorarId: id, cancellationToken);
+
+        produto.Atualizar(request.Nome, request.Categoria, request.Preco, request.PermiteValorLivre, request.Ordem, _clock.UtcNow);
+        await _uow.SaveChangesAsync(cancellationToken);
+
+        return produto.ToDto();
+    }
+
+    public async Task<ProdutoDto> AtivarAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var produto = await CarregarAsync(id, cancellationToken);
+        produto.Ativar(_clock.UtcNow);
+        await _uow.SaveChangesAsync(cancellationToken);
+        return produto.ToDto();
+    }
+
+    /// <summary>RN-PR-03: produto nunca é apagado; desativar é a única forma de tirá-lo do app.</summary>
+    public async Task<ProdutoDto> DesativarAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var produto = await CarregarAsync(id, cancellationToken);
+        produto.Desativar(_clock.UtcNow);
+        await _uow.SaveChangesAsync(cancellationToken);
+        return produto.ToDto();
+    }
+
+    private async Task<Produto> CarregarAsync(Guid id, CancellationToken cancellationToken) =>
+        await _produtos.ObterPorIdAsync(id, cancellationToken)
+        ?? throw new EntidadeNaoEncontradaException("Produto", id);
+
+    private async Task GarantirNomeLivreAsync(string nome, Guid? ignorarId, CancellationToken cancellationToken)
+    {
+        // RN-PR-01. O índice único em nome_normalizado segura a corrida (vira 409); aqui é a mensagem amigável.
+        if (await _produtos.ExisteComNomeAsync(Produto.NormalizarNome(nome), ignorarId, cancellationToken))
+        {
+            throw new DomainException("Já existe um produto com esse nome.");
+        }
     }
 
     private static DateTime ParaUtc(DateTime data) => data.Kind switch

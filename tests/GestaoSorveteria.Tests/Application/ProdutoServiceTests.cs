@@ -1,4 +1,7 @@
+using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Application.Produtos;
+using GestaoSorveteria.Contracts.Produtos;
+using GestaoSorveteria.Domain.Common;
 using GestaoSorveteria.Domain.Produtos;
 
 namespace GestaoSorveteria.Tests.Application;
@@ -9,13 +12,17 @@ public class ProdutoServiceTests
     private static readonly DateTime Hoje = new(2026, 9, 17, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly ProdutoRepositoryFake _produtos = new();
+    private readonly UnitOfWorkFake _uow = new();
     private readonly ClockFake _clock = new();
     private readonly ProdutoService _service;
 
     public ProdutoServiceTests()
     {
-        _service = new ProdutoService(_produtos, _clock);
+        _service = new ProdutoService(_produtos, _uow, _clock);
     }
+
+    private static SalvarProdutoRequest Picole(string nome = "Picolé", decimal preco = 5m) =>
+        new(nome, "Picolés", preco, PermiteValorLivre: false, Ordem: 1);
 
     [Fact]
     public async Task Listar_SemDesde_RetornaCatalogoInteiroInclusiveInativos()
@@ -104,5 +111,142 @@ public class ProdutoServiceTests
         var catalogo = await _service.ListarAsync(null, TestContext.Current.CancellationToken);
 
         Assert.Equal(Ontem, catalogo.Produtos.Single().AtualizadoEmUtc);
+    }
+
+    // ---------- Cadastro (Admin) ----------
+
+    [Fact]
+    public async Task Criar_Valido_GravaComDataDoRelogioEConfirma()
+    {
+        var dto = await _service.CriarAsync(Picole(), TestContext.Current.CancellationToken);
+
+        var gravado = Assert.Single(_produtos.Produtos);
+        Assert.Equal(dto.Id, gravado.Id);
+        Assert.NotEqual(Guid.Empty, dto.Id);
+        Assert.Equal("Picolé", dto.Nome);
+        Assert.Equal(5m, dto.Preco);
+        Assert.True(dto.Ativo);
+        Assert.Equal(_clock.UtcNow, dto.AtualizadoEmUtc);
+        Assert.Equal(1, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Criar_NomeJaUsadoIgnorandoMaiusculasEEspacos_Lanca()
+    {
+        // RN-PR-01
+        _produtos.Produtos.Add(Produto.Criar("Picolé de Uva", "Picolés", 5m, false, 1, Ontem));
+
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
+            _service.CriarAsync(Picole("  PICOLÉ DE UVA "), TestContext.Current.CancellationToken));
+
+        Assert.Equal("Já existe um produto com esse nome.", ex.Message);
+        Assert.Single(_produtos.Produtos);
+        Assert.Equal(0, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Criar_PrecoNegativo_LancaSemGravar()
+    {
+        await Assert.ThrowsAsync<DomainException>(() =>
+            _service.CriarAsync(Picole(preco: -1m), TestContext.Current.CancellationToken));
+
+        Assert.Empty(_produtos.Produtos);
+        Assert.Equal(0, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Atualizar_Existente_AlteraEMarcaAtualizadoEm()
+    {
+        var produto = Produto.Criar("Picolé", "Picolés", 5m, false, 1, Ontem);
+        _produtos.Produtos.Add(produto);
+
+        var dto = await _service.AtualizarAsync(produto.Id, Picole(preco: 6.5m) with { Ordem = 3 }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(6.5m, dto.Preco);
+        Assert.Equal(3, dto.Ordem);
+        Assert.Equal(_clock.UtcNow, dto.AtualizadoEmUtc);
+        Assert.Equal(1, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Atualizar_MantendoOProprioNome_NaoLanca()
+    {
+        var produto = Produto.Criar("Picolé", "Picolés", 5m, false, 1, Ontem);
+        _produtos.Produtos.Add(produto);
+
+        var dto = await _service.AtualizarAsync(produto.Id, Picole(preco: 7m), TestContext.Current.CancellationToken);
+
+        Assert.Equal(7m, dto.Preco);
+    }
+
+    [Fact]
+    public async Task Atualizar_ComNomeDeOutroProduto_Lanca()
+    {
+        // RN-PR-01
+        _produtos.Produtos.Add(Produto.Criar("Casquinha", "Sorvetes", 6m, false, 1, Ontem));
+        var produto = Produto.Criar("Picolé", "Picolés", 5m, false, 1, Ontem);
+        _produtos.Produtos.Add(produto);
+
+        await Assert.ThrowsAsync<DomainException>(() =>
+            _service.AtualizarAsync(produto.Id, Picole("casquinha"), TestContext.Current.CancellationToken));
+
+        Assert.Equal(0, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Atualizar_NaoEncontrado_Lanca()
+    {
+        await Assert.ThrowsAsync<EntidadeNaoEncontradaException>(() =>
+            _service.AtualizarAsync(Guid.NewGuid(), Picole(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Desativar_Existente_ContinuaNoCatalogoComAtivoFalso()
+    {
+        // RN-PR-03: nunca apagado; desativado vem na sincronização com Ativo = false.
+        var produto = Produto.Criar("Picolé", "Picolés", 5m, false, 1, Ontem);
+        _produtos.Produtos.Add(produto);
+        _clock.UtcNow = Hoje;
+
+        var dto = await _service.DesativarAsync(produto.Id, TestContext.Current.CancellationToken);
+        var catalogo = await _service.ListarAsync(Ontem.AddHours(1), TestContext.Current.CancellationToken);
+
+        Assert.False(dto.Ativo);
+        Assert.Single(_produtos.Produtos);
+        Assert.False(Assert.Single(catalogo.Produtos).Ativo);
+        Assert.Equal(1, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Ativar_Inativo_VoltaAtivoEMarcaAtualizadoEm()
+    {
+        var produto = Produto.Criar("Picolé", "Picolés", 5m, false, 1, Ontem);
+        produto.Desativar(Ontem);
+        _produtos.Produtos.Add(produto);
+
+        var dto = await _service.AtivarAsync(produto.Id, TestContext.Current.CancellationToken);
+
+        Assert.True(dto.Ativo);
+        Assert.Equal(_clock.UtcNow, dto.AtualizadoEmUtc);
+        Assert.Equal(1, _uow.Confirmacoes);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AtivarOuDesativar_NaoEncontrado_Lanca(bool ativar)
+    {
+        var id = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<EntidadeNaoEncontradaException>(() => ativar
+            ? _service.AtivarAsync(id, TestContext.Current.CancellationToken)
+            : _service.DesativarAsync(id, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Obter_NaoEncontrado_Lanca()
+    {
+        await Assert.ThrowsAsync<EntidadeNaoEncontradaException>(() =>
+            _service.ObterAsync(Guid.NewGuid(), TestContext.Current.CancellationToken));
     }
 }
