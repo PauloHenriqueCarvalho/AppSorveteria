@@ -25,7 +25,7 @@ Fase 4 — Expansões ................. a combinar
 - [x] Migração `InitialCreate` gerada e aplicada no PostgreSQL local (7 tabelas conferidas); login e `/api/auth/me` testados com a API rodando (29/09/2026)
 - [x] Repositório único `AppSorveteria` com o MVP em `src/GestaoSorveteria.Mobile` (histórico preservado) + solução do Sprint 0 + docs — branch `develop`
 - [x] `git push -u origin develop`
-- [ ] **Você:** proteger a `main` no GitHub
+- [x] **Você:** proteger a `main` no GitHub (PR obrigatório + check "backend")
 
 **Pronto quando:** `POST /api/auth/login` devolve token no Swagger e `dotnet test` está verde.
 
