@@ -47,7 +47,7 @@ GestaoSorveteria.Contracts ◄────────────────�
 | **Infrastructure** | `AppDbContext`, configurações EF, repositórios, hash PBKDF2, relógio, seed | Application | Npgsql.EntityFrameworkCore.PostgreSQL |
 | **Server** | Controllers, JWT, Swagger, rate limit, ProblemDetails, CORS do painel, composição (DI) | Application, Infrastructure | JwtBearer, Swashbuckle, EF Design |
 | **Mobile** | App do atendente (MVP em refatoração — docs/06): telas, SQLite, sincronização | Domain, Contracts (Etapa A) | MAUI, sqlite-net-pcl |
-| **Painel** (Sprint 3) | Site estático da dona; consome a API | Contracts (se Blazor WASM) | a definir: Blazor WebAssembly ou React + Vite |
+| **Painel** (Sprint 3) | Site estático da dona; consome a API | — (tipos TypeScript espelham os DTOs de Contracts) | React + Vite + TypeScript, npm (ADR 018) |
 | **Tests** | xUnit v3: domínio e aplicação com fakes | Domain, Application | xunit.v3 |
 
 **Regra de ouro (mantida):** Domain e Application nunca referenciam Infrastructure, Server ou Mobile. Dependências apontam para dentro.

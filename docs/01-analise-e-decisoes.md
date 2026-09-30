@@ -121,6 +121,12 @@ Depois da análise do MVP (docs/06) e da conversa sobre hospedagem, estas decis�
 | 016 | **Repositório único** `AppSorveteria` no GitHub (app, API, testes, docs), trabalho em `develop`, `main` só com código testado | Desenvolver de qualquer computador com um `git clone` |
 | 017 | O sistema segue o **melhor funcionamento**, não a proposta comercial ao pé da letra | A proposta é ajustada depois ao que foi construído (docs/05) |
 
+### Decisões de 30/09/2026
+
+| ADR | Decisão | Por quê |
+|---|---|---|
+| 018 | **Painel da dona em React + Vite + TypeScript** (`src/GestaoSorveteria.Painel`, npm), publicado no **Cloudflare Pages**. Fecha a dúvida do ADR 004 revisado | Gera um site estático leve que abre rápido no celular da dona (Blazor WebAssembly baixa o runtime .NET, vários MB, na primeira visita); ecossistema grande para telas simples. Custo: os DTOs de `Contracts` são reescritos em TypeScript à mão. Por isso o painel **nunca calcula dinheiro**: só mostra o que a API devolve (R$ pt-BR, datas em America/Sao_Paulo) |
+
 ## 8. O que **não** muda
 
 - Preço fechado com a dona (R$ 1.300 em 3 fases) — decisão comercial sua; o escopo cresceu (caixa, offline, painel web), então vale formalizar o escopo por escrito (doc 05).
