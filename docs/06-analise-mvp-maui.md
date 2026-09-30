@@ -93,7 +93,7 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [ ] Cancelar comanda aberta com confirmação (B10)
 - [x] Toast em vez de `DisplayAlert` ao adicionar item; mesmo produto soma na linha (B11)
 - [ ] Busca e filtro por categoria na seleção de produto (B12)
-- [ ] Marcar Delivery + observação
+- [x] Marcar Delivery + observação
 
 ### Etapa C — Caixa, login e sincronização (3–4 dias)
 - [ ] Telas de abrir caixa (fundo de troco), sangria/suprimento, fechar caixa com conferência

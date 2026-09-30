@@ -22,6 +22,7 @@ public class ListarComandasViewModel : BindableObject
     }
 
     public ICommand NovaComandaCommand { get; }
+    public ICommand NovoDeliveryCommand { get; }
     public ICommand AdicionarProdutoCommand { get; }
     public ICommand FinalizarComandaCommand { get; }
     public ICommand VendaRapidaCommand { get; }
@@ -34,6 +35,7 @@ public class ListarComandasViewModel : BindableObject
         _paymentService = paymentService;
 
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
+        NovoDeliveryCommand = new Command(async () => await AbrirDelivery());
         AdicionarProdutoCommand = new Command<Comanda>(async (c) => await Navegar("SelecaoProdutoView", c));
         FinalizarComandaCommand = new Command<Comanda>(async (c) => await FecharComanda(c));
         VendaRapidaCommand = new Command(async () => await ExecutarVendaRapida());
@@ -72,6 +74,18 @@ public class ListarComandasViewModel : BindableObject
             // RN-CM-02 / B8: número sequencial no caixa, calculado ao gravar
             await Executar(() => _comandas.AbrirAsync(nome));
         }
+    }
+
+    /// <summary>RN-CM-11: delivery na F1 é marcação + observação (nome/endereço); sem taxa.</summary>
+    private async Task AbrirDelivery()
+    {
+        string nome = await Shell.Current.DisplayPromptAsync("Delivery", "Nome do cliente (opcional):", "Próximo", "Cancelar");
+        if (nome == null) return;
+
+        string observacao = await Shell.Current.DisplayPromptAsync("Delivery", "Endereço / observação:", "Abrir", "Cancelar", maxLength: 300);
+        if (observacao == null) return;
+
+        await Executar(() => _comandas.AbrirAsync(nome, GestaoSorveteria.Domain.Comandas.TipoComanda.Delivery, observacao));
     }
 
     private async Task FecharComanda(Comanda comanda)
