@@ -62,6 +62,23 @@ public class CaixaConsultaServiceTests
     }
 
     [Fact]
+    public async Task ObterAtual_ComVendaEstornada_EsperadoContaODinheiroEFaturamentoNao()
+    {
+        // RN-CM-09: o estorno não mexe no caixa (a devolução é sangria); RN-RL-01: estornada fica fora do faturamento.
+        var caixa = NovoCaixa(fundo: 100m);
+        var venda = VendaFechada(caixa, 1, new DadosPagamento(FormaPagamento.Dinheiro, 30m, 30m));
+        venda.Estornar("cliente devolveu", _usuarios.Usuarios[0].Id, Abertura.AddHours(1));
+
+        var atual = await _service.ObterAtualAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(atual);
+        Assert.Equal(30m, atual.TotalVendasDinheiro);
+        Assert.Equal(130m, atual.ValorEsperado);
+        Assert.Equal(0m, atual.TotalVendas);
+        Assert.Equal(0, atual.QuantidadeComandas);
+    }
+
+    [Fact]
     public async Task ObterAtual_SemCaixaAberto_RetornaNull()
     {
         var caixa = NovoCaixa();

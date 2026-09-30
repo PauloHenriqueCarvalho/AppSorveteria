@@ -322,28 +322,49 @@ public class ComandaTests
         Assert.Single(comanda.Itens); // nada é apagado (RN-TD-03)
     }
 
-    [Fact]
-    public void Estornar_Fechada_ComMotivo_ViraCancelada()
+    private static Comanda ComandaFechada(FormaPagamento forma = FormaPagamento.Pix)
     {
         var comanda = Cenario.ComandaAberta();
         comanda.AdicionarProduto(Cenario.Picole(5m), 1);
-        comanda.Fechar([new DadosPagamento(FormaPagamento.Pix, 5m)], Cenario.Agora);
+        comanda.Fechar([new DadosPagamento(forma, 5m)], Cenario.Agora);
+        return comanda;
+    }
 
-        comanda.Estornar("cobrado em duplicidade", Cenario.Agora.AddMinutes(5));
+    [Fact]
+    public void Estornar_Fechada_ComMotivo_ViraEstornadaEGuardaQuemQuandoEPorque()
+    {
+        var comanda = ComandaFechada();
 
-        Assert.Equal(StatusComanda.Cancelada, comanda.Status);
-        Assert.Equal("cobrado em duplicidade", comanda.MotivoCancelamento);
-        Assert.Single(comanda.Pagamentos);
+        comanda.Estornar("cobrado em duplicidade", Cenario.Dona, Cenario.Agora.AddMinutes(5));
+
+        // RN-CM-09: status próprio, diferente da Cancelada (RN-CM-08).
+        Assert.Equal(StatusComanda.Estornada, comanda.Status);
+        Assert.Equal("cobrado em duplicidade", comanda.MotivoEstorno);
+        Assert.Equal(Cenario.Dona, comanda.EstornadaPorUsuarioId);
+        Assert.Equal(Cenario.Agora.AddMinutes(5), comanda.EstornadaEm);
+        Assert.Null(comanda.CanceladaEm);
+        Assert.Null(comanda.MotivoCancelamento);
+        Assert.Single(comanda.Pagamentos); // nada é apagado (RN-TD-03)
+        Assert.Equal(5m, comanda.Total);
+        Assert.False(comanda.EstaFechada);
+    }
+
+    [Fact]
+    public void Estornar_Dinheiro_ContinuaEntrandoNoCaixa()
+    {
+        var comanda = ComandaFechada(FormaPagamento.Dinheiro);
+
+        comanda.Estornar("cliente devolveu", Cenario.Dona, Cenario.Agora.AddMinutes(5));
+
+        // O estorno não mexe no caixa: a devolução é uma sangria no caixa aberto (RN-CM-09).
+        Assert.True(comanda.EntraNoCaixa);
+        Assert.Equal(5m, comanda.TotalEmDinheiro);
     }
 
     [Fact]
     public void Estornar_SemMotivo_Lanca()
     {
-        var comanda = Cenario.ComandaAberta();
-        comanda.AdicionarProduto(Cenario.Picole(5m), 1);
-        comanda.Fechar([new DadosPagamento(FormaPagamento.Pix, 5m)], Cenario.Agora);
-
-        Assert.Throws<DomainException>(() => comanda.Estornar(" ", Cenario.Agora));
+        Assert.Throws<DomainException>(() => ComandaFechada().Estornar(" ", Cenario.Dona, Cenario.Agora));
     }
 
     [Fact]
@@ -351,7 +372,43 @@ public class ComandaTests
     {
         var comanda = Cenario.ComandaAberta();
 
-        Assert.Throws<DomainException>(() => comanda.Estornar("motivo", Cenario.Agora));
+        Assert.Throws<DomainException>(() => comanda.Estornar("motivo", Cenario.Dona, Cenario.Agora));
+    }
+
+    [Fact]
+    public void Estornar_Cancelada_Lanca()
+    {
+        var comanda = Cenario.ComandaAberta();
+        comanda.Cancelar(null, Cenario.Agora);
+
+        Assert.Throws<DomainException>(() => comanda.Estornar("motivo", Cenario.Dona, Cenario.Agora));
+        Assert.False(comanda.EntraNoCaixa);
+    }
+
+    [Fact]
+    public void Estornar_DuasVezes_Lanca()
+    {
+        var comanda = ComandaFechada();
+        comanda.Estornar("primeiro", Cenario.Dona, Cenario.Agora.AddMinutes(5));
+
+        var ex = Assert.Throws<DomainException>(() => comanda.Estornar("segundo", Cenario.Dona, Cenario.Agora.AddMinutes(6)));
+        Assert.Contains("já foi estornada", ex.Message);
+        Assert.Equal("primeiro", comanda.MotivoEstorno);
+    }
+
+    [Fact]
+    public void Estornar_AntesDoFechamento_Lanca()
+    {
+        Assert.Throws<DomainException>(() => ComandaFechada().Estornar("motivo", Cenario.Dona, Cenario.Agora.AddMinutes(-1)));
+    }
+
+    [Fact]
+    public void Restaurar_Estornada_Lanca()
+    {
+        // O app nunca estorna: estorno é só pelo painel (RN-CM-09).
+        Assert.Throws<DomainException>(() => Comanda.Restaurar(
+            Guid.NewGuid(), Guid.NewGuid(), Cenario.Atendente, 1, TipoComanda.Balcao, StatusComanda.Estornada,
+            Cenario.Agora, Cenario.Agora, null, []));
     }
 
     [Fact]

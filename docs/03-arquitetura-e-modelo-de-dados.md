@@ -178,7 +178,7 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | caixa_id | uuid FK caixas | |
 | usuario_id | uuid FK usuarios | quem abriu |
 | tipo | varchar(20) | `Balcao` / `Delivery` |
-| status | varchar(20) | `Aberta` / `Fechada` / `Cancelada` |
+| status | varchar(20) | `Aberta` / `Fechada` / `Cancelada` / `Estornada` (RN-CM-09) |
 | observacao | varchar(300) null | |
 | total | numeric(12,2) | Σ itens (recalculado a cada alteração) |
 | criada_em | timestamptz | hora do dispositivo |
@@ -187,6 +187,10 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | cancelada_em | timestamptz null | |
 | motivo_cancelamento | varchar(300) null | |
 | recebida_apos_fechamento_caixa | boolean | RN-CX-08 |
+| estornada_em | timestamptz null | RN-CM-09 |
+| estornada_por_usuario_id | uuid FK usuarios, null | RN-CM-09: quem estornou (Admin) |
+| motivo_estorno | varchar(300) null | RN-CM-09 |
+| xmin (sistema) | xid | token de concorrência: dois estornos simultâneos → 409 |
 
 ### `itens_comanda`
 | coluna | tipo | obs |

@@ -31,7 +31,10 @@ public interface IComandaRepository
     /// <summary>RN-CX-05.</summary>
     Task<bool> ExisteAbertaNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
 
-    /// <summary>RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das comandas fechadas do caixa.</summary>
+    /// <summary>
+    /// RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das vendas do caixa — fechadas e também as estornadas
+    /// depois, porque o estorno não mexe no caixa (RN-CM-09; a devolução é uma sangria).
+    /// </summary>
     Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
 
     /// <summary>RN-CM-02: número já usado no caixa (sincronização: vira rejeição, não 409).</summary>

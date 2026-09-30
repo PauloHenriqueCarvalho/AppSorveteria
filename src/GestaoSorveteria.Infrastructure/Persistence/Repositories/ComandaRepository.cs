@@ -100,7 +100,7 @@ internal sealed class ComandaRepository : IComandaRepository
             from pagamento in _db.Pagamentos
             join comanda in _db.Comandas on pagamento.ComandaId equals comanda.Id
             where comanda.CaixaId == caixaId
-                  && comanda.Status == StatusComanda.Fechada
+                  && (comanda.Status == StatusComanda.Fechada || comanda.Status == StatusComanda.Estornada) // RN-CM-09
                   && pagamento.Forma == FormaPagamento.Dinheiro
             select pagamento.Valor;
 

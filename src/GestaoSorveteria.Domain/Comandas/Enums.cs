@@ -4,7 +4,12 @@ public enum StatusComanda
 {
     Aberta = 1,
     Fechada = 2,
+
+    /// <summary>RN-CM-08: comanda aberta cancelada pelo atendente.</summary>
     Cancelada = 3,
+
+    /// <summary>RN-CM-09: comanda fechada estornada pela dona no painel. Não mexe em caixa nenhum.</summary>
+    Estornada = 4,
 }
 
 /// <summary>RN-CM-02/11: na Fase 1, Delivery é só marcação + observação.</summary>

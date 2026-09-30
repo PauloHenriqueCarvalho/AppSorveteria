@@ -20,6 +20,7 @@ public class SyncComandasTests
     private readonly ClockFake _clock = new() { UtcNow = Abertura.AddHours(3) };
     private readonly SyncService _service;
     private readonly Guid _atendente;
+    private readonly Guid _dona;
     private readonly Produto _picole;
     private readonly Guid _caixaId = Guid.NewGuid();
     private int _numero;
@@ -30,6 +31,7 @@ public class SyncComandasTests
         var dona = Usuario.Criar("Dona Maria", "maria", "hash", PerfilUsuario.Admin, Abertura);
         _usuarios.Usuarios.AddRange([atendente, dona]);
         _atendente = atendente.Id;
+        _dona = dona.Id;
         _picole = Produto.Criar("Picolé de morango", "Picolés", 5m, false, 1, Abertura);
         _produtos.Produtos.Add(_picole);
         _service = new SyncService(_caixas, _comandas, _usuarios, _produtos, _uow, _clock);
@@ -207,12 +209,12 @@ public class SyncComandasTests
         await AbrirCaixa();
         var dto = Avulsa(10m);
         await Enviar(dto);
-        _comandas.Comandas[0].Estornar("cliente devolveu", Abertura.AddHours(2)); // RN-CM-09 pelo painel
+        _comandas.Comandas[0].Estornar("cliente devolveu", _dona, Abertura.AddHours(2)); // RN-CM-09 pelo painel
 
         var resposta = await Enviar(dto);
 
         Assert.Equal(StatusSync.JaRecebida, resposta.Resultados[0].Status);
-        Assert.Equal(StatusComanda.Cancelada, _comandas.Comandas[0].Status);
+        Assert.Equal(StatusComanda.Estornada, _comandas.Comandas[0].Status);
     }
 
     [Fact]
@@ -358,5 +360,26 @@ public class SyncComandasTests
         var resposta = await Enviar(Avulsa(10m) with { Tipo = null }, Avulsa(10m) with { Status = null });
 
         Assert.All(resposta.Resultados, r => Assert.Equal(StatusSync.Rejeitada, r.Status));
+    }
+
+    [Fact]
+    public async Task FechamentoDoCaixa_ComVendaEstornadaAntes_EsperadoContaAVenda()
+    {
+        // RN-CM-09: o estorno não mexe no caixa. O dinheiro entrou na gaveta; a devolução é uma sangria.
+        await AbrirCaixa(fundo: 100m);
+        var venda = Avulsa(30m, "Dinheiro");
+        await Enviar(venda);
+        _comandas.Comandas[0].Estornar("cliente devolveu", _dona, Abertura.AddHours(2));
+        var devolucao = new MovimentoCaixaSyncDto(Guid.NewGuid(), "Sangria", 30m, "devolução do estorno", _atendente, Abertura.AddHours(2));
+        var fechamento = new CaixaSyncDto(_caixaId, _atendente, Abertura, 100m, [devolucao],
+            new FechamentoCaixaSyncDto(_atendente, Abertura.AddHours(8), ValorContado: 100m, TotalVendasDinheiro: 30m, ValorEsperado: 100m, Diferenca: 0m));
+
+        await _service.ReceberCaixasAsync(new SyncCaixasRequest([fechamento]), Ct);
+
+        var caixa = _caixas.Caixas[0];
+        Assert.Equal(30m, caixa.TotalVendasDinheiro);
+        Assert.Equal(100m, caixa.ValorEsperado); // 100 + 30 − 30
+        Assert.Equal(0m, caixa.Diferenca);
+        Assert.False(caixa.DivergenciaSincronizacao);
     }
 }

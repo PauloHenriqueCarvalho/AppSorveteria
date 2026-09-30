@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
+using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Caixas;
 using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Produtos;
@@ -50,6 +51,7 @@ builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection(SeedOpt
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProdutoService>();
 builder.Services.AddScoped<SyncService>();
+builder.Services.AddScoped<EstornoService>();
 builder.Services.AddScoped<CaixaConsultaService>();
 builder.Services.AddScoped<ComandaConsultaService>();
 

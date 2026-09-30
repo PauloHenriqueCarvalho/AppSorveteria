@@ -110,7 +110,8 @@ public sealed class CaixaConsultaService
         if (caixa.EstaAberto)
         {
             // Parcial: mesma conta do fechamento (RN-CX-06), com as vendas já recebidas do app.
-            vendasDinheiro = Moeda.Arredondar(fechadas.Sum(c => c.TotalEmDinheiro));
+            // Estornada conta: o estorno não mexe no caixa (RN-CM-09); a devolução é uma sangria.
+            vendasDinheiro = Moeda.Arredondar(comandas.Where(c => c.EntraNoCaixa).Sum(c => c.TotalEmDinheiro));
             esperado = caixa.CalcularEsperado(vendasDinheiro.Value);
         }
         else
@@ -135,8 +136,9 @@ public sealed class CaixaConsultaService
             caixa.ValorContado,
             caixa.Diferenca,
             caixa.DivergenciaSincronizacao,
-            comandas.Count(c => c.RecebidaAposFechamentoCaixa),
-            Moeda.Arredondar(fechadas.Where(c => c.RecebidaAposFechamentoCaixa).Sum(c => c.TotalEmDinheiro)));
+            // RN-CX-08: vendas (fechadas ou estornadas depois, RN-CM-09) que chegaram após o fechamento, para conferência.
+            comandas.Count(c => c.RecebidaAposFechamentoCaixa && c.EntraNoCaixa),
+            Moeda.Arredondar(comandas.Where(c => c.RecebidaAposFechamentoCaixa && c.EntraNoCaixa).Sum(c => c.TotalEmDinheiro)));
     }
 
     private async Task<IReadOnlyDictionary<Guid, string>> NomesAsync(CancellationToken cancellationToken) =>

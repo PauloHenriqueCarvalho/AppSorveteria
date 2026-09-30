@@ -26,9 +26,17 @@ internal sealed class ComandaConfiguration : IEntityTypeConfiguration<Comanda>
         builder.Property(c => c.CanceladaEm);
         builder.Property(c => c.MotivoCancelamento).HasMaxLength(300);
         builder.Property(c => c.RecebidaAposFechamentoCaixa).IsRequired();
+        builder.Property(c => c.EstornadaEm);
+        builder.Property(c => c.EstornadaPorUsuarioId);
+        builder.Property(c => c.MotivoEstorno).HasMaxLength(300);
+
+        // Dois estornos (ou estorno + outra alteração) ao mesmo tempo: o segundo UPDATE falha com 409 em vez de
+        // sobrescrever quem estornou e o motivo (RN-CM-09). xmin é coluna de sistema do PostgreSQL.
+        builder.Property<uint>("Versao").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
 
         builder.Ignore(c => c.EstaAberta);
         builder.Ignore(c => c.EstaFechada);
+        builder.Ignore(c => c.EntraNoCaixa);
         builder.Ignore(c => c.TotalEmDinheiro);
         builder.Ignore(c => c.TotalTroco);
 
@@ -45,6 +53,11 @@ internal sealed class ComandaConfiguration : IEntityTypeConfiguration<Comanda>
         builder.HasOne<Usuario>()
             .WithMany()
             .HasForeignKey(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Usuario>()
+            .WithMany()
+            .HasForeignKey(c => c.EstornadaPorUsuarioId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(c => c.Itens)

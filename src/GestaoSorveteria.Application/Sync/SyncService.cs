@@ -166,12 +166,12 @@ public sealed class SyncService
 
     /// <summary>
     /// Reenvio da mesma comanda: nada muda no servidor. Mesmo status e total → <c>ja_recebida</c>; a dona pode ter
-    /// estornado depois (Fechada → Cancelada, RN-CM-09), o que também é <c>ja_recebida</c>. Qualquer outra diferença
+    /// estornado depois (Fechada → Estornada, RN-CM-09), o que também é <c>ja_recebida</c>. Qualquer outra diferença
     /// é erro do app → <c>rejeitada</c>, para aparecer em vez de sumir.
     /// </summary>
     private static string JaRecebida(Comanda existente, ComandaSyncDto dto, StatusComanda status)
     {
-        var estornadaDepois = existente.Status == StatusComanda.Cancelada && existente.FechadaEm is not null && status == StatusComanda.Fechada;
+        var estornadaDepois = existente.Status == StatusComanda.Estornada && status == StatusComanda.Fechada;
         Guard(existente.CaixaId != dto.CaixaId || existente.Numero != dto.Numero || existente.Total != dto.Total
               || (existente.Status != status && !estornadaDepois),
             $"Esta comanda já foi recebida com outro caixa, número, status ou total (nº {existente.Numero}, {existente.Status}, " +

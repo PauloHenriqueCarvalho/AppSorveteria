@@ -155,7 +155,7 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
         Task.FromResult(Comandas.Any(c => c.CaixaId == caixaId && c.EstaAberta));
 
     public Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Comandas.Where(c => c.CaixaId == caixaId && c.EstaFechada).Sum(c => c.TotalEmDinheiro));
+        Task.FromResult(Comandas.Where(c => c.CaixaId == caixaId && c.EntraNoCaixa).Sum(c => c.TotalEmDinheiro));
 
     public Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default) =>
         Task.FromResult(Comandas.Any(c => c.CaixaId == caixaId && c.Numero == numero));
