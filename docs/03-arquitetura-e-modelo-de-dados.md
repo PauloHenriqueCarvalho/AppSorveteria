@@ -243,7 +243,7 @@ Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainExceptio
 
 - **App e painel** usam o mesmo `POST /api/auth/login` → JWT (claims `sub`, `name`, `role`), validade 12 h, assinado com `Jwt:Key` (mín. 32 caracteres, variável de ambiente em produção). Enviado em `Authorization: Bearer`.
 - **App:** o primeiro login com PIN exige internet; o token fica no `SecureStorage`. Se expirar sem internet, o app continua vendendo e pede o PIN de novo quando a conexão voltar (as vendas pendentes esperam na fila).
-- **Painel:** token guardado na sessão do navegador; perfil Admin obrigatório.
+- **Painel:** token guardado no navegador (`localStorage`) até o `ExpiraEmUtc` do login; vencido ou recusado pela API (401) → volta para o login. Perfil Admin obrigatório (conferido no login e no `GET /api/auth/me` ao abrir). Enquanto a API acorda, o painel mostra "Conectando ao servidor…" e tenta de novo (até 5 tentativas de 70 s).
 - **CORS:** a API libera apenas a origem do painel (`Cors:PainelOrigem`).
 - Autorização por perfil: `[Authorize(Roles = "Admin")]` nos endpoints de gestão.
 
