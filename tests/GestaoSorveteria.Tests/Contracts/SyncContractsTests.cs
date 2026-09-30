@@ -77,6 +77,26 @@ public class SyncContractsTests
         Assert.DoesNotContain(tipo.GetProperties(), p => p.GetCustomAttributes<ValidationAttribute>().Any());
     }
 
+    // Com Nullable ligado, o [ApiController] trata referência não anulável como [Required] implícito:
+    // um campo nulo derrubaria o lote inteiro com 400 e travaria a fila do celular.
+    [Theory]
+    [InlineData(typeof(CaixaSyncDto))]
+    [InlineData(typeof(MovimentoCaixaSyncDto))]
+    [InlineData(typeof(FechamentoCaixaSyncDto))]
+    [InlineData(typeof(ComandaSyncDto))]
+    [InlineData(typeof(ItemComandaSyncDto))]
+    [InlineData(typeof(PagamentoSyncDto))]
+    public void DtoDeItemDoLote_ReferenciasSaoAnulaveis(Type tipo)
+    {
+        var nulabilidade = new NullabilityInfoContext();
+        var obrigatorias = tipo.GetProperties()
+            .Where(p => !p.PropertyType.IsValueType && p.Name != "EqualityContract")
+            .Where(p => nulabilidade.Create(p).ReadState != NullabilityState.Nullable)
+            .Select(p => p.Name);
+
+        Assert.Empty(obrigatorias);
+    }
+
     // Os textos documentados nos Contracts precisam existir no Domain (o app e a API convertem por nome).
     [Theory]
     [InlineData(typeof(FormaPagamento), new[] { "Dinheiro", "Pix", "CartaoDebito", "CartaoCredito" })]

@@ -74,6 +74,14 @@ internal sealed class ComandaRepository : IComandaRepository
         return await valores.SumAsync(cancellationToken);
     }
 
+    public Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default) =>
+        _db.Comandas.AnyAsync(c => c.CaixaId == caixaId && c.Numero == numero, cancellationToken);
+
+    public async Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
+        ids.Count > 0
+        && (await _db.ItensComanda.AnyAsync(i => ids.Contains(i.Id), cancellationToken)
+            || await _db.Pagamentos.AnyAsync(p => ids.Contains(p.Id), cancellationToken));
+
     public async Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default) =>
         await _db.Comandas.AddAsync(comanda, cancellationToken);
 }

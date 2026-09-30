@@ -1,6 +1,7 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Caixas;
+using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
 using GestaoSorveteria.Domain.Repositories;
 
@@ -17,48 +18,165 @@ public sealed class SyncService
     private readonly ICaixaRepository _caixas;
     private readonly IComandaRepository _comandas;
     private readonly IUsuarioRepository _usuarios;
+    private readonly IProdutoRepository _produtos;
     private readonly IUnitOfWork _uow;
+    private readonly IClock _clock;
 
-    public SyncService(ICaixaRepository caixas, IComandaRepository comandas, IUsuarioRepository usuarios, IUnitOfWork uow)
+    public SyncService(
+        ICaixaRepository caixas,
+        IComandaRepository comandas,
+        IUsuarioRepository usuarios,
+        IProdutoRepository produtos,
+        IUnitOfWork uow,
+        IClock clock)
     {
         _caixas = caixas;
         _comandas = comandas;
         _usuarios = usuarios;
+        _produtos = produtos;
         _uow = uow;
+        _clock = clock;
     }
 
     /// <summary>POST /api/sync/caixas. Semântica de reenvio em <see cref="CaixaSyncDto"/>.</summary>
-    public async Task<SyncResponse> ReceberCaixasAsync(SyncCaixasRequest request, CancellationToken cancellationToken = default)
+    public Task<SyncResponse> ReceberCaixasAsync(SyncCaixasRequest request, CancellationToken cancellationToken = default)
     {
-        var resultados = new List<ResultadoSyncDto>(request.Caixas.Count);
         var usuariosConhecidos = new HashSet<Guid>();
+        return ProcessarLoteAsync(
+            request.Caixas,
+            "Caixa",
+            dto => dto.Id,
+            dto => ReceberCaixaAsync(dto, usuariosConhecidos, cancellationToken),
+            cancellationToken);
+    }
 
-        foreach (var dto in request.Caixas)
+    /// <summary>
+    /// POST /api/sync/comandas (RN-SY-06, RN-CX-08). Comanda fechada ou cancelada no celular, remontada com
+    /// <see cref="Comanda.Remontar"/>. Já existente → <c>ja_recebida</c> (inclusive se a dona estornou depois).
+    /// </summary>
+    public Task<SyncResponse> ReceberComandasAsync(SyncComandasRequest request, CancellationToken cancellationToken = default)
+    {
+        var usuariosConhecidos = new HashSet<Guid>();
+        var produtosConhecidos = new HashSet<Guid>();
+        return ProcessarLoteAsync(
+            request.Comandas,
+            "Comanda",
+            dto => dto.Id,
+            dto => ReceberComandaAsync(dto, usuariosConhecidos, produtosConhecidos, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<SyncResponse> ProcessarLoteAsync<T>(
+        IReadOnlyList<T> documentos,
+        string nome,
+        Func<T, Guid> id,
+        Func<T, Task<string>> receber,
+        CancellationToken cancellationToken)
+        where T : class
+    {
+        var resultados = new List<ResultadoSyncDto>(documentos.Count);
+
+        foreach (var dto in documentos)
         {
             if (dto is null)
             {
-                resultados.Add(new ResultadoSyncDto(Guid.Empty, StatusSync.Rejeitada, "Caixa vazio no lote."));
+                resultados.Add(new ResultadoSyncDto(Guid.Empty, StatusSync.Rejeitada, $"{nome} vazio(a) no lote."));
                 continue;
             }
 
             try
             {
-                var status = await ReceberCaixaAsync(dto, usuariosConhecidos, cancellationToken);
+                var status = await receber(dto);
                 if (status == StatusSync.Aceita)
                 {
                     await _uow.SaveChangesAsync(cancellationToken);
                 }
 
-                resultados.Add(new ResultadoSyncDto(dto.Id, status));
+                resultados.Add(new ResultadoSyncDto(id(dto), status));
             }
             catch (DomainException ex)
             {
                 _uow.DescartarAlteracoes();
-                resultados.Add(new ResultadoSyncDto(dto.Id, StatusSync.Rejeitada, ex.Message));
+                resultados.Add(new ResultadoSyncDto(id(dto), StatusSync.Rejeitada, ex.Message));
             }
         }
 
         return new SyncResponse(resultados);
+    }
+
+    private async Task<string> ReceberComandaAsync(
+        ComandaSyncDto dto,
+        HashSet<Guid> usuariosConhecidos,
+        HashSet<Guid> produtosConhecidos,
+        CancellationToken cancellationToken)
+    {
+        Guard(dto.Id == Guid.Empty, "Comanda sem Id.");
+        var status = TextoEnum.Converter<StatusComanda>(dto.Status, "Status da comanda");
+        var tipo = TextoEnum.Converter<TipoComanda>(dto.Tipo, "Tipo da comanda");
+
+        var existente = await _comandas.ObterPorIdAsync(dto.Id, cancellationToken);
+        if (existente is not null)
+        {
+            return JaRecebida(existente, dto, status);
+        }
+
+        var itens = dto.Itens ?? [];
+        var pagamentos = dto.Pagamentos ?? [];
+        Guard(itens.Any(i => i is null) || pagamentos.Any(p => p is null), "Item ou pagamento vazio na comanda.");
+        Guard(pagamentos.Any(p => p.Id == Guid.Empty), "Pagamento sem Id.");
+
+        var caixa = await _caixas.ObterPorIdAsync(dto.CaixaId, cancellationToken);
+        Guard(caixa is null, "O caixa desta comanda ainda não chegou ao servidor. Envie o caixa antes das comandas (RN-SY-03).");
+        await ExigirUsuarioAsync(dto.UsuarioId, usuariosConhecidos, cancellationToken);
+
+        // Índices únicos e chaves estrangeiras conferidos aqui para virar rejeição com motivo,
+        // em vez de 409/500 no lote inteiro, que travaria a fila do celular para sempre.
+        Guard(await _comandas.ExisteNumeroNoCaixaAsync(dto.CaixaId, dto.Numero, cancellationToken),
+            $"Já existe outra comanda nº {dto.Numero} neste caixa (RN-CM-02).");
+        var filhos = itens.Select(i => i.Id).Concat(pagamentos.Select(p => p.Id)).ToList();
+        Guard(filhos.Distinct().Count() != filhos.Count, "A comanda tem itens ou pagamentos com Id repetido.");
+        Guard(await _comandas.ExisteItemOuPagamentoAsync(filhos, cancellationToken),
+            "Um item ou pagamento desta comanda já foi usado em outra comanda.");
+        foreach (var produtoId in itens.Select(i => i.ProdutoId).OfType<Guid>().Distinct())
+        {
+            await ExigirProdutoAsync(produtoId, produtosConhecidos, cancellationToken);
+        }
+
+        var comanda = Comanda.Remontar(
+            caixa!,
+            dto.Id,
+            dto.UsuarioId,
+            dto.Numero,
+            tipo,
+            status,
+            dto.CriadaEm,
+            _clock.UtcNow,
+            dto.Observacao,
+            itens.Select(i => new DadosItemRecebido(i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal)).ToList(),
+            dto.Total,
+            pagamentos.Select(p => new DadosPagamento(
+                TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco)).ToList(),
+            dto.FechadaEm,
+            dto.CanceladaEm,
+            dto.MotivoCancelamento);
+
+        await _comandas.AdicionarAsync(comanda, cancellationToken);
+        return StatusSync.Aceita;
+    }
+
+    /// <summary>
+    /// Reenvio da mesma comanda: nada muda no servidor. Mesmo status e total → <c>ja_recebida</c>; a dona pode ter
+    /// estornado depois (Fechada → Cancelada, RN-CM-09), o que também é <c>ja_recebida</c>. Qualquer outra diferença
+    /// é erro do app → <c>rejeitada</c>, para aparecer em vez de sumir.
+    /// </summary>
+    private static string JaRecebida(Comanda existente, ComandaSyncDto dto, StatusComanda status)
+    {
+        var estornadaDepois = existente.Status == StatusComanda.Cancelada && existente.FechadaEm is not null && status == StatusComanda.Fechada;
+        Guard(existente.CaixaId != dto.CaixaId || existente.Numero != dto.Numero || existente.Total != dto.Total
+              || (existente.Status != status && !estornadaDepois),
+            $"Esta comanda já foi recebida com outro caixa, número, status ou total (nº {existente.Numero}, {existente.Status}, " +
+            $"{existente.Total:N2}); nada foi alterado.");
+        return StatusSync.JaRecebida;
     }
 
     private async Task<string> ReceberCaixaAsync(CaixaSyncDto dto, HashSet<Guid> usuariosConhecidos, CancellationToken cancellationToken)
@@ -158,11 +276,11 @@ public sealed class SyncService
             Guard(m.Em < caixa.AbertoEm, "O movimento é anterior à abertura do caixa.");
             if (tipo == TipoMovimentoCaixa.Sangria)
             {
-                caixa.RegistrarSangria(m.Valor, m.Motivo, m.UsuarioId, m.Em, m.Id);
+                caixa.RegistrarSangria(m.Valor, m.Motivo ?? string.Empty, m.UsuarioId, m.Em, m.Id);
             }
             else
             {
-                caixa.RegistrarSuprimento(m.Valor, m.Motivo, m.UsuarioId, m.Em, m.Id);
+                caixa.RegistrarSuprimento(m.Valor, m.Motivo ?? string.Empty, m.UsuarioId, m.Em, m.Id);
             }
         }
     }
@@ -203,6 +321,18 @@ public sealed class SyncService
     /// documento com data de 7 casas decimais pareceria "diferente" do que já foi gravado.
     /// </summary>
     private static bool MesmoInstante(DateTime a, DateTime b) => Math.Abs((a - b).Ticks) < TimeSpan.TicksPerMicrosecond;
+
+    private async Task ExigirProdutoAsync(Guid produtoId, HashSet<Guid> conhecidos, CancellationToken cancellationToken)
+    {
+        if (conhecidos.Contains(produtoId))
+        {
+            return;
+        }
+
+        // RN-SY-06: produto desativado ou com outro preço vale (o item guarda o preço da venda); inexistente, não.
+        Guard(await _produtos.ObterPorIdAsync(produtoId, cancellationToken) is null, $"Produto não encontrado no servidor: {produtoId}.");
+        conhecidos.Add(produtoId);
+    }
 
     /// <summary>RN-TD-04: quem fez precisa existir (desativado vale: o histórico dele permanece, RN-US-07).</summary>
     private async Task ExigirUsuarioAsync(Guid usuarioId, HashSet<Guid> conhecidos, CancellationToken cancellationToken)

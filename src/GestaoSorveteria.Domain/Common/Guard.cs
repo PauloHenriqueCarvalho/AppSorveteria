@@ -40,6 +40,7 @@ internal static class Guard
     {
         Contra(valor < 0, $"{Capitalizar(campo)} não pode ser negativo.");
         Contra(!permiteZero && valor == 0, $"{Capitalizar(campo)} deve ser maior que zero.");
+        Contra(valor > Moeda.ValorMaximo, $"{Capitalizar(campo)} passa do máximo aceito ({Moeda.ValorMaximo:N2}). Confira o valor digitado.");
         Contra(!Moeda.TemNoMaximoDuasCasas(valor), $"{Capitalizar(campo)} deve ter no máximo 2 casas decimais.");
         return valor;
     }

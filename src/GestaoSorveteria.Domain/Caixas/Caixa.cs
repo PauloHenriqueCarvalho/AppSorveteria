@@ -119,7 +119,8 @@ public sealed class Caixa : Entity
         string? observacao = null)
     {
         Guard.Dinheiro(totalVendasDinheiroApp, "o total de vendas em dinheiro do celular", permiteZero: true);
-        Guard.Contra(!Moeda.TemNoMaximoDuasCasas(valorEsperadoApp), "O valor esperado do celular deve ter no máximo 2 casas decimais.");
+        Guard.Contra(!Moeda.TemNoMaximoDuasCasas(valorEsperadoApp) || Math.Abs(valorEsperadoApp) > Moeda.LimiteColuna,
+            "O valor esperado do celular é inválido (máximo de 2 casas decimais).");
         Fechar(valorContado, totalVendasDinheiro, usuarioId, fechadoEmUtc, observacao);
 
         if (totalVendasDinheiroApp != TotalVendasDinheiro || valorEsperadoApp != ValorEsperado)
