@@ -11,7 +11,7 @@ Sistema de gestão para uma sorveteria pequena, feito por Paulo (dev .NET) para 
 | App do atendente (balcão, Android, **funciona offline**) | `src/GestaoSorveteria.Mobile` | .NET MAUI + SQLite (`sqlite-net-pcl`) |
 | API | `src/GestaoSorveteria.Server` + `Domain`, `Contracts`, `Application`, `Infrastructure` | ASP.NET Core 10, EF Core 10, PostgreSQL (Npgsql), JWT |
 | Testes | `tests/GestaoSorveteria.Tests` | xUnit v3 |
-| Painel da dona | a criar (Sprint 3) | site estático — Blazor WebAssembly ou React + Vite (a decidir) |
+| Painel da dona (site estático, Cloudflare Pages) | `src/GestaoSorveteria.Painel` | React + Vite + TypeScript, npm (ADR 018) — nunca calcula dinheiro, só mostra o que a API devolve |
 
 Problemas que o sistema resolve: pedidos em papel, estoque "no olhômetro", não saber o que vende mais, **caixa que não bate**, reposição sem planejamento.
 
@@ -55,6 +55,12 @@ dotnet run --project src/GestaoSorveteria.Server       # Swagger: http://localho
 # Migrações (sempre com -p Infrastructure -s Server)
 dotnet ef migrations add <Nome> -p src/GestaoSorveteria.Infrastructure -s src/GestaoSorveteria.Server -o Persistence/Migrations
 dotnet ef database update      -p src/GestaoSorveteria.Infrastructure -s src/GestaoSorveteria.Server
+
+# Painel da dona (Node LTS) — rodar dentro de src/GestaoSorveteria.Painel
+npm ci                                                 # instala dependências (package-lock.json)
+npm run dev                                            # http://localhost:5173 (API em VITE_API_URL, padrão http://localhost:5080)
+npm run lint                                           # ESLint
+npm run build                                          # gera dist/ (o que vai para o Cloudflare Pages)
 ```
 
 Os testes rodam no **Microsoft Testing Platform** (`"test": { "runner": "Microsoft.Testing.Platform" }` no `global.json`), exigido pelo xUnit v3 4.x no .NET 10 — não adicione `Microsoft.NET.Test.Sdk` nem `xunit.runner.visualstudio`. Filtro: `dotnet test --project tests/GestaoSorveteria.Tests --filter-class "<Namespace.Classe>"`.

@@ -54,7 +54,7 @@ Plano detalhado em docs/06, seção 4.
 
 ### Sprint 3 — Painel da dona (site estático) (semana 3)
 
-- [ ] Decidir a tecnologia: Blazor WebAssembly (C#, reaproveita Contracts) ou React + Vite
+- [x] Decidir a tecnologia: **React + Vite + TypeScript** em `src/GestaoSorveteria.Painel` (ADR 018, docs/01)
 - [ ] Projeto do painel no repositório; publicação no Cloudflare Pages; CORS na API
 - [ ] Login da dona pela API (JWT, perfil Admin)
 - [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
