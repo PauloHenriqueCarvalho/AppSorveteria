@@ -1,90 +1,52 @@
-using FormaPagamento = GestaoSorveteria.Domain.Comandas.FormaPagamento;
+using GestaoSorveteria.Domain.Comandas;
 using SorveteriaMaui.Model;
-using System;
-using System.Threading.Tasks;
 using System.Globalization;
 
-namespace SorveteriaMaui.Services
+namespace SorveteriaMaui.Services;
+
+public class PaymentService : IPaymentService
 {
-    public class PaymentService : IPaymentService
+    private const string Dinheiro = "Dinheiro";
+    private const string Pix = "Pix";
+    private const string CartaoDebito = "Cartão débito";
+    private const string CartaoCredito = "Cartão crédito";
+
+    public async Task<DadosPagamento?> PerguntarPagamentoAsync(decimal total)
     {
-        private readonly DatabaseService _dbService;
+        var pagina = Shell.Current;
 
-        public PaymentService(DatabaseService dbService)
+        // RN-PG-01
+        var opcao = await pagina.DisplayActionSheetAsync($"Pagamento — R$ {total:F2}", "Cancelar", null, Dinheiro, Pix, CartaoDebito, CartaoCredito);
+        switch (opcao)
         {
-            _dbService = dbService;
-        }
+            case Dinheiro:
+                // pré-preenche com o total para agilizar o pagamento exato
+                var recebido = await pagina.DisplayPromptAsync("Pagamento em dinheiro", "Valor recebido:", "Confirmar", "Cancelar",
+                    keyboard: Keyboard.Telephone, initialValue: total.ToString("F2", CultureInfo.InvariantCulture));
+                if (recebido is null)
+                {
+                    return null;
+                }
 
-        // Processa o fluxo de pagamento para uma comanda: exibe opções, pede valor recebido (se necessário), registra pagamento e finaliza comanda.
-        // Retorna true se pagamento e finalização foram realizados com sucesso.
-        // B2/B3 (valor = recebido, aceita dinheiro insuficiente) serão corrigidos na Etapa B, com o pagamento pelo Domain.
-        public async Task<bool> ProcessarPagamentoAsync(Comanda comanda)
-        {
-            if (comanda == null) return false;
+                if (!Conversoes.TentarLerDinheiro(recebido, out var valorRecebido))
+                {
+                    await pagina.DisplayAlertAsync("Atenção", "Valor recebido inválido.", "OK");
+                    return null;
+                }
 
-            // Validação simples: não permitir vendas com valor zero ou negativo
-            if (comanda.Total <= 0)
-            {
-                await Application.Current.MainPage.DisplayAlert("Erro", "Não é possível processar pagamento para vendas com valor zero.", "OK");
-                return false;
-            }
-
-            // RN-PG-01
-            string opcao = await Application.Current.MainPage.DisplayActionSheet("Forma de Pagamento", "Cancelar", null, "Dinheiro", "Pix", "Cartão débito", "Cartão crédito");
-            if (string.IsNullOrEmpty(opcao) || opcao == "Cancelar") return false;
-
-            FormaPagamento forma;
-            decimal valorRecebido = comanda.Total;
-
-            switch (opcao)
-            {
-                case "Dinheiro":
-                    // pré-preencher o valor recebido com o total da comanda para agilizar pagamento exato
-                    string initial = comanda.Total.ToString("F2", CultureInfo.InvariantCulture);
-                    string recebido = await Application.Current.MainPage.DisplayPromptAsync("Pagamento", "Valor Recebido:", "Confirmar", "Cancelar", keyboard: Keyboard.Telephone, initialValue: initial);
-                    if (string.IsNullOrWhiteSpace(recebido)) return false;
-                    if (!Conversoes.TentarLerDinheiro(recebido, out var r))
-                    {
-                        await Application.Current.MainPage.DisplayAlert("Erro", "Valor recebido inválido", "OK");
-                        return false;
-                    }
-                    valorRecebido = r;
-                    forma = FormaPagamento.Dinheiro;
-                    break;
-                case "Pix":
-                    forma = FormaPagamento.Pix;
-                    break;
-                case "Cartão débito":
-                    forma = FormaPagamento.CartaoDebito;
-                    break;
-                case "Cartão crédito":
-                    forma = FormaPagamento.CartaoCredito;
-                    break;
-                default:
-                    return false;
-            }
-
-            decimal troco = valorRecebido - comanda.Total;
-            if (troco < 0) troco = 0;
-
-            if (forma == FormaPagamento.Dinheiro)
-            {
-                await Application.Current.MainPage.DisplayAlert("Troco", $"Troco a devolver: R$ {troco:F2}", "OK");
-            }
-
-            var pagamento = new Pagamento
-            {
-                ComandaId = comanda.Id,
-                Forma = forma,
-                Valor = valorRecebido,
-                ValorRecebido = valorRecebido,
-                PagoEm = DateTime.UtcNow
-            };
-
-            await _dbService.RegistrarPagamento(pagamento);
-            await _dbService.FinalizarComanda(comanda.Id);
-
-            return true;
+                // RN-PG-03 (B2/B3): Valor = total da comanda; o Domain recusa recebido menor e calcula o troco
+                return new DadosPagamento(FormaPagamento.Dinheiro, total, valorRecebido);
+            case Pix:
+                return new DadosPagamento(FormaPagamento.Pix, total);
+            case CartaoDebito:
+                return new DadosPagamento(FormaPagamento.CartaoDebito, total);
+            case CartaoCredito:
+                return new DadosPagamento(FormaPagamento.CartaoCredito, total);
+            default:
+                return null;
         }
     }
+
+    public Task MostrarTrocoAsync(decimal troco) =>
+        Shell.Current.DisplayAlertAsync("Troco", $"Troco a devolver: R$ {troco:F2}", "OK");
 }

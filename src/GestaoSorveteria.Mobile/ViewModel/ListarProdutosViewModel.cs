@@ -1,3 +1,4 @@
+using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
 using System.Collections.ObjectModel;
@@ -7,11 +8,11 @@ namespace SorveteriaMaui.ViewModel
 {
     public class ListarProdutosViewModel : BindableObject
     {
-        private readonly DatabaseService _dbService;
+        private readonly ProdutoRepository _produtos;
 
-        public ListarProdutosViewModel(DatabaseService dbService)
+        public ListarProdutosViewModel(ProdutoRepository produtos)
         {
-            _dbService = dbService;
+            _produtos = produtos;
             Produtos = new ObservableCollection<Produto>();
             NovoProdutoCommand = new Command(async () => await Shell.Current.GoToAsync("CadastroProdutoView"));
             ItemSelectedCommand = new Command<SelectionChangedEventArgs>(async e => await ItemSelected(e));
@@ -25,7 +26,7 @@ namespace SorveteriaMaui.ViewModel
         public async Task CarregarProdutos()
         {
             Produtos.Clear();
-            var lista = await _dbService.GetProdutosAtivos();
+            var lista = await _produtos.ListarAtivosAsync();
             foreach (var p in lista)
                 Produtos.Add(p);
         }

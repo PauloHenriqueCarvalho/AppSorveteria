@@ -15,6 +15,12 @@ public class Comanda
     [PrimaryKey, Column("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    [Indexed, Column("caixa_id")]
+    public Guid CaixaId { get; set; }
+
+    [Column("usuario_id")]
+    public Guid UsuarioId { get; set; }
+
     [Column("numero")]
     public int Numero { get; set; }
 
