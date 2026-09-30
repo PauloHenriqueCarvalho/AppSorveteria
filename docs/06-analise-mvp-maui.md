@@ -31,9 +31,9 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 
 | # | Onde | Problema | Efeito |
 |---|---|---|---|
-| B1 | `ListarComandasViewModel.ExecutarVendaRapida` | `CriarComanda` devolve o objeto com `Total = 0`; o item é gravado só no banco; `ProcessarPagamentoAsync(comanda)` recebe o objeto com total zero e recusa | **Venda rápida nunca funciona**: mostra "valor zero" e deixa uma comanda "Venda Rápida" aberta |
-| B2 | `PaymentService` | `Pagamento.Valor = valorRecebido` (o que o cliente entregou), troco não é gravado | Cliente paga R$ 12,50 com nota de 50 → faturamento registra **R$ 50** |
-| B3 | `PaymentService` | `if (troco < 0) troco = 0` | Aceita receber **menos** que o total em dinheiro e fecha a comanda |
+| ~~B1~~ | `ListarComandasViewModel.ExecutarVendaRapida` | `CriarComanda` devolve o objeto com `Total = 0`; o item é gravado só no banco; `ProcessarPagamentoAsync(comanda)` recebe o objeto com total zero e recusa | ~~**Venda rápida nunca funciona**: mostra "valor zero" e deixa uma comanda "Venda Rápida" aberta~~ — corrigido em c93fddd (#15): venda rápida abre, lança e fecha numa gravação só (RN-CM-10) |
+| ~~B2~~ | `PaymentService` | `Pagamento.Valor = valorRecebido` (o que o cliente entregou), troco não é gravado | ~~Cliente paga R$ 12,50 com nota de 50 → faturamento registra **R$ 50**~~ — corrigido em c93fddd (#15): `Valor` = total, `ValorRecebido` e `Troco` pelo Domain (RN-PG-03) |
+| ~~B3~~ | `PaymentService` | `if (troco < 0) troco = 0` | ~~Aceita receber **menos** que o total em dinheiro e fecha a comanda~~ — corrigido em c93fddd (#15): o Domain recusa dinheiro recebido menor que o valor (RN-PG-03) |
 | B4 | `DetalhesComandaViewModel` (+/−) | Salva a comanda com o total antigo, recarrega do banco e recalcula só em memória | Total no banco fica **desatualizado**; "Finalizar" pela lista cobra o valor antigo |
 | B5 | `DatabaseService.RemoverProdutoDaComanda` | `Total = soma dos itens`, ignora acréscimo/desconto e não atualiza `Subtotal` | Total inconsistente depois de remover item |
 | B6 | Todo o código | Dinheiro em `double` | Erros de centavos em somas (0,1 + 0,2 ≠ 0,3) |
@@ -88,8 +88,8 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [x] Mover `Contexto/` para `docs/contexto-mvp/` (uma cópia só)
 
 ### Etapa B — Corrigir fluxos de venda (2 dias)
-- [ ] Pagamento pelo domínio: `Valor` + `ValorRecebido` + `Troco`, recusa dinheiro insuficiente, pagamento dividido (B2, B3)
-- [ ] Venda rápida funcionando em uma operação (B1)
+- [x] Pagamento pelo domínio: `Valor` + `ValorRecebido` + `Troco`, recusa dinheiro insuficiente, pagamento dividido (B2, B3)
+- [x] Venda rápida funcionando em uma operação (B1) — entrou com a Etapa A (#15)
 - [ ] Cancelar comanda aberta com confirmação (B10)
 - [ ] Toast em vez de `DisplayAlert` ao adicionar item; mesmo produto soma na linha (B11)
 - [ ] Busca e filtro por categoria na seleção de produto (B12)
