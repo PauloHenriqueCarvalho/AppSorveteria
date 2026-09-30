@@ -260,7 +260,7 @@ Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainExceptio
 
 | Chave | Dev (appsettings.Development.json) | Produção (variáveis de ambiente) |
 |---|---|---|
-| `ConnectionStrings:Default` | `Host=localhost;Port=5432;Database=sorveteria;Username=postgres;Password=postgres` | `ConnectionStrings__Default` |
+| `ConnectionStrings:Default` | `Host=localhost;Port=5433;Database=sorveteria;Username=postgres;Password=postgres` | `ConnectionStrings__Default` |
 | `Jwt:Key` | chave de desenvolvimento (no arquivo) | `Jwt__Key` (segredo, ≥ 32 chars) |
 | `Jwt:Issuer` / `Jwt:Audience` | `GestaoSorveteria` | idem |
 | `Jwt:ExpiracaoHoras` | 12 | 12 |

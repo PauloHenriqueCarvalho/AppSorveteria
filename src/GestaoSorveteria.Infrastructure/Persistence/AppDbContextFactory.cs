@@ -10,7 +10,7 @@ namespace GestaoSorveteria.Infrastructure.Persistence;
 public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public const string ConexaoLocalPadrao =
-        "Host=localhost;Port=5432;Database=sorveteria;Username=postgres;Password=postgres";
+        "Host=localhost;Port=5433;Database=sorveteria;Username=postgres;Password=postgres";
 
     public AppDbContext CreateDbContext(string[] args)
     {

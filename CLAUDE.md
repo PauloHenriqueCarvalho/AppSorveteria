@@ -47,7 +47,7 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 ## Comandos
 
 ```powershell
-docker compose up -d                                   # PostgreSQL local (localhost:5432, sorveteria/postgres/postgres)
+docker compose up -d                                   # PostgreSQL local (localhost:5433, sorveteria/postgres/postgres — 5433 para não brigar com PostgreSQL instalado no Windows)
 dotnet build src/GestaoSorveteria.Server               # API
 dotnet test  tests/GestaoSorveteria.Tests              # testes
 dotnet run --project src/GestaoSorveteria.Server       # Swagger: http://localhost:5080/swagger (admin / admin12345 em Development)
