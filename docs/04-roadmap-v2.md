@@ -31,7 +31,7 @@ Fase 4 — Expansões ................. a combinar
 
 ### Sprint 1 — API de sincronização (semana 1)
 
-- [ ] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento)
+- [x] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento) — `Contracts/Sync/SyncContracts.cs`
 - [ ] `SyncService` + `SyncController`: `POST /api/sync/caixas` e `POST /api/sync/comandas` (lote, idempotente pelo `Id`, resultado por item: aceita / já recebida / rejeitada)
 - [ ] Reconstruir os agregados com as regras do Domain; marcar vendas recebidas após o fechamento do caixa (RN-CX-08)
 - [ ] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app; criar, editar, ativar/desativar (Admin)
