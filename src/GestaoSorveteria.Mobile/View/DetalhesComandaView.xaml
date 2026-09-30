@@ -86,6 +86,15 @@
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="10" HorizontalOptions="End">
+                    <!-- RN-CM-08 / B10 -->
+                    <Button Text="Cancelar comanda"
+                            BackgroundColor="Transparent"
+                            BorderColor="White"
+                            BorderWidth="1"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="48"
+                            Command="{Binding CancelarComandaCommand}"/>
                     <Button Text="Pagar" 
                             BackgroundColor="#FF9800" 
                             TextColor="White" 

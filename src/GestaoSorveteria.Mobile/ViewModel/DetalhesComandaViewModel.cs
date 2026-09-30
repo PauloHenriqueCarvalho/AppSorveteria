@@ -30,6 +30,7 @@ public class DetalhesComandaViewModel : BindableObject
     public ICommand RemoverItemCommand { get; }
     public ICommand EditarNomeCommand { get; }
     public ICommand FinalizarComandaCommand { get; }
+    public ICommand CancelarComandaCommand { get; }
 
     public DetalhesComandaViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService)
     {
@@ -41,6 +42,7 @@ public class DetalhesComandaViewModel : BindableObject
         AumentarQuantidadeCommand = new Command<ItemComanda>(async (item) => await AlterarQuantidade(item, item.Quantidade + 1));
         DiminuirQuantidadeCommand = new Command<ItemComanda>(async (item) => await DiminuirQuantidade(item));
         FinalizarComandaCommand = new Command(async () => await FinalizarComanda());
+        CancelarComandaCommand = new Command(async () => await CancelarComanda());
     }
 
     private async Task DiminuirQuantidade(ItemComanda item)
@@ -132,6 +134,29 @@ public class DetalhesComandaViewModel : BindableObject
             }
 
             await Shell.Current.GoToAsync(".."); // comanda fechada não fica na tela de edição
+        }
+    }
+
+    /// <summary>RN-CM-08 / B10: confirmação antes, motivo opcional; volta para a lista depois de gravado.</summary>
+    private async Task CancelarComanda()
+    {
+        if (ComandaAtual == null) return;
+
+        var comandaId = ComandaAtual.Id;
+        bool confirmar = await Shell.Current.DisplayAlertAsync(
+            "Cancelar comanda",
+            $"Cancelar a comanda #{ComandaAtual.Numero} (R$ {ComandaAtual.Total:F2})? Ela sai da lista e não entra no faturamento.",
+            "Cancelar comanda",
+            "Voltar");
+        if (!confirmar) return;
+
+        // null = desistiu no motivo; vazio = cancela sem motivo
+        var motivo = await Shell.Current.DisplayPromptAsync("Motivo (opcional)", "Por que está cancelando?", "Confirmar", "Voltar", maxLength: 300);
+        if (motivo is null) return;
+
+        if (await Executar(() => _comandas.CancelarAsync(comandaId, motivo)))
+        {
+            await Shell.Current.GoToAsync("..");
         }
     }
 

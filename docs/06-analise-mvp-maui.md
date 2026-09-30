@@ -45,7 +45,7 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 |---|---|
 | ~~B8~~ | ~~Número da comanda = `Comandas.Count + 1` (só as abertas) → números repetidos depois de fechar uma~~ — corrigido em c93fddd (#15): sequencial dentro do caixa, contando as fechadas (RN-CM-02) |
 | B9 | Self-service e venda rápida criam `ProdutoId = "MANUAL_..."/"RAPIDA_..."` que não existe → vai quebrar a sincronização (chave estrangeira) |
-| B10 | Não existe cancelar comanda (status 2 existe, mas nenhuma tela usa) — comanda aberta por engano fica para sempre |
+| ~~B10~~ | ~~Não existe cancelar comanda (status 2 existe, mas nenhuma tela usa) — comanda aberta por engano fica para sempre~~ — corrigido: botão "Cancelar comanda" nos detalhes (RN-CM-08) |
 | B11 | `DisplayAlert("Sucesso")` a cada item adicionado → um toque extra por item (contra a meta de rapidez) |
 | B12 | Busca de produto não funciona: a tela faz binding em `FiltroNome` / `BuscarCommand`, que não existem no ViewModel |
 | B13 | Categorias inconsistentes: seed usa `Tipo` 0=Sorvete, 1=Açaí, 2=Bebida; cadastro usa índice de "Picolé, Pote, Bebida, Acompanhamento, Self-Service" |
@@ -90,7 +90,7 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 ### Etapa B — Corrigir fluxos de venda (2 dias)
 - [ ] Pagamento pelo domínio: `Valor` + `ValorRecebido` + `Troco`, recusa dinheiro insuficiente, pagamento dividido (B2, B3)
 - [ ] Venda rápida funcionando em uma operação (B1)
-- [ ] Cancelar comanda aberta com confirmação (B10)
+- [x] Cancelar comanda aberta com confirmação (B10)
 - [ ] Toast em vez de `DisplayAlert` ao adicionar item; mesmo produto soma na linha (B11)
 - [ ] Busca e filtro por categoria na seleção de produto (B12)
 - [ ] Marcar Delivery + observação
