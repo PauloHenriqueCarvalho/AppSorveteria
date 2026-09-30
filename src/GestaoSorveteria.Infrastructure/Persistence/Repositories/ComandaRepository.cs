@@ -40,7 +40,7 @@ internal sealed class ComandaRepository : IComandaRepository
         await _db.Comandas
             .Include(c => c.Itens)
             .Include(c => c.Pagamentos)
-            .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .Where(c => (c.Status == StatusComanda.Fechada || c.Status == StatusComanda.Estornada) && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
             .OrderBy(c => c.FechadaEm)
             .ToListAsync(cancellationToken);
 
@@ -100,7 +100,8 @@ internal sealed class ComandaRepository : IComandaRepository
             from pagamento in _db.Pagamentos
             join comanda in _db.Comandas on pagamento.ComandaId equals comanda.Id
             where comanda.CaixaId == caixaId
-                  && comanda.Status == StatusComanda.Fechada
+                  // RN-CM-09: o estorno não altera o caixa — a venda estornada continua contando na gaveta.
+                  && (comanda.Status == StatusComanda.Fechada || comanda.Status == StatusComanda.Estornada)
                   && pagamento.Forma == FormaPagamento.Dinheiro
             select pagamento.Valor;
 

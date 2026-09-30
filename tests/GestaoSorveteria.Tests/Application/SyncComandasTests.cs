@@ -207,12 +207,12 @@ public class SyncComandasTests
         await AbrirCaixa();
         var dto = Avulsa(10m);
         await Enviar(dto);
-        _comandas.Comandas[0].Estornar("cliente devolveu", Abertura.AddHours(2)); // RN-CM-09 pelo painel
+        _comandas.Comandas[0].Estornar("cliente devolveu", _usuarios.Usuarios[1].Id, Abertura.AddHours(2)); // RN-CM-09 pelo painel
 
         var resposta = await Enviar(dto);
 
         Assert.Equal(StatusSync.JaRecebida, resposta.Resultados[0].Status);
-        Assert.Equal(StatusComanda.Cancelada, _comandas.Comandas[0].Status);
+        Assert.Equal(StatusComanda.Estornada, _comandas.Comandas[0].Status);
     }
 
     [Fact]

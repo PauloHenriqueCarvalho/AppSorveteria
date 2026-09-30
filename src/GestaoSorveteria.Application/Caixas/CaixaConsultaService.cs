@@ -79,13 +79,16 @@ public sealed class CaixaConsultaService
             .Select(m => new MovimentoCaixaDto(m.Id, m.Tipo.ToString(), m.Valor, m.Motivo, Nome(nomes, m.UsuarioId), m.Em))
             .ToList();
 
-        return new CaixaDetalheDto(Resumir(caixa, comandas, nomes), movimentos, TotaisPorForma(comandas), caixa.Observacao);
+        return new CaixaDetalheDto(Resumir(caixa, comandas, nomes), movimentos, TotaisPorForma(comandas, c => c.ContaNoCaixa), caixa.Observacao);
     }
 
-    /// <summary>Soma dos pagamentos das comandas fechadas, por forma, na ordem do enum (Dinheiro, Pix, cartões).</summary>
-    public static IReadOnlyList<TotalPorFormaDto> TotaisPorForma(IEnumerable<Comanda> comandas) =>
+    /// <summary>
+    /// Soma dos pagamentos por forma, na ordem do enum (Dinheiro, Pix, cartões), das comandas que passam por
+    /// <paramref name="incluir"/> (padrão: só <c>Fechada</c>).
+    /// </summary>
+    public static IReadOnlyList<TotalPorFormaDto> TotaisPorForma(IEnumerable<Comanda> comandas, Func<Comanda, bool>? incluir = null) =>
         comandas
-            .Where(c => c.Status == StatusComanda.Fechada)
+            .Where(incluir ?? (c => c.Status == StatusComanda.Fechada))
             .SelectMany(c => c.Pagamentos)
             .GroupBy(p => p.Forma)
             .OrderBy(g => g.Key)
@@ -94,7 +97,8 @@ public sealed class CaixaConsultaService
 
     private static CaixaResumoDto Resumir(Caixa caixa, IReadOnlyList<Comanda> comandas, IReadOnlyDictionary<Guid, string> nomes)
     {
-        var fechadas = comandas.Where(c => c.Status == StatusComanda.Fechada).ToList();
+        // O caixa mostra o que passou pela gaveta: estornadas continuam contando (RN-CM-09, RN-CX-07).
+        var fechadas = comandas.Where(c => c.ContaNoCaixa).ToList();
         var totalVendas = Moeda.Arredondar(fechadas.Sum(c => c.Total));
 
         decimal? vendasDinheiro;

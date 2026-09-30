@@ -178,7 +178,7 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | caixa_id | uuid FK caixas | |
 | usuario_id | uuid FK usuarios | quem abriu |
 | tipo | varchar(20) | `Balcao` / `Delivery` |
-| status | varchar(20) | `Aberta` / `Fechada` / `Cancelada` |
+| status | varchar(20) | `Aberta` / `Fechada` / `Cancelada` / `Estornada` (RN-CM-09) |
 | observacao | varchar(300) null | |
 | total | numeric(12,2) | Σ itens (recalculado a cada alteração) |
 | criada_em | timestamptz | hora do dispositivo |
@@ -186,6 +186,9 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | fechada_em | timestamptz null | |
 | cancelada_em | timestamptz null | |
 | motivo_cancelamento | varchar(300) null | |
+| estornada_em | timestamptz null | RN-CM-09 |
+| estornada_por_usuario_id | uuid FK usuarios, null | Admin que estornou |
+| motivo_estorno | varchar(300) null | obrigatório no estorno |
 | recebida_apos_fechamento_caixa | boolean | RN-CX-08 |
 
 ### `itens_comanda`
@@ -250,10 +253,10 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
-| GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; estornos entram com o status `Estornada`) | `ResumoDiaDto` |
+| GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte) | `ResumoDiaDto` |
 | GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
-| POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09, já previsto) | `ComandaDetalheDto` |
+| POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09) — **pronto** (corpo `{ "motivo": "..." }`; não altera o caixa) | `ComandaDetalheDto` |
 | GET | `/api/caixas?de=&ate=` | Caixas (histórico) — **pronto** (sem datas: 30 dias; máx. 93; hoje faz 1 consulta por caixa — agregar no repositório se pesar) | `IReadOnlyList<CaixaResumoDto>` |
 | GET | `/api/caixas/atual` | Dashboard (caixa aberto) — **pronto** | `CaixaResumoDto` ou 204 sem caixa aberto |
 | GET | `/api/caixas/{id}` | Caixas (detalhe) — **pronto** | `CaixaDetalheDto` |
@@ -266,7 +269,7 @@ record ResumoDiaDto(
     DateOnly Data,                              // dia comercial consultado
     decimal TotalVendido, int QuantidadeComandas, decimal TicketMedio,   // ticket médio calculado na API (0 sem vendas)
     IReadOnlyList<TotalPorFormaDto> PorFormaPagamento,
-    decimal TotalEstornado, int QuantidadeEstornos,
+    decimal TotalEstornado, int QuantidadeEstornos,                      // vendas do dia estornadas depois (RN-RL-01)
     int QuantidadeCanceladas,
     int VendasRecebidasAposFechamento,          // RN-CX-08: para conferência
     CaixaResumoDto? CaixaAtual);                // caixa aberto agora (ou o último do dia)

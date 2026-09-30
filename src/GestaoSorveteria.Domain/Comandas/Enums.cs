@@ -5,6 +5,9 @@ public enum StatusComanda
     Aberta = 1,
     Fechada = 2,
     Cancelada = 3,
+
+    /// <summary>RN-CM-09: comanda fechada desfeita pelo Admin. Continua no caixa e no dia da venda; nos relatórios, à parte.</summary>
+    Estornada = 4,
 }
 
 /// <summary>RN-CM-02/11: na Fase 1, Delivery é só marcação + observação.</summary>

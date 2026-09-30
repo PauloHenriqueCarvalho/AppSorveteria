@@ -9,7 +9,10 @@ public interface IComandaRepository
 
     Task<IReadOnlyList<Comanda>> ListarPorCaixaAsync(Guid caixaId, StatusComanda? status = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Comandas fechadas num intervalo (para relatórios e "vendas do dia").</summary>
+    /// <summary>
+    /// Vendas com fechamento no intervalo (relatórios e "vendas do dia"): <c>Fechada</c> e também <c>Estornada</c>,
+    /// que continua no dia da venda (RN-CM-09, RN-RL-01). Quem precisa separar filtra pelo <see cref="Comanda.Status"/>.
+    /// </summary>
     Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -31,7 +34,7 @@ public interface IComandaRepository
     /// <summary>RN-CX-05.</summary>
     Task<bool> ExisteAbertaNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
 
-    /// <summary>RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das comandas fechadas do caixa.</summary>
+    /// <summary>RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das vendas do caixa (fechadas e estornadas — o estorno não altera o caixa).</summary>
     Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
 
     /// <summary>RN-CM-02: número já usado no caixa (sincronização: vira rejeição, não 409).</summary>

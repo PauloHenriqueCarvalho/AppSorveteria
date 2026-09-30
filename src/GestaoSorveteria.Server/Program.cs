@@ -53,6 +53,7 @@ builder.Services.AddScoped<ProdutoService>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<CaixaConsultaService>();
 builder.Services.AddScoped<ComandaConsultaService>();
+builder.Services.AddScoped<ComandaService>();
 builder.Services.AddScoped<RelatorioService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------

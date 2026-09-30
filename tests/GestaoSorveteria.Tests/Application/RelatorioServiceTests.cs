@@ -63,6 +63,25 @@ public class RelatorioServiceTests
     }
 
     [Fact]
+    public async Task ResumoDoDia_VendaEstornada_FicaForaDoTotalEApareceComoEstorno()
+    {
+        Venda(1, Meio17.AddHours(-2), new DadosPagamento(FormaPagamento.Dinheiro, 10m, 10m));
+        var estornada = Venda(2, Meio17.AddHours(-1), new DadosPagamento(FormaPagamento.Pix, 7.50m));
+        estornada.Estornar("Cobrado duas vezes", _usuarios.Usuarios[0].Id, Meio17);
+
+        var resumo = await _service.ResumoDoDiaAsync(null, TestContext.Current.CancellationToken);
+
+        // RN-RL-01: faturamento só com as fechadas; o estorno à parte, no dia da venda.
+        Assert.Equal(10m, resumo.TotalVendido);
+        Assert.Equal(1, resumo.QuantidadeComandas);
+        Assert.Equal(10m, resumo.TicketMedio);
+        Assert.Equal("Dinheiro", Assert.Single(resumo.PorFormaPagamento).Forma);
+        Assert.Equal(7.50m, resumo.TotalEstornado);
+        Assert.Equal(1, resumo.QuantidadeEstornos);
+        Assert.Equal(0, resumo.QuantidadeCanceladas);
+    }
+
+    [Fact]
     public async Task ResumoDoDia_SemVendas_ZeraSemDividirPorZero()
     {
         var resumo = await _service.ResumoDoDiaAsync(new DateOnly(2026, 9, 10), TestContext.Current.CancellationToken);

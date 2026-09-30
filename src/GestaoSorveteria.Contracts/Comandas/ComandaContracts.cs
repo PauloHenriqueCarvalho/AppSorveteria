@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace GestaoSorveteria.Contracts.Comandas;
 
 // Vendas para o painel (docs/03 §6.1). Valores em dinheiro vêm prontos da API (gravados na venda);
@@ -22,6 +24,7 @@ public sealed record ComandaResumoDto(
 
 /// <summary>
 /// GET /api/comandas/{id}. <paramref name="CriadaEm"/> é a hora do celular e <paramref name="RecebidaEm"/> a do servidor (RN-CM-12).
+/// <paramref name="EstornadaEm"/>, <paramref name="EstornadaPorNome"/> e <paramref name="MotivoEstorno"/> só vêm na venda <c>Estornada</c> (RN-CM-09).
 /// </summary>
 public sealed record ComandaDetalheDto(
     Guid Id,
@@ -36,6 +39,9 @@ public sealed record ComandaDetalheDto(
     DateTime? FechadaEm,
     DateTime? CanceladaEm,
     string? MotivoCancelamento,
+    DateTime? EstornadaEm,
+    string? EstornadaPorNome,
+    string? MotivoEstorno,
     bool RecebidaAposFechamentoCaixa,
     string AtendenteNome,
     IReadOnlyList<ItemComandaDto> Itens,
@@ -46,3 +52,9 @@ public sealed record ItemComandaDto(Guid Id, Guid? ProdutoId, string Descricao, 
 
 /// <summary>RN-PG-01/03. <paramref name="Troco"/> calculado na venda, nunca digitado.</summary>
 public sealed record PagamentoDto(Guid Id, string Forma, decimal Valor, decimal ValorRecebido, decimal Troco);
+
+/// <summary>POST /api/comandas/{id}/estornar (Admin) — RN-CM-09.</summary>
+public sealed record EstornarComandaRequest(
+    [Required(ErrorMessage = "Informe o motivo do estorno.")]
+    [StringLength(300, MinimumLength = 3, ErrorMessage = "O motivo do estorno deve ter de 3 a 300 caracteres.")]
+    string Motivo);
