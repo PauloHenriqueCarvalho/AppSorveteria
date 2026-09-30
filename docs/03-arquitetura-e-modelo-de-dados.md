@@ -70,7 +70,8 @@ AppSorveteria/                   ← repositório único (GitHub)
 │   │   ├── Comandas/            Comanda, ItemComanda, Pagamento, enums
 │   │   └── Repositories/        IUsuarioRepository, IProdutoRepository, ICaixaRepository, IComandaRepository, IUnitOfWork
 │   ├── GestaoSorveteria.Contracts/
-│   │   └── Auth/                LoginRequest, LoginResponse, UsuarioDto
+│   │   ├── Auth/                LoginRequest, LoginResponse, UsuarioDto
+│   │   └── Sync/                SyncCaixasRequest, SyncComandasRequest, SyncResponse (+ DTOs de caixa, movimento, comanda, item, pagamento)
 │   ├── GestaoSorveteria.Application/
 │   │   ├── Abstractions/        IClock, IPasswordHasher, ITokenService
 │   │   ├── Auth/                AuthService
@@ -255,6 +256,7 @@ Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainExceptio
 5. **Resposta da API por comanda:** `aceita` ou `já recebida` → marca como enviada; `rejeitada` → fica visível para o atendente com o motivo (nunca some em silêncio); erro de rede ou API dormindo → tenta de novo (timeout de 90 s — docs/07).
 6. **Fechar o caixa** exige fila vazia (RN-CX-05). Se não houver internet, o atendente fecha localmente e o caixa sobe quando a conexão voltar (RN-CX-08 marca vendas tardias).
 7. **Servidor:** mesmo `Id` recebido de novo → responde `já recebida` sem duplicar (idempotência).
+8. **Formato (`Contracts/Sync`):** lote de 1 a 100 itens; resposta `{ resultados: [ { id, status: "aceita" | "ja_recebida" | "rejeitada", motivo? } ] }` na ordem do lote. Só o lote é validado por atributo (400 se vazio ou grande demais); os itens não, para que um item inválido vire `rejeitada` sem derrubar os outros. Enums como texto com os nomes do Domain; datas UTC. O app manda também os valores que calculou (total, subtotal, troco, esperado, diferença) para a API conferir com as mesmas regras do Domain. Ordem: caixa aberto → comandas → caixa com fechamento (fila vazia). Reenvio de caixa só acrescenta: movimento/fechamento novo = `aceita`, nada novo = `ja_recebida`, nada é apagado, e caixa já fechado no servidor não muda (`rejeitada`, RN-CX-07).
 
 ## 9. Configuração e ambientes
 
