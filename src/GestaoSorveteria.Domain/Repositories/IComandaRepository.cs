@@ -34,5 +34,11 @@ public interface IComandaRepository
     /// <summary>RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das comandas fechadas do caixa.</summary>
     Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
 
+    /// <summary>RN-CM-02: número já usado no caixa (sincronização: vira rejeição, não 409).</summary>
+    Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default);
+
+    /// <summary>Algum desses Ids já existe como item ou pagamento (sincronização: vira rejeição, não 409).</summary>
+    Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
+
     Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default);
 }

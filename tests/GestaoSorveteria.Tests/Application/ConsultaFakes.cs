@@ -66,6 +66,12 @@ internal sealed class ComandasEmMemoria : IComandaRepository
     public Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Comandas.Where(c => c.CaixaId == caixaId && c.EstaFechada).Sum(c => c.TotalEmDinheiro));
 
+    public Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Comandas.Any(c => c.CaixaId == caixaId && c.Numero == numero));
+
+    public Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Comandas.Any(c => c.Itens.Any(i => ids.Contains(i.Id)) || c.Pagamentos.Any(p => ids.Contains(p.Id))));
+
     public Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default)
     {
         Comandas.Add(comanda);

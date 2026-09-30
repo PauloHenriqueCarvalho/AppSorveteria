@@ -383,7 +383,12 @@ public sealed class Comanda : Entity
         _itens.FirstOrDefault(i => i.Id == itemId)
         ?? throw new DomainException("Item não encontrado nesta comanda.");
 
-    private void RecalcularTotal() => Total = Moeda.Arredondar(_itens.Sum(i => i.Subtotal));
+    private void RecalcularTotal()
+    {
+        var total = Moeda.Arredondar(_itens.Sum(i => i.Subtotal));
+        Guard.Contra(total > Moeda.LimiteColuna, "O total da comanda passa do máximo aceito.");
+        Total = total;
+    }
 
     private void ExigirAberta() => Guard.Contra(!EstaAberta, "Esta comanda não está aberta (RN-CM-07).");
 }

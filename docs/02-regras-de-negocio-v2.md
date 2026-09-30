@@ -111,7 +111,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | ID | Regra | Fase |
 |---|---|---|
 | RN-TD-01 | Datas gravadas em UTC (`timestamptz`); exibidas no fuso `America/Sao_Paulo` | F1 |
-| RN-TD-02 | Dinheiro em `decimal(12,2)`; nunca `double`/`float`; arredondamento `MidpointRounding.AwayFromZero` | F1 |
+| RN-TD-02 | Dinheiro em `decimal(12,2)`; nunca `double`/`float`; arredondamento `MidpointRounding.AwayFromZero`. Valor digitado aceito até R$ 9.999.999,99; subtotal e total até o limite da coluna (R$ 9.999.999.999,99) — acima disso é erro de digitação, recusado com motivo | F1 |
 | RN-TD-03 | Nenhum registro de venda, pagamento, caixa ou movimento é apagado; correções geram novos registros com motivo | F1 |
 | RN-TD-04 | Todo registro guarda quem fez (`UsuarioId`) e quando | F1 |
 

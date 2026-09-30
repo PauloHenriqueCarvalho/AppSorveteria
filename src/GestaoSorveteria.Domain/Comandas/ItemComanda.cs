@@ -62,5 +62,10 @@ public sealed class ItemComanda : Entity
     }
 
     /// <summary>RN-CM-05.</summary>
-    private void Recalcular() => Subtotal = Moeda.Arredondar(Quantidade * PrecoUnitario);
+    private void Recalcular()
+    {
+        var subtotal = Moeda.Arredondar(Quantidade * PrecoUnitario);
+        Guard.Contra(subtotal > Moeda.LimiteColuna, "O subtotal do item passa do máximo aceito. Confira quantidade e preço.");
+        Subtotal = subtotal;
+    }
 }
