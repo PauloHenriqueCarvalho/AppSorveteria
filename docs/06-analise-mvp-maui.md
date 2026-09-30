@@ -51,10 +51,25 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 | B13 | Categorias inconsistentes: seed usa `Tipo` 0=Sorvete, 1=Açaí, 2=Bebida; cadastro usa índice de "Picolé, Pote, Bebida, Acompanhamento, Self-Service" |
 | B14 | Datas em `DateTime.Now` (hora local) → sincronização precisa de UTC |
 | B15 | Não há caixa, login, delivery, histórico do turno, pagamento dividido nem sincronização implementada (só os campos) |
+| B16 | Cadastro de produto no app grava direto no SQLite sem passar pelo `Produto` do Domain: aceita nome com 1 caractere e nome repetido (RN-PR-01). O produto aparece na tela de venda, mas o Domain recusa ao adicionar ("O nome do produto deve ter pelo menos 2 caracteres."); o nome repetido fica com dois botões iguais e preços diferentes. Passos na seção 2.1 |
 
 ### Menores
 
 `Application.Current.MainPage` e `Frame` estão obsoletos no .NET 10 · `edit_icon.png` não existe em `Resources/Images` · compila para iOS/Mac sem necessidade · `ApplicationId = com.companyname.sorveteriamaui` · UI (`DisplayAlert`) dentro de serviço · carregamento duplo em `ListarComandasViewModel` (construtor + `OnAppearing`) · pasta `Contexto/` com 3 cópias divergentes das regras dentro do projeto do app.
+
+Vistos no tablet em 30/09/2026: "Valor recebido" em dinheiro vem pré-preenchido com ponto (`6.50`), o resto do app usa vírgula · botões − e + do resumo da comanda quase invisíveis (cinza-claro sobre cinza) · no self-service com valor inválido o botão diz "Tentar novamente", mas só fecha o aviso · fechar comanda vazia pergunta a forma de pagamento antes de avisar que não tem itens, e o aviso manda "cancelar a comanda", que ainda não existe (B10) · produto novo entra com `Ordem = 0` e empata com o primeiro do seed · aviso XA0141 no build: `libe_sqlite3.so` (SQLitePCLRaw 2.1.2) sem página de 16 KB — o tablet de teste já está no Android 16 e o app rodou normal, mas o Google Play vai exigir.
+
+### 2.1 Teste no tablet (30/09/2026)
+
+Galaxy Tab SM-X230, Android 16, develop em 03cabeb (o commit seguinte, 4276cd7, só mexe na API e em partes do Domain que o app não usa). Etapa A conferida: B1, B2, B3, B4, B5, B6, B8, B9, B13 e B14 corrigidos no aparelho, inclusive em modo avião e depois de fechar e reabrir o app; B7 conferido no código (o único `catch` é o de `Services/Operacao.cs`, que mostra alerta e para o fluxo).
+
+**B16 — como reproduzir**
+
+1. Aba **Produtos** → **Novo Produto** → Nome `X`, Preço `1,00` → **Salvar**. Esperado: recusar (nome de 2 a 80 caracteres). Obtido: salva e aparece na lista.
+2. Abrir uma comanda → **+ Produto** → **+ Add** no `X`. Obtido: "Atenção — O nome do produto deve ter pelo menos 2 caracteres." O produto não pode ser vendido; só sai da tela de venda se alguém editar o nome, porque o app não tem desativar produto.
+3. **Novo Produto** → Nome `sorvete de fruta`, Preço `9,00` → **Salvar**. Esperado: recusar (já existe "Sorvete de Fruta"). Obtido: salva; a tela de venda mostra dois "Sorvete de Fruta" (R$ 2,00 e R$ 9,00).
+
+Causa: `CadastroProdutoViewModel.Salvar` só confere nome vazio e preço, e grava pelo `ProdutoRepository.SalvarAsync` sem criar o `Produto` do Domain nem checar nome repetido. Some quando o catálogo passar a vir da API (Etapa C); até lá, o cadastro local deveria validar pelo `Produto.Criar`/`Atualizar` e checar nome repetido com `Produto.NormalizarNome`.
 
 ## 3. O que o MVP ensina — e muda no desenho do sistema
 
