@@ -42,7 +42,7 @@ Fase 4 — Expansões ................. a combinar
 - [ ] `POST /api/comandas/{id}/estornar` (Admin)
 - [x] `GET /api/versao`
 - [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida
-- [ ] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas
+- [x] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas — `src/GestaoSorveteria.Server/Sync.http` (falta rodar contra o PostgreSQL local)
 
 **Pronto quando:** um lote enviado duas vezes grava cada venda uma única vez e os totais do caixa batem no banco.
 
