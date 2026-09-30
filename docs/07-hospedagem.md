@@ -41,10 +41,33 @@
 | `ConnectionStrings__Default` | string do Neon no formato Npgsql, com `SSL Mode=Require` |
 | `Jwt__Key` | segredo aleatório com 32+ caracteres |
 | `Seed__AdminSenha` | senha inicial da dona (trocar no 1º acesso) |
-| `Cors__PainelOrigem` | URL do painel no Cloudflare Pages (Sprint 3) |
+| `Cors__PainelOrigem` | URL do painel no Cloudflare Pages, só esquema e domínio (ex.: `https://sorveteria-painel.pages.dev`). Várias origens: separar por `;`. Vazio = nenhum site chama a API pelo navegador |
 | `Database__MigrateOnStartup` | `true` **só no piloto** (um único serviço, sem réplicas); em produção paga voltar a `false` e rodar `dotnet ef database update` no deploy |
 
 O `Dockerfile` da raiz já está pronto: o Render faz o build a partir dele e informa a porta pela variável `PORT`, que o `Program.cs` já lê. Health check: `/health`.
+
+## Configuração do painel no Cloudflare Pages
+
+Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — ADR 018). Criar em **Workers & Pages → Create → Pages → Connect to Git**, repositório `AppSorveteria`:
+
+| Campo | Valor |
+|---|---|
+| Production branch | `main` (a `develop` gera deploys de prévia, com URL própria) |
+| Framework preset | `React (Vite)` (ou `None` com os campos abaixo) |
+| Root directory | `src/GestaoSorveteria.Painel` |
+| Build command | `npm run build` (o Pages roda `npm ci` antes, pelo `package-lock.json`) |
+| Build output directory | `dist` |
+| Build watch paths (Settings → Builds) | incluir só `src/GestaoSorveteria.Painel/*` — mudança só na API ou no app não gera deploy |
+| Versão do Node | lida do `.nvmrc` do painel (Node 24 LTS); se precisar forçar, variável `NODE_VERSION` |
+
+| Variável (Settings → Variables and Secrets) | Production | Preview |
+|---|---|---|
+| `VITE_API_URL` | URL da API no Render (ex.: `https://sorveteria-api.onrender.com`, sem barra no fim) | a mesma, ou uma API de teste |
+
+- `VITE_API_URL` é gravada no site **na hora do build** e fica visível no navegador: não é segredo. Trocou o valor → refazer o deploy (Deployments → Retry).
+- Rotas do painel (`/produtos`, `/login`…): sem `404.html` na saída, o Pages trata o site como SPA e devolve o `index.html` — não precisa de `_redirects`.
+- Depois do primeiro deploy, colocar a URL `https://<projeto>.pages.dev` em `Cors__PainelOrigem` na API (Render).
+- Local: `npm run dev` usa `http://localhost:5080` quando `VITE_API_URL` não está definida; para outra API, criar `src/GestaoSorveteria.Painel/.env.local` com `VITE_API_URL=...` (ignorado pelo Git).
 
 ## Backup no piloto
 

@@ -21,8 +21,9 @@ POST /api/sync/comandas   body: { comandas: [ ComandaSyncDto ] }    (comanda + i
 ```
 - Caixa antes das comandas daquele caixa.
 - Um item inválido **não** derruba o lote: vira `rejeitada` com motivo.
-- A API reconstrói os agregados com os métodos do `Domain` (mesmas regras do celular) e confere totais; divergência → `rejeitada`.
-- Comanda de caixa já fechado no servidor → aceita e marcada `RecebidaAposFechamentoCaixa` (RN-CX-08).
+- A API reconstrói os agregados com os métodos do `Domain` (mesmas regras do celular) e confere totais. Comanda: divergência → `rejeitada` (RN-SY-06). Caixa: grava os valores do servidor e marca divergência, nunca rejeita por isso (RN-CX-10). Movimentos do caixa entram antes de `FecharSincronizado`.
+- Comanda de caixa já fechado no servidor → aceita e marcada `RecebidaAposFechamentoCaixa` (RN-CX-08), sem mudar os valores do caixa (RN-CX-07).
+- Comanda remontada com o preço da venda (RN-SY-06), via `Comanda.Remontar`; caixa fechado no celular → valores do servidor + marca de divergência (RN-CX-10).
 
 ## Lado do app (`SyncService`)
 - Tabela/flag de pendência por comanda e caixa (`pendente_envio`, `tentativas`, `ultimo_erro`, `rejeitada_motivo`).
@@ -30,7 +31,7 @@ POST /api/sync/comandas   body: { comandas: [ ComandaSyncDto ] }    (comanda + i
 - `HttpClient` com timeout de **90 s** (a API no Render Free leva ~1 min para acordar).
 - `aceita`/`ja_recebida` → marca enviada. `rejeitada` → mostra ao atendente. Erro de rede/timeout/5xx → tenta de novo depois (sem apagar nada).
 - Token expirado (401) → pede o PIN quando houver internet; fila espera.
-- Fechar caixa exige fila vazia; sem internet, fecha localmente e sobe depois.
+- Fechar caixa exige só nenhuma comanda aberta (RN-CX-05), com aviso se houver envio pendente; sem internet, fecha localmente e sobe depois (RN-SY-04). Ordem de envio: caixa aberto → comandas → caixa fechado (RN-SY-03).
 - Indicador sempre visível: "X vendas aguardando envio".
 
 ## Lado da API
