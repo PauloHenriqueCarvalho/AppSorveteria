@@ -221,6 +221,78 @@ public sealed class Comanda : Entity
     /// <summary>RN-CX-08.</summary>
     public void MarcarRecebidaAposFechamentoCaixa() => RecebidaAposFechamentoCaixa = true;
 
+    /// <summary>
+    /// Reconstrói uma comanda já gravada (ex.: SQLite do app) para aplicar as regras de novo.
+    /// Não é regra nova: itens e pagamentos passam pelas mesmas validações, o total é recalculado
+    /// (RN-CM-05) e dados incoerentes com o status lançam <see cref="DomainException"/>.
+    /// Não confere o caixa (RN-CX-03 vale só na abertura).
+    /// </summary>
+    public static Comanda Restaurar(
+        Guid id,
+        Guid caixaId,
+        Guid usuarioId,
+        int numero,
+        TipoComanda tipo,
+        StatusComanda status,
+        DateTime criadaEmUtc,
+        DateTime recebidaEmUtc,
+        string? observacao,
+        IEnumerable<DadosItem> itens,
+        IEnumerable<DadosPagamento>? pagamentos = null,
+        DateTime? fechadaEmUtc = null,
+        DateTime? canceladaEmUtc = null,
+        string? motivoCancelamento = null)
+    {
+        Guard.NaoVazio(id, "a comanda");
+        Guard.NaoVazio(caixaId, "o caixa");
+        Guard.NaoVazio(usuarioId, "o usuário");
+        Guard.Contra(numero < 1, "O número da comanda deve ser maior que zero.");
+        Guard.Contra(!Enum.IsDefined(tipo), "Tipo de comanda desconhecido.");
+        Guard.Contra(!Enum.IsDefined(status), "Status de comanda desconhecido.");
+
+        var comanda = new Comanda(
+            id,
+            caixaId,
+            usuarioId,
+            numero,
+            tipo,
+            Guard.Utc(criadaEmUtc, "a data de criação"),
+            Guard.Utc(recebidaEmUtc, "a data de recebimento"),
+            Guard.TextoOpcional(observacao, "a observação", 300));
+
+        foreach (var dados in itens ?? Enumerable.Empty<DadosItem>())
+        {
+            Guard.Contra(comanda._itens.Any(i => i.Id == dados.Id), "Item repetido na comanda.");
+            comanda._itens.Add(new ItemComanda(id, dados.ProdutoId, dados.Descricao, dados.Quantidade, dados.PrecoUnitario, dados.Id));
+        }
+
+        comanda.RecalcularTotal();
+
+        var listaPagamentos = (pagamentos ?? Enumerable.Empty<DadosPagamento>()).ToList();
+        switch (status)
+        {
+            case StatusComanda.Aberta:
+                Guard.Contra(listaPagamentos.Count > 0, "Comanda aberta não tem pagamentos.");
+                break;
+
+            case StatusComanda.Fechada:
+                Guard.Contra(fechadaEmUtc is null, "Comanda fechada sem data de fechamento.");
+                comanda.Fechar(listaPagamentos, fechadaEmUtc!.Value); // mesmas regras: RN-CM-07, RN-PG-*
+                break;
+
+            case StatusComanda.Cancelada:
+                Guard.Contra(canceladaEmUtc is null, "Comanda cancelada sem data de cancelamento.");
+                comanda._pagamentos.AddRange(listaPagamentos.Select(dados => new Pagamento(id, dados)));
+                comanda.FechadaEm = fechadaEmUtc is { } fechada ? Guard.Utc(fechada, "a data de fechamento") : null;
+                comanda.CanceladaEm = Guard.Utc(canceladaEmUtc!.Value, "a data de cancelamento");
+                comanda.MotivoCancelamento = Guard.TextoOpcional(motivoCancelamento, "o motivo", 300);
+                comanda.Status = StatusComanda.Cancelada;
+                break;
+        }
+
+        return comanda;
+    }
+
     private ItemComanda ObterItem(Guid itemId) =>
         _itens.FirstOrDefault(i => i.Id == itemId)
         ?? throw new DomainException("Item não encontrado nesta comanda.");
