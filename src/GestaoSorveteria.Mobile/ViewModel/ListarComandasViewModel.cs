@@ -111,7 +111,7 @@ namespace SorveteriaMaui.ViewModel
 
             if (string.IsNullOrWhiteSpace(resultado)) return;
 
-            if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor))
+            if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor) || valor <= 0) // RN-CM-03: item livre > 0
             {
                 await Application.Current.MainPage.DisplayAlert("Erro", "Valor inválido", "OK");
                 return;

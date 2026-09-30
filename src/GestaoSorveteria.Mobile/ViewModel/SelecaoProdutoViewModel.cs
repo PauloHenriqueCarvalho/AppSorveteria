@@ -76,7 +76,7 @@ namespace SorveteriaMaui.ViewModel
 
             if (string.IsNullOrWhiteSpace(resultado)) return;
 
-            if (Conversoes.TentarLerDinheiro(resultado, out decimal valor))
+            if (Conversoes.TentarLerDinheiro(resultado, out decimal valor) && valor > 0) // RN-CM-03: item livre > 0
             {
                 // B9: self-service é item livre (ProdutoId nulo), não um produto inventado
                 await _dbService.AdicionarItemLivreNaComanda(ComandaAtual.Id, "Self-Service", valor);

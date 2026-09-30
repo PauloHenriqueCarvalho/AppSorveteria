@@ -24,7 +24,10 @@ public static class Conversoes
 
     public static DateTime? ComoUtc(DateTime? valor) => valor is { } data ? ComoUtc(data) : null;
 
-    /// <summary>Lê o valor digitado pelo atendente ("15,50", "15.50" ou "R$ 15,50").</summary>
+    /// <summary>
+    /// Lê o valor digitado pelo atendente ("15,50", "15.50" ou "R$ 15,50"). Recusa mais de 2 casas
+    /// ("15,555") em vez de arredondar em silêncio (RN-TD-02).
+    /// </summary>
     public static bool TentarLerDinheiro(string? texto, out decimal valor)
     {
         valor = 0m;
@@ -34,7 +37,7 @@ public static class Conversoes
         }
 
         var normalizado = texto.Replace("R$", string.Empty).Trim().Replace(",", ".");
-        if (!decimal.TryParse(normalizado, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var lido))
+        if (!decimal.TryParse(normalizado, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var lido) || !Moeda.TemNoMaximoDuasCasas(lido))
         {
             return false;
         }
