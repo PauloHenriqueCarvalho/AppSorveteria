@@ -156,6 +156,7 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | total_vendas_dinheiro_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
 | valor_esperado_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
 | divergencia_sincronizacao | boolean | RN-CX-10 |
+| xmin (sistema) | xid | token de concorrência: dois fechamentos simultâneos → 409, nunca sobrescrita (RN-CX-07) |
 | observacao | varchar(500) null | |
 
 ### `movimentos_caixa`

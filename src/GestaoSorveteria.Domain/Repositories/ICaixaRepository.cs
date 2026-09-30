@@ -12,5 +12,8 @@ public interface ICaixaRepository
 
     Task<IReadOnlyList<Caixa>> ListarAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 
+    /// <summary>Id de movimento já usado em qualquer caixa (sincronização: Id repetido vira rejeição, não 409).</summary>
+    Task<bool> ExisteMovimentoAsync(Guid movimentoId, CancellationToken cancellationToken = default);
+
     Task AdicionarAsync(Caixa caixa, CancellationToken cancellationToken = default);
 }

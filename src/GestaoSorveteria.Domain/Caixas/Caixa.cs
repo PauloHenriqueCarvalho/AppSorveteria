@@ -91,12 +91,14 @@ public sealed class Caixa : Entity
         Guard.NaoVazio(usuarioId, "o usuário");
         Guard.Utc(agoraUtc, "a data de fechamento");
         Guard.Contra(agoraUtc < AbertoEm, "A data de fechamento não pode ser anterior à abertura.");
+        Guard.Dinheiro(valorContado, "o valor contado", permiteZero: true);
+        var observacaoValidada = Guard.TextoOpcional(observacao, "a observação", 500);
 
-        ValorContado = Guard.Dinheiro(valorContado, "o valor contado", permiteZero: true);
+        ValorContado = valorContado;
         TotalVendasDinheiro = Moeda.Arredondar(totalVendasDinheiro);
         ValorEsperado = CalcularEsperado(totalVendasDinheiro);
         Diferenca = Moeda.Arredondar(ValorContado.Value - ValorEsperado.Value);
-        Observacao = Guard.TextoOpcional(observacao, "a observação", 500);
+        Observacao = observacaoValidada;
         FechadoPorUsuarioId = usuarioId;
         FechadoEm = agoraUtc;
         Status = StatusCaixa.Fechado;

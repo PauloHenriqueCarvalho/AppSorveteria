@@ -19,6 +19,9 @@ internal sealed class CaixasEmMemoria : ICaixaRepository
     public Task<IReadOnlyList<Caixa>> ListarAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Caixa>>(Caixas.Where(c => c.AbertoEm >= deUtc && c.AbertoEm < ateUtc).ToList());
 
+    public Task<bool> ExisteMovimentoAsync(Guid movimentoId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Caixas.Any(c => c.Movimentos.Any(m => m.Id == movimentoId)));
+
     public Task AdicionarAsync(Caixa caixa, CancellationToken cancellationToken = default)
     {
         Caixas.Add(caixa);

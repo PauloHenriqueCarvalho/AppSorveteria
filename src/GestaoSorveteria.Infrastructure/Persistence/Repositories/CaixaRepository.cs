@@ -30,6 +30,9 @@ internal sealed class CaixaRepository : ICaixaRepository
             .OrderByDescending(c => c.AbertoEm)
             .ToListAsync(cancellationToken);
 
+    public Task<bool> ExisteMovimentoAsync(Guid movimentoId, CancellationToken cancellationToken = default) =>
+        _db.MovimentosCaixa.AnyAsync(m => m.Id == movimentoId, cancellationToken);
+
     public async Task AdicionarAsync(Caixa caixa, CancellationToken cancellationToken = default) =>
         await _db.Caixas.AddAsync(caixa, cancellationToken);
 }
