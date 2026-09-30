@@ -2,6 +2,9 @@ using GestaoSorveteria.Domain.Common;
 
 namespace GestaoSorveteria.Domain.Comandas;
 
+/// <summary>Item já gravado, usado em <see cref="Comanda.Restaurar"/>. ProdutoId nulo = item livre.</summary>
+public readonly record struct DadosItem(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario);
+
 /// <summary>
 /// Linha da comanda. Guarda descrição e preço praticado no momento (snapshot, RN-PR-04).
 /// ProdutoId nulo = item livre (self-service / venda avulsa, RN-CM-03).
