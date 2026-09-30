@@ -59,13 +59,13 @@ Plano detalhado em docs/06, seção 4.
 - [x] Decidir a tecnologia: **React + Vite + TypeScript** em `src/GestaoSorveteria.Painel` (ADR 018, docs/01)
 - [x] Projeto do painel no repositório (Vite + React + TS, React Router, TanStack Query, ESLint, CI `Painel`); configuração do Cloudflare Pages documentada (docs/07)
 - [x] CORS na API com a origem do painel vinda de configuração (`Cors:PainelOrigem`)
-- [ ] Login da dona pela API (JWT, perfil Admin)
+- [x] Login da dona pela API (JWT, perfil Admin; sai sozinho quando o token vence ou a API responde 401)
 - [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
 - [ ] Vendas por data com itens e pagamentos; estorno
 - [ ] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões
 - [ ] Caixas: histórico de fechamentos com diferenças
 - [ ] Usuários: criar atendente, redefinir PIN
-- [ ] Tela "Conectando ao servidor…" enquanto a API acorda
+- [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 
 **Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu.
 
