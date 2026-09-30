@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Model;
 using Dominio = GestaoSorveteria.Domain.Comandas;
 
@@ -72,6 +73,12 @@ public sealed class ComandaRepository(BancoLocal banco)
         await db.RunInTransactionAsync(tx =>
         {
             var existente = tx.Find<Comanda>(comanda.Id);
+
+            // Defesa extra: comanda fechada/cancelada é imutável (RN-CM-07); desfaz a transação.
+            if (existente is not null && existente.Status != Dominio.StatusComanda.Aberta)
+            {
+                throw new DomainException("Esta comanda já foi fechada ou cancelada.");
+            }
             var linha = new Comanda
             {
                 Id = comanda.Id,
@@ -154,6 +161,12 @@ public sealed class ComandaRepository(BancoLocal banco)
     public async Task AlterarNomeClienteAsync(Guid comandaId, string? nomeCliente)
     {
         var db = await banco.ConexaoAsync();
-        await db.ExecuteAsync("UPDATE comandas SET nome_cliente = ? WHERE id = ?", nomeCliente, comandaId);
+        var alteradas = await db.ExecuteAsync(
+            "UPDATE comandas SET nome_cliente = ? WHERE id = ? AND status = ?",
+            nomeCliente, comandaId, (int)Dominio.StatusComanda.Aberta);
+        if (alteradas == 0)
+        {
+            throw new DomainException("Só dá para mudar o nome de uma comanda aberta.");
+        }
     }
 }

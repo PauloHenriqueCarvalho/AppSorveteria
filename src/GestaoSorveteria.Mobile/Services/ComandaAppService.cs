@@ -12,12 +12,17 @@ namespace SorveteriaMaui.Services;
 /// </summary>
 public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaProvisorio caixa)
 {
-    public async Task<Guid> AbrirAsync(string? nomeCliente)
-    {
-        var comanda = await NovaComandaAsync();
-        await comandas.GravarAsync(comanda, nomeCliente);
-        return comanda.Id;
-    }
+    // Uma operação por vez: dois toques rápidos não podem ler a mesma versão da comanda
+    // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
+    private readonly SemaphoreSlim _umaPorVez = new(1, 1);
+
+    public Task<Guid> AbrirAsync(string? nomeCliente) =>
+        UmaPorVezAsync(async () =>
+        {
+            var comanda = await NovaComandaAsync();
+            await comandas.GravarAsync(comanda, nomeCliente);
+            return comanda.Id;
+        });
 
     /// <summary>RN-CM-03/04: mesmo produto soma na linha existente.</summary>
     public Task AdicionarProdutoAsync(Guid comandaId, Guid produtoId, int quantidade) =>
@@ -58,7 +63,11 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
         });
 
     public Task AlterarNomeClienteAsync(Guid comandaId, string? nomeCliente) =>
-        comandas.AlterarNomeClienteAsync(comandaId, nomeCliente);
+        UmaPorVezAsync(async () =>
+        {
+            await comandas.AlterarNomeClienteAsync(comandaId, nomeCliente?.Trim());
+            return true;
+        });
 
     /// <summary>RN-CM-07 / RN-PG-03: pagamento soma exatamente o total; troco calculado pelo Domain.</summary>
     public Task<Comanda> FecharAsync(Guid comandaId, DadosPagamento pagamento) =>
@@ -72,14 +81,15 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     /// RN-CM-10 / B1: abre a comanda, lança "Venda avulsa" e fecha com o pagamento numa única gravação.
     /// Se o pagamento for recusado, nada é gravado (não sobra comanda aberta).
     /// </summary>
-    public async Task<Comanda> VendaRapidaAsync(decimal valor, DadosPagamento pagamento)
-    {
-        var comanda = await NovaComandaAsync();
-        comanda.AdicionarItemLivre(Comanda.DescricaoVendaAvulsa, valor);
-        comanda.Fechar([pagamento], DateTime.UtcNow);
-        await comandas.GravarAsync(comanda);
-        return comanda;
-    }
+    public Task<Comanda> VendaRapidaAsync(decimal valor, DadosPagamento pagamento) =>
+        UmaPorVezAsync(async () =>
+        {
+            var comanda = await NovaComandaAsync();
+            comanda.AdicionarItemLivre(Comanda.DescricaoVendaAvulsa, valor);
+            comanda.Fechar([pagamento], DateTime.UtcNow);
+            await comandas.GravarAsync(comanda);
+            return comanda;
+        });
 
     private async Task<Comanda> NovaComandaAsync()
     {
@@ -89,12 +99,26 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
         return Comanda.Abrir(caixaAtual, caixa.UsuarioId, numero, TipoComanda.Balcao, agora, agora);
     }
 
-    private async Task<Comanda> AlterarAsync(Guid comandaId, Func<Comanda, Task> alteracao)
+    private Task<Comanda> AlterarAsync(Guid comandaId, Func<Comanda, Task> alteracao) =>
+        UmaPorVezAsync(async () =>
+        {
+            var comanda = await comandas.ObterAsync(comandaId)
+                ?? throw new DomainException("Comanda não encontrada.");
+            await alteracao(comanda);
+            await comandas.GravarAsync(comanda);
+            return comanda;
+        });
+
+    private async Task<T> UmaPorVezAsync<T>(Func<Task<T>> operacao)
     {
-        var comanda = await comandas.ObterAsync(comandaId)
-            ?? throw new DomainException("Comanda não encontrada.");
-        await alteracao(comanda);
-        await comandas.GravarAsync(comanda);
-        return comanda;
+        await _umaPorVez.WaitAsync();
+        try
+        {
+            return await operacao();
+        }
+        finally
+        {
+            _umaPorVez.Release();
+        }
     }
 }

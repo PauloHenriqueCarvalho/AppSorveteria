@@ -117,14 +117,21 @@ public class DetalhesComandaViewModel : BindableObject
         var pagamento = await _paymentService.PerguntarPagamentoAsync(ComandaAtual.Total);
         if (pagamento is null) return;
 
+        var fechou = false;
         await Executar(async () =>
         {
             var fechada = await _comandas.FecharAsync(comandaId, pagamento.Value);
+            fechou = true;
             if (fechada.TotalTroco > 0)
             {
                 await _paymentService.MostrarTrocoAsync(fechada.TotalTroco);
             }
         });
+
+        if (fechou)
+        {
+            await Shell.Current.GoToAsync(".."); // comanda fechada não fica na tela de edição
+        }
     }
 
     /// <summary>Regra recusada pelo Domain aparece para o atendente; depois recarrega o que está gravado.</summary>

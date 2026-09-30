@@ -6,7 +6,7 @@ namespace SorveteriaMaui.Data;
 /// <summary>Conexão única com o SQLite do aparelho. Cria as tabelas no primeiro uso.</summary>
 public sealed class BancoLocal
 {
-    private readonly string _caminho = Path.Combine(FileSystem.AppDataDirectory, "sorveteria_v4.db3");
+    private readonly string _caminho = Path.Combine(FileSystem.AppDataDirectory, "sorveteria_v5.db3");
     private readonly SemaphoreSlim _inicializacao = new(1, 1);
     private SQLiteAsyncConnection? _conexao;
 
