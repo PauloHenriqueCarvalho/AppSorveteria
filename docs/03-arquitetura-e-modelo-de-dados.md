@@ -250,7 +250,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
-| GET | `/api/relatorios/dia?data=` | Dashboard | `ResumoDiaDto` |
+| GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; estornos entram com o status `Estornada`) | `ResumoDiaDto` |
 | GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09, já previsto) | `ComandaDetalheDto` |
