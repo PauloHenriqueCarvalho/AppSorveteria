@@ -16,10 +16,11 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
 
-    public Task<Guid> AbrirAsync(string? nomeCliente) =>
+    /// <summary>RN-CM-02/11: balcão ou delivery; no delivery a observação guarda nome/endereço.</summary>
+    public Task<Guid> AbrirAsync(string? nomeCliente, TipoComanda tipo = TipoComanda.Balcao, string? observacao = null) =>
         UmaPorVezAsync(async () =>
         {
-            var comanda = await NovaComandaAsync();
+            var comanda = await NovaComandaAsync(tipo, observacao);
             await comandas.GravarAsync(comanda, nomeCliente);
             return comanda.Id;
         });
@@ -62,6 +63,14 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return Task.CompletedTask;
         });
 
+    /// <summary>RN-CM-06: observação editável enquanto a comanda está aberta (até 300 caracteres).</summary>
+    public Task AlterarObservacaoAsync(Guid comandaId, string? observacao) =>
+        AlterarAsync(comandaId, comanda =>
+        {
+            comanda.AlterarObservacao(observacao);
+            return Task.CompletedTask;
+        });
+
     public Task AlterarNomeClienteAsync(Guid comandaId, string? nomeCliente) =>
         UmaPorVezAsync(async () =>
         {
@@ -91,12 +100,12 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return comanda;
         });
 
-    private async Task<Comanda> NovaComandaAsync()
+    private async Task<Comanda> NovaComandaAsync(TipoComanda tipo = TipoComanda.Balcao, string? observacao = null)
     {
         var caixaAtual = caixa.Atual();
         var numero = await comandas.ProximoNumeroAsync(caixaAtual.Id);
         var agora = DateTime.UtcNow;
-        return Comanda.Abrir(caixaAtual, caixa.UsuarioId, numero, TipoComanda.Balcao, agora, agora);
+        return Comanda.Abrir(caixaAtual, caixa.UsuarioId, numero, tipo, agora, agora, observacao);
     }
 
     private Task<Comanda> AlterarAsync(Guid comandaId, Func<Comanda, Task> alteracao) =>
