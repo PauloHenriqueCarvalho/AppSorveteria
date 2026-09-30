@@ -27,6 +27,11 @@ internal sealed class CaixaConfiguration : IEntityTypeConfiguration<Caixa>
         builder.Property(c => c.ValorEsperadoApp).HasPrecision(12, 2);
         builder.Property(c => c.DivergenciaSincronizacao).IsRequired();
 
+        // RN-CX-07: dois fechamentos ao mesmo tempo (reenvio sobreposto, fechamento forçado + sincronização) não podem
+        // sobrescrever um ao outro. xmin é a coluna de sistema do PostgreSQL que muda a cada UPDATE: o segundo UPDATE
+        // falha com DbUpdateConcurrencyException (409) e o reenvio cai em ja_recebida/rejeitada.
+        builder.Property<uint>("Versao").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
+
         // Propriedades calculadas: não viram coluna.
         builder.Ignore(c => c.EstaAberto);
         builder.Ignore(c => c.TotalSangrias);

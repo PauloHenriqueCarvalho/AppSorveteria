@@ -4,4 +4,10 @@ namespace GestaoSorveteria.Domain.Repositories;
 public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Esquece o que foi alterado e ainda não confirmado. Usado na sincronização em lote: um documento rejeitado
+    /// não pode deixar alteração pela metade para o próximo <see cref="SaveChangesAsync"/> do mesmo lote.
+    /// </summary>
+    void DescartarAlteracoes();
 }

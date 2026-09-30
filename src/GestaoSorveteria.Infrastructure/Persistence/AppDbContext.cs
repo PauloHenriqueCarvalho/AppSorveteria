@@ -26,6 +26,8 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<ItemComanda> ItensComanda => Set<ItemComanda>();
     public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
 
+    public void DescartarAlteracoes() => ChangeTracker.Clear();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
