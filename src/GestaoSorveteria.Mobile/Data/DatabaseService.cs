@@ -1,3 +1,4 @@
+using StatusComanda = GestaoSorveteria.Domain.Comandas.StatusComanda;
 using SorveteriaMaui.Model;
 using SQLite;
 using System.Threading;
@@ -13,8 +14,8 @@ namespace SorveteriaMaui.Services
 
         public DatabaseService()
         {
-            // Caminho automático que funciona em Android, iOS e Windows
-            _dbPath = Path.Combine(FileSystem.AppDataDirectory, "sorveteria_v3.db3");
+            // v4: tabelas novas (decimal em centavos, UTC, enums, Guid)
+            _dbPath = Path.Combine(FileSystem.AppDataDirectory, "sorveteria_v4.db3");
         }
 
         public async Task PopularBancoSeVazio()
@@ -24,17 +25,22 @@ namespace SorveteriaMaui.Services
 
             if (contagem == 0)
             {
+                var agora = DateTime.UtcNow;
+                var ordem = 0;
+                Produto Novo(string nome, decimal preco, string categoria) =>
+                    new Produto { Nome = nome, Preco = preco, Categoria = categoria, Ordem = ordem++, CriadoEm = agora };
+
                 var produtosIniciais = new List<Produto>
                 {
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Sorvete de Fruta", Preco = 2.00, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Sorvete de Leite", Preco = 2.50, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Sorvete Especial", Preco = 8.00, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Sorvete Skimo", Preco = 5.00, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Sorvete Moreninha", Preco = 7.00, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Promoção de Picoles", Preco = 37.00, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Promoção de Potes 1L", Preco = 48.00, Tipo = 0, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Açaí Montado 400ml", Preco = 23.00, Tipo = 1, Ativo = 1, DataCriacao = DateTime.Now },
-                    new Produto { Id = Guid.NewGuid().ToString(), Nome = "Água Mineral", Preco = 3.50, Tipo = 2, Ativo = 1, DataCriacao = DateTime.Now }
+                    Novo("Sorvete de Fruta", 2.00m, "Sorvete"),
+                    Novo("Sorvete de Leite", 2.50m, "Sorvete"),
+                    Novo("Sorvete Especial", 8.00m, "Sorvete"),
+                    Novo("Sorvete Skimo", 5.00m, "Sorvete"),
+                    Novo("Sorvete Moreninha", 7.00m, "Sorvete"),
+                    Novo("Promoção de Picoles", 37.00m, "Sorvete"),
+                    Novo("Promoção de Potes 1L", 48.00m, "Sorvete"),
+                    Novo("Açaí Montado 400ml", 23.00m, "Açaí"),
+                    Novo("Água Mineral", 3.50m, "Bebida"),
                 };
 
                 try
@@ -64,7 +70,6 @@ namespace SorveteriaMaui.Services
                     await _db.CreateTableAsync<Produto>();
                     await _db.CreateTableAsync<ItemComanda>();
                     await _db.CreateTableAsync<Pagamento>();
-                    await _db.CreateTableAsync<LogSincronizacao>();
                 }
                 catch (Exception ex)
                 {
@@ -83,7 +88,7 @@ namespace SorveteriaMaui.Services
         public async Task<List<Comanda>> GetComandasAbertas()
         {
             await Init();
-            return await _db.Table<Comanda>().Where(c => c.Status == 0).ToListAsync();
+            return await _db.Table<Comanda>().Where(c => c.Status == StatusComanda.Aberta).ToListAsync();
         }
 
         public async Task SalvarComandaCompleta(Comanda comanda, List<ItemComanda> itens)
@@ -114,7 +119,7 @@ namespace SorveteriaMaui.Services
         public async Task<List<Produto>> GetProdutosAtivos()
         {
             await Init();
-            return await _db.Table<Produto>().Where(p => p.Ativo == 1).OrderBy(p => p.Nome).ToListAsync();
+            return await _db.Table<Produto>().Where(p => p.Ativo == true).OrderBy(p => p.Ordem).ThenBy(p => p.Nome).ToListAsync();
         }
 
         public async Task<int> SalvarProduto(Produto produto)
@@ -157,13 +162,10 @@ namespace SorveteriaMaui.Services
             await Init();
             var novaComanda = new Comanda
             {
-                Id = Guid.NewGuid().ToString(),
                 Numero = numero,
                 NomeCliente = nomeCliente,
-                Status = 0,
-                DataAbertura = DateTime.Now,
-                Sincronizado = 0,
-                PendenteSincronizacao = false
+                Status = StatusComanda.Aberta,
+                CriadaEm = DateTime.UtcNow,
             };
 
             try
@@ -178,20 +180,32 @@ namespace SorveteriaMaui.Services
             return novaComanda;
         }
 
-        public async Task AdicionarProdutoNaComanda(string comandaId, Produto produto, double quantidade)
-        {
-            await Init();
-
-            var item = new ItemComanda
+        public Task AdicionarProdutoNaComanda(Guid comandaId, Produto produto, int quantidade) =>
+            InserirItem(new ItemComanda
             {
-                Id = Guid.NewGuid().ToString(),
                 ComandaId = comandaId,
                 ProdutoId = produto.Id,
-                ProdutoNome = produto.Nome,
+                Descricao = produto.Nome,
                 Quantidade = quantidade,
                 PrecoUnitario = produto.Preco,
-                Total = produto.Preco * quantidade
-            };
+                Subtotal = quantidade * produto.Preco,
+            });
+
+        /// <summary>Self-service / venda avulsa: sem produto cadastrado (RN-CM-03, B9).</summary>
+        public Task AdicionarItemLivreNaComanda(Guid comandaId, string descricao, decimal valor) =>
+            InserirItem(new ItemComanda
+            {
+                ComandaId = comandaId,
+                ProdutoId = null,
+                Descricao = descricao,
+                Quantidade = 1,
+                PrecoUnitario = valor,
+                Subtotal = valor,
+            });
+
+        private async Task InserirItem(ItemComanda item)
+        {
+            await Init();
 
             try
             {
@@ -199,22 +213,21 @@ namespace SorveteriaMaui.Services
                 {
                     tran.Insert(item);
 
-                    var comanda = tran.Table<Comanda>().FirstOrDefault(c => c.Id == comandaId);
+                    var comanda = tran.Table<Comanda>().FirstOrDefault(c => c.Id == item.ComandaId);
                     if (comanda != null)
                     {
-                        comanda.Subtotal += item.Total;
-                        comanda.Total = (comanda.Subtotal + comanda.AcrescimoManual) - comanda.DescontoManual;
+                        comanda.Total += item.Subtotal;
                         tran.Update(comanda);
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro ao adicionar produto na comanda: {ex.Message}");
+                Console.WriteLine($"Erro ao adicionar item na comanda: {ex.Message}");
             }
         }
 
-        public async Task FinalizarComanda(string comandaId)
+        public async Task FinalizarComanda(Guid comandaId)
         {
             await Init();
 
@@ -223,10 +236,9 @@ namespace SorveteriaMaui.Services
             {
                 try
                 {
-                    comanda.Status = 1;
-                    comanda.DataFechamento = DateTime.Now;
-                    comanda.Sincronizado = 0;
-                    comanda.PendenteSincronizacao = true;
+                    comanda.Status = StatusComanda.Fechada;
+                    comanda.FechadaEm = DateTime.UtcNow;
+                    comanda.PendenteEnvio = true;
 
                     await _db.UpdateAsync(comanda);
                 }
@@ -237,53 +249,7 @@ namespace SorveteriaMaui.Services
             }
         }
 
-        public async Task CriarProduto(string nome, double preco, int tipo)
-        {
-            await Init();
-
-            var novoProduto = new Produto
-            {
-                Id = Guid.NewGuid().ToString(),
-                Nome = nome,
-                Preco = preco,
-                Tipo = tipo,
-                Ativo = 1,
-                DataCriacao = DateTime.Now
-            };
-
-            try
-            {
-                await _db.InsertAsync(novoProduto);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao criar produto: {ex.Message}");
-            }
-        }
-
-        public async Task AdicionarAcrescimoManual(string comandaId, double valorAcrescimo)
-        {
-            await Init();
-
-            var comanda = await _db.Table<Comanda>().FirstOrDefaultAsync(c => c.Id == comandaId);
-
-            if (comanda != null)
-            {
-                comanda.AcrescimoManual += valorAcrescimo;
-                comanda.Total = (comanda.Subtotal + comanda.AcrescimoManual) - comanda.DescontoManual;
-
-                try
-                {
-                    await _db.UpdateAsync(comanda);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Erro ao adicionar acréscimo manual: {ex.Message}");
-                }
-            }
-        }
-
-        public async Task AtualizarNomeComanda(string comandaId, string novoNome)
+        public async Task AtualizarNomeComanda(Guid comandaId, string novoNome)
         {
             await Init();
             var comanda = await _db.Table<Comanda>().FirstOrDefaultAsync(c => c.Id == comandaId);
@@ -315,12 +281,11 @@ namespace SorveteriaMaui.Services
             }
 
             var todosItens = await _db.Table<ItemComanda>().Where(i => i.ComandaId == item.ComandaId).ToListAsync();
-            double novoTotal = todosItens.Sum(i => i.Total);
 
             var comanda = await _db.Table<Comanda>().FirstOrDefaultAsync(c => c.Id == item.ComandaId);
             if (comanda != null)
             {
-                comanda.Total = novoTotal;
+                comanda.Total = todosItens.Sum(i => i.Subtotal);
                 try
                 {
                     await _db.UpdateAsync(comanda);
@@ -332,7 +297,7 @@ namespace SorveteriaMaui.Services
             }
         }
 
-        public async Task<List<ItemComanda>> GetItensDaComanda(string comandaId)
+        public async Task<List<ItemComanda>> GetItensDaComanda(Guid comandaId)
         {
             await Init();
             return await _db.Table<ItemComanda>()
@@ -340,21 +305,21 @@ namespace SorveteriaMaui.Services
                            .ToListAsync();
         }
 
-        public async Task<Comanda> GetComandaPorId(string id)
+        public async Task<Comanda> GetComandaPorId(Guid id)
         {
             await Init();
             return await _db.Table<Comanda>().FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public async Task<List<Comanda>> GetComandasPendentesSincronizacao()
+        public async Task<List<Comanda>> GetComandasPendentesEnvio()
         {
             await Init();
             return await _db.Table<Comanda>()
-                           .Where(c => c.PendenteSincronizacao == true && c.Status == 1)
+                           .Where(c => c.PendenteEnvio == true && c.Status != StatusComanda.Aberta)
                            .ToListAsync();
         }
 
-        public async Task MarcarComandaSincronizada(string comandaId)
+        public async Task MarcarComandaEnviada(Guid comandaId)
         {
             await Init();
             try
@@ -362,14 +327,13 @@ namespace SorveteriaMaui.Services
                 var comanda = await _db.Table<Comanda>().FirstOrDefaultAsync(c => c.Id == comandaId);
                 if (comanda != null)
                 {
-                    comanda.PendenteSincronizacao = false;
-                    comanda.Sincronizado = 1;
+                    comanda.PendenteEnvio = false;
                     await _db.UpdateAsync(comanda);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro ao marcar comanda sincronizada: {ex.Message}");
+                Console.WriteLine($"Erro ao marcar comanda enviada: {ex.Message}");
             }
         }
 

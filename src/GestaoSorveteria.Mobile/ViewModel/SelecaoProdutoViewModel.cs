@@ -20,8 +20,8 @@ namespace SorveteriaMaui.ViewModel
         public ObservableCollection<Produto> Produtos { get; set; } = new();
 
         // Propriedade de Quantidade controlada pela tela
-        private double _quantidade = 1;
-        public double Quantidade
+        private int _quantidade = 1;
+        public int Quantidade
         {
             get => _quantidade;
             set
@@ -76,22 +76,10 @@ namespace SorveteriaMaui.ViewModel
 
             if (string.IsNullOrWhiteSpace(resultado)) return;
 
-            // TRATAMENTO DE STRING:
-            // 1. Troca vírgula por ponto para o C# entender
-            string valorTratado = resultado.Replace(",", ".");
-
-            // 2. Tenta converter usando a cultura invariante (ponto como decimal)
-            if (double.TryParse(valorTratado, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double valor))
+            if (Conversoes.TentarLerDinheiro(resultado, out decimal valor))
             {
-                var prodManual = new Produto
-                {
-                    Id = "MANUAL_" + Guid.NewGuid().ToString(),
-                    Nome = "Self-Service",
-                    Preco = valor,
-                    Ativo = 1
-                };
-
-                await _dbService.AdicionarProdutoNaComanda(ComandaAtual.Id, prodManual, 1);
+                // B9: self-service é item livre (ProdutoId nulo), não um produto inventado
+                await _dbService.AdicionarItemLivreNaComanda(ComandaAtual.Id, "Self-Service", valor);
 
                 await Application.Current.MainPage.DisplayAlert("Sucesso", $"Valor de R$ {valor:F2} adicionado!", "OK");
 

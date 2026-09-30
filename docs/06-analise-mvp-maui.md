@@ -81,7 +81,7 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 ### Etapa A — Base sólida (2–3 dias)
 - [x] Monorepo: `src/GestaoSorveteria.Mobile` na `GestaoSorveteria.slnx`; só `net10.0-android` (+ `net10.0-windows` para testar no PC); `ApplicationId = br.com.sorveteria.atendente`
 - [x] Referenciar `Domain` e `Contracts`
-- [ ] Modelos SQLite com `decimal`, datas UTC, enums em vez de `int` mágico, `ProdutoId` nulo para item livre (B6, B9, B13, B14)
+- [x] Modelos SQLite com `decimal`, datas UTC, enums em vez de `int` mágico, `ProdutoId` nulo para item livre (B6, B9, B13, B14)
 - [ ] Substituir `DatabaseService` por repositórios pequenos + `ComandaAppService` que carrega → chama o domínio → grava tudo numa transação (B1, B4, B5)
 - [ ] Erros visíveis: gravação que falha mostra alerta e não segue (B7)
 - [x] Mover `Contexto/` para `docs/contexto-mvp/` (uma cópia só)

@@ -1,39 +1,62 @@
-﻿using SQLite;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using GestaoSorveteria.Domain.Comandas;
+using SQLite;
+using static SorveteriaMaui.Model.Conversoes;
 
-namespace SorveteriaMaui.Model
+namespace SorveteriaMaui.Model;
+
+/// <summary>Linha da tabela local de comandas. Espelha a <c>Comanda</c> do Domain.</summary>
+[Table("comandas")]
+public class Comanda
 {
-    [Table("Comanda")]
-    public class Comanda
+    private DateTime _criadaEm;
+    private DateTime? _fechadaEm;
+    private DateTime? _canceladaEm;
+
+    [PrimaryKey, Column("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Column("numero")]
+    public int Numero { get; set; }
+
+    [Column("nome_cliente")]
+    public string? NomeCliente { get; set; }
+
+    [Column("tipo")]
+    public TipoComanda Tipo { get; set; } = TipoComanda.Balcao;
+
+    [Indexed, Column("status")]
+    public StatusComanda Status { get; set; } = StatusComanda.Aberta;
+
+    [Column("observacao")]
+    public string? Observacao { get; set; }
+
+    [Column("total_centavos")]
+    public long TotalCentavos { get; set; }
+
+    [Ignore]
+    public decimal Total
     {
-        [PrimaryKey]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Indexed(Name = "idx_comanda_status")]
-        public int Numero { get; set; }
-
-        public string NomeCliente { get; set; }
-
-        public int Status { get; set; } // 0 = Aberta, 1 = Fechada, 2 = Cancelada
-
-        public DateTime DataAbertura { get; set; }
-
-        public DateTime? DataFechamento { get; set; }
-
-        public double Subtotal { get; set; } = 0;
-
-        public double AcrescimoManual { get; set; } = 0;
-
-        public double DescontoManual { get; set; } = 0;
-
-        public double Total { get; set; } = 0;
-
-        [Indexed(Name = "idx_comanda_sincronizado")]
-        public int Sincronizado { get; set; } = 0;
-
-        // Indica se a comanda fechada ainda precisa ser sincronizada com o servidor
-        public bool PendenteSincronizacao { get; set; } = false;
+        get => ParaReais(TotalCentavos);
+        set => TotalCentavos = ParaCentavos(value);
     }
+
+    [Column("criada_em")]
+    public DateTime CriadaEm { get => _criadaEm; set => _criadaEm = ComoUtc(value); }
+
+    [Column("fechada_em")]
+    public DateTime? FechadaEm { get => _fechadaEm; set => _fechadaEm = ComoUtc(value); }
+
+    [Column("cancelada_em")]
+    public DateTime? CanceladaEm { get => _canceladaEm; set => _canceladaEm = ComoUtc(value); }
+
+    [Column("motivo_cancelamento")]
+    public string? MotivoCancelamento { get; set; }
+
+    /// <summary>Fechada ou cancelada e ainda não confirmada pela API (docs/03, seção 8).</summary>
+    [Indexed, Column("pendente_envio")]
+    public bool PendenteEnvio { get; set; }
+
+    /// <summary>Para a tela: hora do celular (RN-TD-01).</summary>
+    [Ignore]
+    public DateTime CriadaEmLocal => CriadaEm.ToLocalTime();
 }

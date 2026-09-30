@@ -32,13 +32,13 @@
                                 <!-- Nome -->
                                 <Label Grid.Row="0" 
                Grid.Column="0"
-               Text="{Binding ProdutoNome}" 
+               Text="{Binding Descricao}" 
                FontAttributes="Bold"  TextColor="Gray" />
 
                                 <!-- Total -->
                                 <Label Grid.Row="0" 
                Grid.Column="1"
-               Text="{Binding Total, StringFormat='R$ {0:F2}'}" 
+               Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" 
                FontAttributes="Bold"
                VerticalOptions="Center" TextColor="Gray"/>
 

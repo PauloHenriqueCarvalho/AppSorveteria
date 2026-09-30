@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using GestaoSorveteria.Domain.Common;
 using System.Windows.Input;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
@@ -48,7 +49,7 @@ public class DetalhesComandaViewModel : BindableObject
         if (item.Quantidade > 1)
         {
             item.Quantidade--;
-            item.Total = item.Quantidade * item.PrecoUnitario;
+            item.Subtotal = Moeda.Arredondar(item.Quantidade * item.PrecoUnitario);
 
             await _dbService.SalvarComandaCompleta(ComandaAtual, Itens.ToList());
             await CarregarItens();
@@ -57,7 +58,7 @@ public class DetalhesComandaViewModel : BindableObject
         {
             bool confirmar = await Application.Current.MainPage.DisplayAlert(
                 "Excluir item",
-                $"Remover {item.ProdutoNome} da comanda?",
+                $"Remover {item.Descricao} da comanda?",
                 "Remover",
                 "Cancelar");
 
@@ -73,9 +74,8 @@ public class DetalhesComandaViewModel : BindableObject
 
     private void RecalcularTotal()
     {
-        ComandaAtual.Subtotal = Itens.Sum(i => i.Total);
-        ComandaAtual.Total = (ComandaAtual.Subtotal + ComandaAtual.AcrescimoManual)
-                             - ComandaAtual.DescontoManual;
+        // RN-CM-05: Total = soma dos subtotais
+        ComandaAtual.Total = Itens.Sum(i => i.Subtotal);
 
         OnPropertyChanged(nameof(ComandaAtual));
     }
@@ -83,7 +83,7 @@ public class DetalhesComandaViewModel : BindableObject
     private async Task AumentarQuantidade(ItemComanda item)
     {
         item.Quantidade++;
-        item.Total = item.Quantidade * item.PrecoUnitario;
+        item.Subtotal = Moeda.Arredondar(item.Quantidade * item.PrecoUnitario);
 
         await _dbService.SalvarComandaCompleta(ComandaAtual, Itens.ToList());
         await CarregarItens();
@@ -108,7 +108,7 @@ public class DetalhesComandaViewModel : BindableObject
     private async Task RemoverItem(ItemComanda item)
     {
         bool confirm = await Application.Current.MainPage.DisplayAlert("Remover",
-            $"Deseja remover {item.ProdutoNome}?", "Sim", "Não");
+            $"Deseja remover {item.Descricao}?", "Sim", "Não");
 
         if (confirm)
         {
