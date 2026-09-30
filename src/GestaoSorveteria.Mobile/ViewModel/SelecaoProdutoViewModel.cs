@@ -92,7 +92,7 @@ public class SelecaoProdutoViewModel : BindableObject
         // B9: self-service é item livre (ProdutoId nulo), não um produto inventado
         if (await Executar(() => _comandas.AdicionarItemLivreAsync(ComandaAtual.Id, "Self-Service", valor)))
         {
-            await Shell.Current.DisplayAlertAsync("Sucesso", $"Valor de R$ {valor:F2} adicionado!", "OK");
+            AvisoRapido.Mostrar($"Self-Service R$ {valor:F2} adicionado"); // B11: sem toque extra
             await Shell.Current.GoToAsync("..");
         }
     }
@@ -104,7 +104,7 @@ public class SelecaoProdutoViewModel : BindableObject
         var quantidade = Quantidade;
         if (await Executar(() => _comandas.AdicionarProdutoAsync(ComandaAtual.Id, produto.Id, quantidade)))
         {
-            await Shell.Current.DisplayAlertAsync("Sucesso", $"{quantidade}x {produto.Nome} adicionado!", "OK");
+            AvisoRapido.Mostrar($"{quantidade}x {produto.Nome} adicionado"); // B11: sem toque extra
 
             // Reseta a quantidade para 1 para o próximo clique
             Quantidade = 1;
