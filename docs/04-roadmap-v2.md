@@ -40,7 +40,7 @@ Fase 4 — Expansões ................. a combinar
 - [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
 - [x] `ProdutosController`: criar, editar, ativar/desativar (Admin)
 - [ ] `POST /api/comandas/{id}/estornar` (Admin)
-- [ ] `GET /api/versao`
+- [x] `GET /api/versao`
 - [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida
 - [ ] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas
 

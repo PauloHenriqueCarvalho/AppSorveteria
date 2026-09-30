@@ -239,7 +239,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |
 | GET | `/api/relatorios/dia?data=` | Admin | resumo do dia para o painel |
 | GET | `/api/caixas?de=&ate=` | Admin | histórico de fechamentos |
-| GET | `/api/versao` | público | versão mínima do app |
+| GET | `/api/versao` | público | `versaoApi`, `versaoMinimaApp`, `versaoAtualApp`, `linkApk` (configuração `App:*`); abaixo da mínima o app exige atualizar, abaixo da atual só avisa |
 
 Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainException`), 401/403 acesso, 404 não encontrado, 409 conflito (violação de unicidade), 429 rate limit. No sync em lote, rejeição de uma comanda **não** derruba o lote: vem no resultado daquela comanda.
 
