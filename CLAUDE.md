@@ -40,7 +40,7 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 
 ## Estado atual (atualize esta seção ao terminar um sprint)
 
-- **Sprint 0 (fundação da API): concluído (29/09/2026).** Solução inteira compila sem avisos, 100 testes passam, migração `InitialCreate` aplicada no PostgreSQL local (porta 5433) e login/`/api/auth/me` testados. Pendente: proteger a `main` no GitHub.
+- **Sprint 0 (fundação da API): concluído (29/09/2026).** Solução inteira compila sem avisos, 100 testes passam, migração `InitialCreate` aplicada no PostgreSQL local (porta 5433) e login/`/api/auth/me` testados.
 - **App MAUI: MVP funcionando, com bugs de dinheiro** (docs/06 — B1 venda rápida quebrada, B2 pagamento grava valor entregue, B3 aceita dinheiro insuficiente, B4/B5 totais desatualizados, B6 `double`, B7 erros silenciosos).
 - **Próximo:** Etapa A do app (base sólida) e Sprint 1 da API (sincronização).
 
