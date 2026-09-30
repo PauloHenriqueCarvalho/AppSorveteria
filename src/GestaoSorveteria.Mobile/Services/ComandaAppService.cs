@@ -63,7 +63,7 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return Task.CompletedTask;
         });
 
-    /// <summary>RN-CM-06: observação editável enquanto a comanda está aberta (até 300 caracteres).</summary>
+    /// <summary>RN-CM-06/11: observação (no delivery, nome/endereço) editável enquanto a comanda está aberta (até 300 caracteres).</summary>
     public Task AlterarObservacaoAsync(Guid comandaId, string? observacao) =>
         AlterarAsync(comandaId, comanda =>
         {
