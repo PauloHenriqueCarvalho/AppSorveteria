@@ -22,7 +22,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_Correto_RetornaTokenEUsuario()
     {
-        var resposta = await _service.LoginAsync(new LoginRequest("maria", "senha123"));
+        var resposta = await _service.LoginAsync(new LoginRequest("maria", "senha123"), TestContext.Current.CancellationToken);
 
         Assert.NotNull(resposta);
         Assert.Equal("token-maria", resposta.Token);
@@ -35,7 +35,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_NormalizaLoginDigitado()
     {
-        var resposta = await _service.LoginAsync(new LoginRequest("  MARIA ", "senha123"));
+        var resposta = await _service.LoginAsync(new LoginRequest("  MARIA ", "senha123"), TestContext.Current.CancellationToken);
 
         Assert.NotNull(resposta);
         Assert.Equal("maria", resposta.Usuario.Login);
@@ -44,7 +44,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_AtendenteComPin_Funciona()
     {
-        var resposta = await _service.LoginAsync(new LoginRequest("joao", "1234"));
+        var resposta = await _service.LoginAsync(new LoginRequest("joao", "1234"), TestContext.Current.CancellationToken);
 
         Assert.NotNull(resposta);
         Assert.Equal("Atendente", resposta.Usuario.Perfil);
@@ -53,7 +53,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_SenhaErrada_RetornaNull()
     {
-        var resposta = await _service.LoginAsync(new LoginRequest("maria", "errada"));
+        var resposta = await _service.LoginAsync(new LoginRequest("maria", "errada"), TestContext.Current.CancellationToken);
 
         Assert.Null(resposta);
     }
@@ -61,7 +61,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_UsuarioInexistente_RetornaNull()
     {
-        var resposta = await _service.LoginAsync(new LoginRequest("ninguem", "senha123"));
+        var resposta = await _service.LoginAsync(new LoginRequest("ninguem", "senha123"), TestContext.Current.CancellationToken);
 
         Assert.Null(resposta);
     }
@@ -71,7 +71,7 @@ public class AuthServiceTests
     {
         _usuarios.Usuarios.Single(u => u.Login == "joao").Desativar();
 
-        var resposta = await _service.LoginAsync(new LoginRequest("joao", "1234"));
+        var resposta = await _service.LoginAsync(new LoginRequest("joao", "1234"), TestContext.Current.CancellationToken);
 
         Assert.Null(resposta);
     }
@@ -81,7 +81,7 @@ public class AuthServiceTests
     [InlineData("maria", "")]
     public async Task Login_CamposVazios_RetornaNull(string login, string senha)
     {
-        var resposta = await _service.LoginAsync(new LoginRequest(login, senha));
+        var resposta = await _service.LoginAsync(new LoginRequest(login, senha), TestContext.Current.CancellationToken);
 
         Assert.Null(resposta);
     }
