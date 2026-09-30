@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Host único: API REST (JWT) para o app do atendente e, no Sprint 3, o painel Blazor da dona.
+       É também o projeto de inicialização das ferramentas do EF (dotnet ef ... -s este projeto). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GestaoSorveteria.Server</RootNamespace>
+    <UserSecretsId>gestao-sorveteria-server</UserSecretsId>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestaoSorveteria.Application\GestaoSorveteria.Application.csproj" />
+    <ProjectReference Include="..\GestaoSorveteria.Infrastructure\GestaoSorveteria.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

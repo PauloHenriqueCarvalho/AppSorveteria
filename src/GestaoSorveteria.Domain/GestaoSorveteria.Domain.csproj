@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Camada de domínio: entidades, regras de negócio e interfaces de repositório.
+       Regra de ouro: ZERO dependência externa (nenhum pacote, nenhum outro projeto). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GestaoSorveteria.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

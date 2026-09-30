@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Detalhes de implementação: EF Core + PostgreSQL, repositórios, hash de senha, relógio, seed.
+       Único projeto (além do Server) que conhece o banco. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GestaoSorveteria.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestaoSorveteria.Application\GestaoSorveteria.Application.csproj" />
+  </ItemGroup>
+
+</Project>

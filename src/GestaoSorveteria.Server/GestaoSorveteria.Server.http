@@ -1,0 +1,40 @@
+@host = http://localhost:5080
+
+### Informações da API
+GET {{host}}/
+
+### Saúde (banco acessível?)
+GET {{host}}/health
+
+### Login da dona (Admin criado pelo seed em Development)
+# Copie o "token" da resposta para a variável abaixo.
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "login": "admin",
+  "senha": "admin12345"
+}
+
+### Quem sou eu (cole o token)
+@token = COLE_O_TOKEN_AQUI
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Login inválido → 401 ProblemDetails
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "login": "admin",
+  "senha": "errada"
+}
+
+### Validação → 400 ValidationProblemDetails
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "login": "ab",
+  "senha": ""
+}

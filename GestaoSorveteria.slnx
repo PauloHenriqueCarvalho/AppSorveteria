@@ -1,0 +1,34 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="docs/01-analise-e-decisoes.md" />
+    <File Path="docs/02-regras-de-negocio-v2.md" />
+    <File Path="docs/03-arquitetura-e-modelo-de-dados.md" />
+    <File Path="docs/04-roadmap-v2.md" />
+    <File Path="docs/05-correcoes-da-proposta.md" />
+    <File Path="docs/06-analise-mvp-maui.md" />
+    <File Path="docs/07-hospedagem.md" />
+  </Folder>
+  <Folder Name="/solution-items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path=".github/workflows/ci.yml" />
+    <File Path="Directory.Build.props" />
+    <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/GestaoSorveteria.Domain/GestaoSorveteria.Domain.csproj" />
+    <Project Path="src/GestaoSorveteria.Contracts/GestaoSorveteria.Contracts.csproj" />
+    <Project Path="src/GestaoSorveteria.Application/GestaoSorveteria.Application.csproj" />
+    <Project Path="src/GestaoSorveteria.Infrastructure/GestaoSorveteria.Infrastructure.csproj" />
+    <Project Path="src/GestaoSorveteria.Server/GestaoSorveteria.Server.csproj" />
+    <Project Path="src/GestaoSorveteria.Mobile/GestaoSorveteria.Mobile.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GestaoSorveteria.Tests/GestaoSorveteria.Tests.csproj" />
+  </Folder>
+</Solution>

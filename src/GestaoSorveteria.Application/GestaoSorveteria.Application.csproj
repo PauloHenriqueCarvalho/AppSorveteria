@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Casos de uso. Orquestra o Domain; conhece só interfaces (repositórios, relógio, hash, token).
+       Sem pacotes NuGet: as implementações ficam em Infrastructure/Server. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GestaoSorveteria.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestaoSorveteria.Domain\GestaoSorveteria.Domain.csproj" />
+    <ProjectReference Include="..\GestaoSorveteria.Contracts\GestaoSorveteria.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

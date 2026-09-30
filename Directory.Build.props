@@ -1,0 +1,14 @@
+<Project>
+  <!-- Propriedades comuns a todos os projetos da solução.
+       O TargetFramework fica em cada .csproj (o projeto MAUI usa TargetFrameworks no plural). -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <NeutralLanguage>pt-BR</NeutralLanguage>
+    <Authors>Paulo</Authors>
+    <Product>Gestão Sorveteria</Product>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>
