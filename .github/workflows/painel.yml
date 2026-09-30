@@ -1,0 +1,42 @@
+# Lint e build do painel da dona (React + Vite) quando o painel muda.
+# O deploy é feito pelo Cloudflare Pages a partir do repositório (docs/07), não por este workflow.
+name: Painel
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/GestaoSorveteria.Painel/**"
+      - ".github/workflows/painel.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/GestaoSorveteria.Painel/**"
+      - ".github/workflows/painel.yml"
+  workflow_dispatch:
+
+jobs:
+  painel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/GestaoSorveteria.Painel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Node LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: src/GestaoSorveteria.Painel/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

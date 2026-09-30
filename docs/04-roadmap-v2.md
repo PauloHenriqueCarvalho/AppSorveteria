@@ -55,7 +55,8 @@ Plano detalhado em docs/06, seção 4.
 ### Sprint 3 — Painel da dona (site estático) (semana 3)
 
 - [x] Decidir a tecnologia: **React + Vite + TypeScript** em `src/GestaoSorveteria.Painel` (ADR 018, docs/01)
-- [ ] Projeto do painel no repositório; publicação no Cloudflare Pages; CORS na API
+- [x] Projeto do painel no repositório (Vite + React + TS, React Router, TanStack Query, ESLint, CI `Painel`); configuração do Cloudflare Pages documentada (docs/07)
+- [ ] CORS na API com a origem do painel vinda de configuração (`Cors:PainelOrigem`)
 - [ ] Login da dona pela API (JWT, perfil Admin)
 - [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
 - [ ] Vendas por data com itens e pagamentos; estorno
