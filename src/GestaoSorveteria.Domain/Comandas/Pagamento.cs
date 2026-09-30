@@ -10,9 +10,6 @@ namespace GestaoSorveteria.Domain.Comandas;
 /// </summary>
 public readonly record struct DadosPagamento(FormaPagamento Forma, decimal Valor, decimal? ValorRecebido = null, Guid? Id = null, decimal? TrocoInformado = null);
 
-/// <summary>Item de uma comanda recebida na sincronização: descrição e preço praticados na venda (RN-SY-06).</summary>
-public readonly record struct DadosItemRecebido(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal);
-
 /// <summary>
 /// RN-PG-03/04: Valor abate da comanda; em dinheiro, Troco = ValorRecebido − Valor, calculado aqui, nunca digitado.
 /// Criado somente pela <see cref="Comanda"/>.
