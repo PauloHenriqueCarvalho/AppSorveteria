@@ -1,0 +1,34 @@
+# Roda a cada push/PR: compila o backend em Release e executa os testes.
+# O app MAUI (src/GestaoSorveteria.Mobile) fica fora do CI por enquanto: exige o workload
+# do .NET MAUI/Android. Compile-o no Visual Studio. (Um job Android pode entrar no Sprint 4.)
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Compilar a API
+        run: dotnet build src/GestaoSorveteria.Server/GestaoSorveteria.Server.csproj -c Release
+
+      - name: Testar
+        run: dotnet test tests/GestaoSorveteria.Tests/GestaoSorveteria.Tests.csproj -c Release --logger "trx;LogFileName=resultados.trx"
+
+      - name: Publicar resultados dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-testes
+          path: "**/TestResults/*.trx"

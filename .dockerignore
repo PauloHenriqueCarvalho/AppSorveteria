@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/TestResults/
+.git/
+docs/
+tests/
+*.md
+docker-compose*.yml
+src/GestaoSorveteria.Mobile/

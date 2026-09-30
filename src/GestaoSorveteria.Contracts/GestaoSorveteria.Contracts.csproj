@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DTOs da API (request/response). Compartilhado entre Server, Application e o app MAUI.
+       Sem dependências: só records e DataAnnotations (BCL). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GestaoSorveteria.Contracts</RootNamespace>
+  </PropertyGroup>
+
+</Project>

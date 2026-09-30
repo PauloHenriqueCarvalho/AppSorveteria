@@ -1,4 +1,4 @@
-﻿	<Project Sdk="Microsoft.NET.Sdk">
+	<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<DebugSymbols>true</DebugSymbols>
@@ -21,7 +21,7 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>SorveteriaMaui</ApplicationTitle>
+		<ApplicationTitle>Sorveteria</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.companyname.sorveteriamaui</ApplicationId>
@@ -63,11 +63,6 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLiteNetExtensions" Version="2.1.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Contexto\" />
-	  <Folder Include="Service\" />
 	</ItemGroup>
 
 	<ItemGroup>
