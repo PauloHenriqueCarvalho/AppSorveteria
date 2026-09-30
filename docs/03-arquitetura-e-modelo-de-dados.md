@@ -227,7 +227,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 |---|---|---|---|
 | POST | `/api/auth/login` | público | rate limit; devolve JWT + usuário (pronto no Sprint 0) |
 | GET | `/api/auth/me` | qualquer | valida token (pronto no Sprint 0) |
-| GET | `/api/produtos?desde=` | qualquer | o app baixa o catálogo (alterados desde a última sincronização) |
+| GET | `/api/produtos?desde=` | qualquer | o app baixa o catálogo. Sem `desde`: tudo. Com `desde` (data/hora com fuso): só os criados/alterados a partir dali, **inclusive desativados** (o app esconde o botão, RN-PR-03). A resposta traz `geradoEmUtc`, que o app guarda e manda como próximo `desde`. A API recua `desde` em 5 min (margem contra gravação concorrente); repetir produto é inofensivo |
 | POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel |
 | POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | |
 | POST | `/api/sync/caixas` | qualquer | lote de caixas (abertos/fechados) com movimentos; idempotente pelo `id` |

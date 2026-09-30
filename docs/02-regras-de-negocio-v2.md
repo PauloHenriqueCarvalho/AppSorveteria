@@ -24,7 +24,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 |---|---|---|---|
 | RN-PR-01 | Produto tem nome (2–80 caracteres, único sem diferenciar maiúsculas), categoria (obrigatória) e preço ≥ 0 | F1 | Domain (`Produto`) |
 | RN-PR-02 | Produto com `PermiteValorLivre` (ex.: "Self-service por kg") aceita valor digitado pelo atendente na venda; o preço cadastrado é apenas sugestão (pode ser 0) | F1 | Domain |
-| RN-PR-03 | Produto é **desativado**, nunca apagado, quando já foi vendido. Produto inativo não aparece no app | F1 | Application |
+| RN-PR-03 | Produto é **desativado**, nunca apagado, quando já foi vendido. Produto inativo não aparece no app: a API entrega os inativos na sincronização (`GET /api/produtos?desde=`) e o app esconde o botão | F1 | Application + App |
 | RN-PR-04 | Alterar o preço não altera vendas passadas (o item guarda o preço praticado) | F1 | Domain (`ItemComanda`) |
 | RN-PR-05 | `Ordem` define a posição do botão no app (mais vendidos primeiro) | F1 | Domain |
 | RN-PR-06 | Produto pode ter **ficha técnica** (lista de insumo + quantidade). Produto sem ficha técnica não movimenta estoque (ex.: picolé comprado pronto, na Fase 2) | F2 | Domain |

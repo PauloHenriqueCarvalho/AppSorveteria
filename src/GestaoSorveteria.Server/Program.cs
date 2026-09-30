@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
+using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Infrastructure;
 using GestaoSorveteria.Infrastructure.Seed;
 using GestaoSorveteria.Server.Middleware;
@@ -43,6 +44,7 @@ builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection(SeedOpt
 
 // ---------- Aplicação ----------
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ProdutoService>();
 
 // ---------- Autenticação JWT (app do atendente) ----------
 var jwt = builder.Configuration.GetSection(JwtOptions.Secao).Get<JwtOptions>() ?? new JwtOptions();
