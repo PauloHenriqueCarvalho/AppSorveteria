@@ -28,3 +28,33 @@ export type Perfil = 'Admin' | 'Atendente'
 
 /** Só a administração da loja entra no painel. */
 export const PERFIL_ADMIN: Perfil = 'Admin'
+
+/** Contracts/Produtos/ProdutoDto */
+export interface ProdutoDto {
+  id: string
+  nome: string
+  categoria: string
+  /** Preço em reais, como a API devolve (decimal com 2 casas). */
+  preco: number
+  /** Self-service: o atendente digita o valor na venda; o preço é só sugestão (RN-PR-02). */
+  permiteValorLivre: boolean
+  ativo: boolean
+  /** Posição do botão no app (RN-PR-05). */
+  ordem: number
+  atualizadoEmUtc: string
+}
+
+/** Contracts/Produtos/CatalogoProdutosResponse */
+export interface CatalogoProdutosResponse {
+  geradoEmUtc: string
+  produtos: ProdutoDto[]
+}
+
+/** Contracts/Produtos/SalvarProdutoRequest — POST e PUT /api/produtos. */
+export interface SalvarProdutoRequest {
+  nome: string
+  categoria: string
+  preco: number
+  permiteValorLivre: boolean
+  ordem: number
+}
