@@ -178,3 +178,20 @@ export interface ComandaDetalheDto {
   itens: ItemComandaDto[]
   pagamentos: PagamentoDto[]
 }
+
+/** Contracts/Relatorios/ResumoDiaDto — dashboard. Tudo calculado na API. */
+export interface ResumoDiaDto {
+  /** Dia comercial "2026-09-30". */
+  data: string
+  totalVendido: number
+  quantidadeComandas: number
+  ticketMedio: number
+  porFormaPagamento: TotalPorFormaDto[]
+  /** Vendas do dia estornadas depois (RN-RL-01), fora do total vendido. */
+  totalEstornado: number
+  quantidadeEstornos: number
+  quantidadeCanceladas: number
+  vendasRecebidasAposFechamento: number
+  /** Caixa aberto agora (último estado recebido do celular), ou null. */
+  caixaAtual: CaixaResumoDto | null
+}

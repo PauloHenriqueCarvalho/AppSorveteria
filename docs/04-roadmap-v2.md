@@ -63,7 +63,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] Projeto do painel no repositório (Vite + React + TS, React Router, TanStack Query, ESLint, CI `Painel`); configuração do Cloudflare Pages documentada (docs/07)
 - [x] CORS na API com a origem do painel vinda de configuração (`Cors:PainelOrigem`)
 - [x] Login da dona pela API (JWT, perfil Admin; sai sozinho quando o token vence ou a API responde 401)
-- [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
+- [x] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
 - [x] Vendas por data com itens e pagamentos; estorno (status `Estornada` — RN-CM-09)
 - [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
 - [x] Caixas: histórico de fechamentos com diferenças (`GET /api/caixas*` + tela do painel)
