@@ -58,3 +58,54 @@ export interface SalvarProdutoRequest {
   permiteValorLivre: boolean
   ordem: number
 }
+
+/** Contracts/Caixas/TotalPorFormaDto — soma dos pagamentos de uma forma. */
+export interface TotalPorFormaDto {
+  forma: string
+  total: number
+  quantidade: number
+}
+
+/**
+ * Contracts/Caixas/CaixaResumoDto. Fechado: valores gravados no fechamento. Aberto: vendas em dinheiro e
+ * esperado "até agora"; contado e diferença nulos. Todos os valores vêm calculados pela API.
+ */
+export interface CaixaResumoDto {
+  id: string
+  status: 'Aberto' | 'Fechado'
+  abertoEm: string
+  abertoPorNome: string
+  fundoTroco: number
+  fechadoEm: string | null
+  fechadoPorNome: string | null
+  totalVendas: number
+  quantidadeComandas: number
+  totalVendasDinheiro: number | null
+  valorEsperado: number | null
+  valorContado: number | null
+  /** contado − esperado. Negativo = faltou dinheiro na gaveta. */
+  diferenca: number | null
+  /** RN-CX-10: o fechamento feito no celular não bateu com o do servidor. */
+  divergenciaSincronizacao: boolean
+  /** RN-CX-08: vendas que chegaram depois do fechamento. */
+  vendasRecebidasAposFechamento: number
+  dinheiroRecebidoAposFechamento: number
+}
+
+/** Contracts/Caixas/MovimentoCaixaDto */
+export interface MovimentoCaixaDto {
+  id: string
+  tipo: 'Sangria' | 'Suprimento'
+  valor: number
+  motivo: string
+  usuarioNome: string
+  em: string
+}
+
+/** Contracts/Caixas/CaixaDetalheDto */
+export interface CaixaDetalheDto {
+  resumo: CaixaResumoDto
+  movimentos: MovimentoCaixaDto[]
+  porFormaPagamento: TotalPorFormaDto[]
+  observacao: string | null
+}

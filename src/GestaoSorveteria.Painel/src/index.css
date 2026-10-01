@@ -378,6 +378,76 @@ a.botao {
   }
 }
 
+h2 {
+  font-size: 1.125rem;
+  margin: 0 0 0.75rem;
+}
+
+.etiqueta-ok {
+  background: #e6f4ea;
+  color: var(--cor-sucesso);
+}
+
+.etiqueta-erro {
+  background: #fdecea;
+  color: var(--cor-erro);
+}
+
+.etiqueta-aviso {
+  background: #fff4e5;
+  color: #8a4b00;
+}
+
+.etiqueta-info {
+  background: var(--cor-marca-clara);
+  color: var(--cor-marca);
+}
+
+/* Pares rótulo / valor (dinheiro à direita, alinhado). */
+.valores {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0 0;
+}
+
+.valores-linha {
+  display: contents;
+}
+
+.valores dt {
+  color: var(--cor-texto-suave);
+}
+
+.valores dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.filtros-datas {
+  flex-direction: row;
+  margin-bottom: 0.5rem;
+}
+
+.filtros-datas .campo {
+  flex: 1;
+}
+
+.filtros-datas input {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 0.5rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.lista-simples .lista-item {
+  min-height: 0;
+}
+
 /* Celular: menu fixo embaixo, ao alcance do polegar. */
 .menu {
   position: fixed;
