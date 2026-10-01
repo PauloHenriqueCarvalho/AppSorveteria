@@ -10,6 +10,8 @@ import ListaCaixas from './paginas/caixas/ListaCaixas.tsx'
 import NaoEncontrada from './paginas/NaoEncontrada.tsx'
 import EditarProduto from './paginas/produtos/EditarProduto.tsx'
 import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
+import DetalheVenda from './paginas/vendas/DetalheVenda.tsx'
+import ListaVendas from './paginas/vendas/ListaVendas.tsx'
 import SessaoProvider from './sessao/SessaoProvider.tsx'
 
 const queryClient = new QueryClient({
@@ -33,6 +35,8 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Inicio /> },
+          { path: 'vendas', element: <ListaVendas /> },
+          { path: 'vendas/:id', element: <DetalheVenda /> },
           { path: 'caixas', element: <ListaCaixas /> },
           { path: 'caixas/:id', element: <DetalheCaixa /> },
           { path: 'produtos', element: <ListaProdutos /> },

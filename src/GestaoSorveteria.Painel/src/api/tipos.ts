@@ -109,3 +109,72 @@ export interface CaixaDetalheDto {
   porFormaPagamento: TotalPorFormaDto[]
   observacao: string | null
 }
+
+/** Contracts/Comandas/PaginaDto — totalItens é o total sem paginação. */
+export interface PaginaDto<T> {
+  itens: T[]
+  pagina: number
+  tamanho: number
+  totalItens: number
+}
+
+export type StatusComanda = 'Aberta' | 'Fechada' | 'Cancelada' | 'Estornada'
+
+/** Contracts/Comandas/ComandaResumoDto — linha da lista de vendas. */
+export interface ComandaResumoDto {
+  id: string
+  numero: number
+  caixaId: string
+  tipo: 'Balcao' | 'Delivery'
+  status: StatusComanda
+  total: number
+  criadaEm: string
+  fechadaEm: string | null
+  atendenteNome: string
+  formasPagamento: string[]
+  recebidaAposFechamentoCaixa: boolean
+}
+
+/** Contracts/Comandas/ItemComandaDto — produtoId nulo = item livre (self-service, venda avulsa). */
+export interface ItemComandaDto {
+  id: string
+  produtoId: string | null
+  descricao: string
+  quantidade: number
+  precoUnitario: number
+  subtotal: number
+}
+
+/** Contracts/Comandas/PagamentoDto — troco calculado na venda. */
+export interface PagamentoDto {
+  id: string
+  forma: string
+  valor: number
+  valorRecebido: number
+  troco: number
+}
+
+/** Contracts/Comandas/ComandaDetalheDto */
+export interface ComandaDetalheDto {
+  id: string
+  numero: number
+  caixaId: string
+  tipo: 'Balcao' | 'Delivery'
+  status: StatusComanda
+  total: number
+  observacao: string | null
+  /** Hora do celular. */
+  criadaEm: string
+  /** Hora em que o servidor recebeu. */
+  recebidaEm: string
+  fechadaEm: string | null
+  canceladaEm: string | null
+  motivoCancelamento: string | null
+  estornadaEm: string | null
+  estornadaPorNome: string | null
+  motivoEstorno: string | null
+  recebidaAposFechamentoCaixa: boolean
+  atendenteNome: string
+  itens: ItemComandaDto[]
+  pagamentos: PagamentoDto[]
+}

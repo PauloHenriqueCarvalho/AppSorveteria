@@ -67,3 +67,15 @@ const FORMAS: Record<string, string> = {
 export function nomeDaForma(forma: string): string {
   return FORMAS[forma] ?? forma
 }
+
+const STATUS: Record<string, string> = {
+  Aberta: 'Aberta',
+  Fechada: 'Paga',
+  Cancelada: 'Cancelada',
+  Estornada: 'Estornada',
+}
+
+/** Situação da venda em linguagem da dona ("Fechada" → "Paga"). */
+export function nomeDoStatus(status: string): string {
+  return STATUS[status] ?? status
+}
