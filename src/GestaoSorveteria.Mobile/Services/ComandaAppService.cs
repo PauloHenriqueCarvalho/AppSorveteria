@@ -16,10 +16,11 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
 
-    public Task<Guid> AbrirAsync(string? nomeCliente) =>
+    /// <summary>RN-CM-02/11: balcão ou delivery; no delivery a observação guarda nome/endereço.</summary>
+    public Task<Guid> AbrirAsync(string? nomeCliente, TipoComanda tipo = TipoComanda.Balcao, string? observacao = null) =>
         UmaPorVezAsync(async () =>
         {
-            var comanda = await NovaComandaAsync();
+            var comanda = await NovaComandaAsync(tipo, observacao);
             await comandas.GravarAsync(comanda, nomeCliente);
             return comanda.Id;
         });
@@ -62,6 +63,14 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return Task.CompletedTask;
         });
 
+    /// <summary>RN-CM-06/11: observação (no delivery, nome/endereço) editável enquanto a comanda está aberta (até 300 caracteres).</summary>
+    public Task AlterarObservacaoAsync(Guid comandaId, string? observacao) =>
+        AlterarAsync(comandaId, comanda =>
+        {
+            comanda.AlterarObservacao(observacao);
+            return Task.CompletedTask;
+        });
+
     public Task AlterarNomeClienteAsync(Guid comandaId, string? nomeCliente) =>
         UmaPorVezAsync(async () =>
         {
@@ -69,11 +78,11 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return true;
         });
 
-    /// <summary>RN-CM-07 / RN-PG-03: pagamento soma exatamente o total; troco calculado pelo Domain.</summary>
-    public Task<Comanda> FecharAsync(Guid comandaId, DadosPagamento pagamento) =>
+    /// <summary>RN-CM-07 / RN-PG-02/03: pagamentos (um ou vários) somam exatamente o total; troco calculado pelo Domain.</summary>
+    public Task<Comanda> FecharAsync(Guid comandaId, IReadOnlyList<DadosPagamento> pagamentos) =>
         AlterarAsync(comandaId, comanda =>
         {
-            comanda.Fechar([pagamento], DateTime.UtcNow);
+            comanda.Fechar(pagamentos, DateTime.UtcNow);
             return Task.CompletedTask;
         });
 
@@ -92,22 +101,22 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     /// RN-CM-10 / B1: abre a comanda, lança "Venda avulsa" e fecha com o pagamento numa única gravação.
     /// Se o pagamento for recusado, nada é gravado (não sobra comanda aberta).
     /// </summary>
-    public Task<Comanda> VendaRapidaAsync(decimal valor, DadosPagamento pagamento) =>
+    public Task<Comanda> VendaRapidaAsync(decimal valor, IReadOnlyList<DadosPagamento> pagamentos) =>
         UmaPorVezAsync(async () =>
         {
             var comanda = await NovaComandaAsync();
             comanda.AdicionarItemLivre(Comanda.DescricaoVendaAvulsa, valor);
-            comanda.Fechar([pagamento], DateTime.UtcNow);
+            comanda.Fechar(pagamentos, DateTime.UtcNow);
             await comandas.GravarAsync(comanda);
             return comanda;
         });
 
-    private async Task<Comanda> NovaComandaAsync()
+    private async Task<Comanda> NovaComandaAsync(TipoComanda tipo = TipoComanda.Balcao, string? observacao = null)
     {
         var caixaAtual = caixa.Atual();
         var numero = await comandas.ProximoNumeroAsync(caixaAtual.Id);
         var agora = DateTime.UtcNow;
-        return Comanda.Abrir(caixaAtual, caixa.UsuarioId, numero, TipoComanda.Balcao, agora, agora);
+        return Comanda.Abrir(caixaAtual, caixa.UsuarioId, numero, tipo, agora, agora, observacao);
     }
 
     private Task<Comanda> AlterarAsync(Guid comandaId, Func<Comanda, Task> alteracao) =>

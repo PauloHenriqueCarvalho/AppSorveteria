@@ -62,6 +62,13 @@ public class Comanda
     [Indexed, Column("pendente_envio")]
     public bool PendenteEnvio { get; set; }
 
+    /// <summary>Para a tela: RN-CM-11, delivery na F1 é só marcação + observação.</summary>
+    [Ignore]
+    public bool EhDelivery => Tipo == TipoComanda.Delivery;
+
+    [Ignore]
+    public bool TemObservacao => !string.IsNullOrWhiteSpace(Observacao);
+
     /// <summary>Para a tela: hora do celular (RN-TD-01).</summary>
     [Ignore]
     public DateTime CriadaEmLocal => CriadaEm.ToLocalTime();

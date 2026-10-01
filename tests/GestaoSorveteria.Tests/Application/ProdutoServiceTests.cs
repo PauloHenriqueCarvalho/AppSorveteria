@@ -231,6 +231,22 @@ public class ProdutoServiceTests
         Assert.Equal(1, _uow.Confirmacoes);
     }
 
+    [Fact]
+    public async Task Ativar_JaAtivo_NaoEntraNaProximaSincronizacao()
+    {
+        // Sem mudança real não há AtualizadoEm novo, então o app não baixa o produto de novo.
+        _produtos.Produtos.Add(Produto.Criar("Picolé", "Picolés", 5m, false, 1, Ontem));
+        _clock.UtcNow = Hoje;
+        var produto = _produtos.Produtos.Single();
+
+        var dto = await _service.AtivarAsync(produto.Id, TestContext.Current.CancellationToken);
+        var catalogo = await _service.ListarAsync(Ontem.AddHours(1), TestContext.Current.CancellationToken);
+
+        Assert.True(dto.Ativo);
+        Assert.Equal(Ontem, dto.AtualizadoEmUtc);
+        Assert.Empty(catalogo.Produtos);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

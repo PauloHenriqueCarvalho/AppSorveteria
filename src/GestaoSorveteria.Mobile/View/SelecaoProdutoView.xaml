@@ -23,6 +23,37 @@
                        SearchCommand="{Binding BuscarCommand}"
                        BackgroundColor="White"
                        CancelButtonColor="Gray"/>
+
+            <!-- B12: filtro por categoria -->
+            <CollectionView ItemsSource="{Binding Categorias}"
+                            SelectionMode="Single"
+                            SelectedItem="{Binding CategoriaSelecionada}"
+                            HeightRequest="44">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border StrokeShape="RoundRectangle 18" Stroke="#6200EE" StrokeThickness="1" Padding="16,8" BackgroundColor="White">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup Name="CommonStates">
+                                    <VisualState Name="Normal">
+                                        <VisualState.Setters>
+                                            <Setter Property="BackgroundColor" Value="White" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState Name="Selected">
+                                        <VisualState.Setters>
+                                            <Setter Property="BackgroundColor" Value="#E8DEF8" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Label Text="{Binding .}" TextColor="#6200EE" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </VerticalStackLayout>
 
         <CollectionView Grid.Row="1" ItemsSource="{Binding Produtos}" Margin="15,10,15,10">

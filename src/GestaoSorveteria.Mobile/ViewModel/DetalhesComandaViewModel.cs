@@ -29,6 +29,7 @@ public class DetalhesComandaViewModel : BindableObject
     public ObservableCollection<ItemComanda> Itens { get; set; } = new();
     public ICommand RemoverItemCommand { get; }
     public ICommand EditarNomeCommand { get; }
+    public ICommand EditarObservacaoCommand { get; }
     public ICommand FinalizarComandaCommand { get; }
     public ICommand CancelarComandaCommand { get; }
 
@@ -39,6 +40,7 @@ public class DetalhesComandaViewModel : BindableObject
         _paymentService = paymentService;
         RemoverItemCommand = new Command<ItemComanda>(async (item) => await RemoverItem(item));
         EditarNomeCommand = new Command(async () => await EditarNome());
+        EditarObservacaoCommand = new Command(async () => await EditarObservacao());
         AumentarQuantidadeCommand = new Command<ItemComanda>(async (item) => await AlterarQuantidade(item, item.Quantidade + 1));
         DiminuirQuantidadeCommand = new Command<ItemComanda>(async (item) => await DiminuirQuantidade(item));
         FinalizarComandaCommand = new Command(async () => await FinalizarComanda());
@@ -114,16 +116,31 @@ public class DetalhesComandaViewModel : BindableObject
         }
     }
 
+    private async Task EditarObservacao()
+    {
+        if (ComandaAtual == null) return;
+
+        var comandaId = ComandaAtual.Id;
+        string observacao = await Shell.Current.DisplayPromptAsync("Observação",
+            ComandaAtual.EhDelivery ? "Endereço / observação do delivery:" : "Observação:",
+            "Salvar", "Cancelar", maxLength: 300, initialValue: ComandaAtual.Observacao);
+
+        if (observacao != null)
+        {
+            await Executar(() => _comandas.AlterarObservacaoAsync(comandaId, observacao));
+        }
+    }
+
     private async Task FinalizarComanda()
     {
         if (ComandaAtual == null) return;
 
         var comandaId = ComandaAtual.Id;
-        var pagamento = await _paymentService.PerguntarPagamentoAsync(ComandaAtual.Total);
-        if (pagamento is null) return;
+        var pagamentos = await _paymentService.PerguntarPagamentosAsync(ComandaAtual.Total);
+        if (pagamentos is null) return;
 
         GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
-        var fechou = await Executar(async () => fechada = await _comandas.FecharAsync(comandaId, pagamento.Value));
+        var fechou = await Executar(async () => fechada = await _comandas.FecharAsync(comandaId, pagamentos));
 
         // B7: troco e saída da tela só depois de gravado
         if (fechou && fechada is not null)

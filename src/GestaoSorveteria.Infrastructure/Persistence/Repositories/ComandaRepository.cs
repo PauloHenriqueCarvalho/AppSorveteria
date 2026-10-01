@@ -44,6 +44,39 @@ internal sealed class ComandaRepository : IComandaRepository
             .OrderBy(c => c.FechadaEm)
             .ToListAsync(cancellationToken);
 
+    public async Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
+        DateTime deUtc,
+        DateTime ateUtc,
+        StatusComanda? status,
+        int pular,
+        int quantidade,
+        CancellationToken cancellationToken = default)
+    {
+        // Data da venda: COALESCE(fechada_em, cancelada_em, criada_em).
+        IQueryable<Comanda> query = _db.Comandas
+            .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc);
+
+        if (status is { } filtro)
+        {
+            query = query.Where(c => c.Status == filtro);
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        // Só leitura: sem rastreamento e sem itens (a lista usa só os pagamentos).
+        // Id no fim desempata a ordem — com split query cada consulta repete ORDER BY + OFFSET.
+        var itens = await query
+            .AsNoTracking()
+            .Include(c => c.Pagamentos)
+            .OrderByDescending(c => c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm)
+            .ThenByDescending(c => c.Numero)
+            .ThenByDescending(c => c.Id)
+            .Skip(pular)
+            .Take(quantidade)
+            .ToListAsync(cancellationToken);
+
+        return (itens, total);
+    }
+
     /// <summary>
     /// RN-CM-02: próximo número sequencial dentro do caixa.
     /// Dois celulares abrindo comanda no mesmo instante podem receber o mesmo número: o índice único
@@ -73,6 +106,14 @@ internal sealed class ComandaRepository : IComandaRepository
 
         return await valores.SumAsync(cancellationToken);
     }
+
+    public Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default) =>
+        _db.Comandas.AnyAsync(c => c.CaixaId == caixaId && c.Numero == numero, cancellationToken);
+
+    public async Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
+        ids.Count > 0
+        && (await _db.ItensComanda.AnyAsync(i => ids.Contains(i.Id), cancellationToken)
+            || await _db.Pagamentos.AnyAsync(p => ids.Contains(p.Id), cancellationToken));
 
     public async Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default) =>
         await _db.Comandas.AddAsync(comanda, cancellationToken);

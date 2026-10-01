@@ -91,12 +91,14 @@ public sealed class Caixa : Entity
         Guard.NaoVazio(usuarioId, "o usuário");
         Guard.Utc(agoraUtc, "a data de fechamento");
         Guard.Contra(agoraUtc < AbertoEm, "A data de fechamento não pode ser anterior à abertura.");
+        Guard.Dinheiro(valorContado, "o valor contado", permiteZero: true);
+        var observacaoValidada = Guard.TextoOpcional(observacao, "a observação", 500);
 
-        ValorContado = Guard.Dinheiro(valorContado, "o valor contado", permiteZero: true);
+        ValorContado = valorContado;
         TotalVendasDinheiro = Moeda.Arredondar(totalVendasDinheiro);
         ValorEsperado = CalcularEsperado(totalVendasDinheiro);
         Diferenca = Moeda.Arredondar(ValorContado.Value - ValorEsperado.Value);
-        Observacao = Guard.TextoOpcional(observacao, "a observação", 500);
+        Observacao = observacaoValidada;
         FechadoPorUsuarioId = usuarioId;
         FechadoEm = agoraUtc;
         Status = StatusCaixa.Fechado;
@@ -117,7 +119,8 @@ public sealed class Caixa : Entity
         string? observacao = null)
     {
         Guard.Dinheiro(totalVendasDinheiroApp, "o total de vendas em dinheiro do celular", permiteZero: true);
-        Guard.Contra(!Moeda.TemNoMaximoDuasCasas(valorEsperadoApp), "O valor esperado do celular deve ter no máximo 2 casas decimais.");
+        Guard.Contra(!Moeda.TemNoMaximoDuasCasas(valorEsperadoApp) || Math.Abs(valorEsperadoApp) > Moeda.LimiteColuna,
+            "O valor esperado do celular é inválido (máximo de 2 casas decimais).");
         Fechar(valorContado, totalVendasDinheiro, usuarioId, fechadoEmUtc, observacao);
 
         if (totalVendasDinheiroApp != TotalVendasDinheiro || valorEsperadoApp != ValorEsperado)

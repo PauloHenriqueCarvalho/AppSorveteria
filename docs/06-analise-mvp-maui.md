@@ -31,9 +31,9 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 
 | # | Onde | Problema | Efeito |
 |---|---|---|---|
-| B1 | `ListarComandasViewModel.ExecutarVendaRapida` | `CriarComanda` devolve o objeto com `Total = 0`; o item é gravado só no banco; `ProcessarPagamentoAsync(comanda)` recebe o objeto com total zero e recusa | **Venda rápida nunca funciona**: mostra "valor zero" e deixa uma comanda "Venda Rápida" aberta |
-| B2 | `PaymentService` | `Pagamento.Valor = valorRecebido` (o que o cliente entregou), troco não é gravado | Cliente paga R$ 12,50 com nota de 50 → faturamento registra **R$ 50** |
-| B3 | `PaymentService` | `if (troco < 0) troco = 0` | Aceita receber **menos** que o total em dinheiro e fecha a comanda |
+| ~~B1~~ | `ListarComandasViewModel.ExecutarVendaRapida` | `CriarComanda` devolve o objeto com `Total = 0`; o item é gravado só no banco; `ProcessarPagamentoAsync(comanda)` recebe o objeto com total zero e recusa | ~~**Venda rápida nunca funciona**: mostra "valor zero" e deixa uma comanda "Venda Rápida" aberta~~ — corrigido em c93fddd (#15): venda rápida abre, lança e fecha numa gravação só (RN-CM-10) |
+| ~~B2~~ | `PaymentService` | `Pagamento.Valor = valorRecebido` (o que o cliente entregou), troco não é gravado | ~~Cliente paga R$ 12,50 com nota de 50 → faturamento registra **R$ 50**~~ — corrigido em c93fddd (#15): `Valor` = total, `ValorRecebido` e `Troco` pelo Domain (RN-PG-03) |
+| ~~B3~~ | `PaymentService` | `if (troco < 0) troco = 0` | ~~Aceita receber **menos** que o total em dinheiro e fecha a comanda~~ — corrigido em c93fddd (#15): o Domain recusa dinheiro recebido menor que o valor (RN-PG-03) |
 | B4 | `DetalhesComandaViewModel` (+/−) | Salva a comanda com o total antigo, recarrega do banco e recalcula só em memória | Total no banco fica **desatualizado**; "Finalizar" pela lista cobra o valor antigo |
 | B5 | `DatabaseService.RemoverProdutoDaComanda` | `Total = soma dos itens`, ignora acréscimo/desconto e não atualiza `Subtotal` | Total inconsistente depois de remover item |
 | B6 | Todo o código | Dinheiro em `double` | Erros de centavos em somas (0,1 + 0,2 ≠ 0,3) |
@@ -46,15 +46,30 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 | ~~B8~~ | ~~Número da comanda = `Comandas.Count + 1` (só as abertas) → números repetidos depois de fechar uma~~ — corrigido em c93fddd (#15): sequencial dentro do caixa, contando as fechadas (RN-CM-02) |
 | B9 | Self-service e venda rápida criam `ProdutoId = "MANUAL_..."/"RAPIDA_..."` que não existe → vai quebrar a sincronização (chave estrangeira) |
 | ~~B10~~ | ~~Não existe cancelar comanda (status 2 existe, mas nenhuma tela usa) — comanda aberta por engano fica para sempre~~ — corrigido: botão "Cancelar comanda" nos detalhes (RN-CM-08) |
-| B11 | `DisplayAlert("Sucesso")` a cada item adicionado → um toque extra por item (contra a meta de rapidez) |
-| B12 | Busca de produto não funciona: a tela faz binding em `FiltroNome` / `BuscarCommand`, que não existem no ViewModel |
+| ~~B11~~ | ~~`DisplayAlert("Sucesso")` a cada item adicionado → um toque extra por item (contra a meta de rapidez)~~ — corrigido: toast nativo do Android; mesmo produto soma na linha pelo Domain (RN-CM-04) |
+| ~~B12~~ | ~~Busca de produto não funciona: a tela faz binding em `FiltroNome` / `BuscarCommand`, que não existem no ViewModel~~ — corrigido: busca sem acento enquanto digita + faixa de categorias |
 | B13 | Categorias inconsistentes: seed usa `Tipo` 0=Sorvete, 1=Açaí, 2=Bebida; cadastro usa índice de "Picolé, Pote, Bebida, Acompanhamento, Self-Service" |
 | B14 | Datas em `DateTime.Now` (hora local) → sincronização precisa de UTC |
 | B15 | Não há caixa, login, delivery, histórico do turno, pagamento dividido nem sincronização implementada (só os campos) |
+| B16 | Cadastro de produto no app grava direto no SQLite sem passar pelo `Produto` do Domain: aceita nome com 1 caractere e nome repetido (RN-PR-01). O produto aparece na tela de venda, mas o Domain recusa ao adicionar ("O nome do produto deve ter pelo menos 2 caracteres."); o nome repetido fica com dois botões iguais e preços diferentes. Passos na seção 2.1 |
 
 ### Menores
 
 `Application.Current.MainPage` e `Frame` estão obsoletos no .NET 10 · `edit_icon.png` não existe em `Resources/Images` · compila para iOS/Mac sem necessidade · `ApplicationId = com.companyname.sorveteriamaui` · UI (`DisplayAlert`) dentro de serviço · carregamento duplo em `ListarComandasViewModel` (construtor + `OnAppearing`) · pasta `Contexto/` com 3 cópias divergentes das regras dentro do projeto do app.
+
+Vistos no tablet em 30/09/2026: "Valor recebido" em dinheiro vem pré-preenchido com ponto (`6.50`), o resto do app usa vírgula · botões − e + do resumo da comanda quase invisíveis (cinza-claro sobre cinza) · no self-service com valor inválido o botão diz "Tentar novamente", mas só fecha o aviso · fechar comanda vazia pergunta a forma de pagamento antes de avisar que não tem itens, e o aviso manda "cancelar a comanda", que ainda não existe (B10) · produto novo entra com `Ordem = 0` e empata com o primeiro do seed · aviso XA0141 no build: `libe_sqlite3.so` (SQLitePCLRaw 2.1.2) sem página de 16 KB — o tablet de teste já está no Android 16 e o app rodou normal, mas o Google Play vai exigir.
+
+### 2.1 Teste no tablet (30/09/2026)
+
+Galaxy Tab SM-X230, Android 16, develop em 03cabeb (o commit seguinte, 4276cd7, só mexe na API e em partes do Domain que o app não usa). Etapa A conferida: B1, B2, B3, B4, B5, B6, B8, B9, B13 e B14 corrigidos no aparelho, inclusive em modo avião e depois de fechar e reabrir o app; B7 conferido no código (o único `catch` é o de `Services/Operacao.cs`, que mostra alerta e para o fluxo).
+
+**B16 — como reproduzir**
+
+1. Aba **Produtos** → **Novo Produto** → Nome `X`, Preço `1,00` → **Salvar**. Esperado: recusar (nome de 2 a 80 caracteres). Obtido: salva e aparece na lista.
+2. Abrir uma comanda → **+ Produto** → **+ Add** no `X`. Obtido: "Atenção — O nome do produto deve ter pelo menos 2 caracteres." O produto não pode ser vendido; só sai da tela de venda se alguém editar o nome, porque o app não tem desativar produto.
+3. **Novo Produto** → Nome `sorvete de fruta`, Preço `9,00` → **Salvar**. Esperado: recusar (já existe "Sorvete de Fruta"). Obtido: salva; a tela de venda mostra dois "Sorvete de Fruta" (R$ 2,00 e R$ 9,00).
+
+Causa: `CadastroProdutoViewModel.Salvar` só confere nome vazio e preço, e grava pelo `ProdutoRepository.SalvarAsync` sem criar o `Produto` do Domain nem checar nome repetido. Some quando o catálogo passar a vir da API (Etapa C); até lá, o cadastro local deveria validar pelo `Produto.Criar`/`Atualizar` e checar nome repetido com `Produto.NormalizarNome`.
 
 ## 3. O que o MVP ensina — e muda no desenho do sistema
 
@@ -88,12 +103,12 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [x] Mover `Contexto/` para `docs/contexto-mvp/` (uma cópia só)
 
 ### Etapa B — Corrigir fluxos de venda (2 dias)
-- [ ] Pagamento pelo domínio: `Valor` + `ValorRecebido` + `Troco`, recusa dinheiro insuficiente, pagamento dividido (B2, B3)
-- [ ] Venda rápida funcionando em uma operação (B1)
+- [x] Pagamento pelo domínio: `Valor` + `ValorRecebido` + `Troco`, recusa dinheiro insuficiente, pagamento dividido (B2, B3)
+- [x] Venda rápida funcionando em uma operação (B1) — entrou com a Etapa A (#15)
 - [x] Cancelar comanda aberta com confirmação (B10)
-- [ ] Toast em vez de `DisplayAlert` ao adicionar item; mesmo produto soma na linha (B11)
-- [ ] Busca e filtro por categoria na seleção de produto (B12)
-- [ ] Marcar Delivery + observação
+- [x] Toast em vez de `DisplayAlert` ao adicionar item; mesmo produto soma na linha (B11)
+- [x] Busca e filtro por categoria na seleção de produto (B12)
+- [x] Marcar Delivery + observação
 
 ### Etapa C — Caixa, login e sincronização (3–4 dias)
 - [ ] Telas de abrir caixa (fundo de troco), sangria/suprimento, fechar caixa com conferência

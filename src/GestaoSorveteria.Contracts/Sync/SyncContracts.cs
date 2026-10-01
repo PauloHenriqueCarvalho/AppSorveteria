@@ -7,7 +7,8 @@ namespace GestaoSorveteria.Contracts.Sync;
 //
 // Só o lote tem validação por atributo. Os itens do lote NÃO têm: um item inválido não pode
 // derrubar o lote inteiro com 400 — ele vira "rejeitada" com motivo no resultado daquele item,
-// a partir das regras do Domain.
+// a partir das regras do Domain. Por isso os textos e listas dos itens são anuláveis (string?, lista?):
+// com Nullable ligado, o [ApiController] trataria um tipo não anulável como [Required] implícito.
 //
 // Enums trafegam como texto, com os mesmos nomes do Domain (ex.: "Dinheiro", "Balcao", "Fechada").
 // Datas em UTC (ISO 8601 com "Z"; data local é rejeitada). Dinheiro em decimal com 2 casas.
@@ -65,15 +66,15 @@ public sealed record CaixaSyncDto(
     Guid AbertoPorUsuarioId,
     DateTime AbertoEm,
     decimal FundoTroco,
-    IReadOnlyList<MovimentoCaixaSyncDto> Movimentos,
+    IReadOnlyList<MovimentoCaixaSyncDto>? Movimentos,
     FechamentoCaixaSyncDto? Fechamento = null);
 
 /// <summary>RN-CX-04. <paramref name="Tipo"/>: "Sangria" ou "Suprimento".</summary>
 public sealed record MovimentoCaixaSyncDto(
     Guid Id,
-    string Tipo,
+    string? Tipo,
     decimal Valor,
-    string Motivo,
+    string? Motivo,
     Guid UsuarioId,
     DateTime Em);
 
@@ -111,12 +112,12 @@ public sealed record ComandaSyncDto(
     Guid CaixaId,
     Guid UsuarioId,
     int Numero,
-    string Tipo,
-    string Status,
+    string? Tipo,
+    string? Status,
     decimal Total,
     DateTime CriadaEm,
-    IReadOnlyList<ItemComandaSyncDto> Itens,
-    IReadOnlyList<PagamentoSyncDto> Pagamentos,
+    IReadOnlyList<ItemComandaSyncDto>? Itens,
+    IReadOnlyList<PagamentoSyncDto>? Pagamentos,
     string? Observacao = null,
     DateTime? FechadaEm = null,
     DateTime? CanceladaEm = null,
@@ -129,7 +130,7 @@ public sealed record ComandaSyncDto(
 public sealed record ItemComandaSyncDto(
     Guid Id,
     Guid? ProdutoId,
-    string Descricao,
+    string? Descricao,
     int Quantidade,
     decimal PrecoUnitario,
     decimal Subtotal);
@@ -140,7 +141,7 @@ public sealed record ItemComandaSyncDto(
 /// </summary>
 public sealed record PagamentoSyncDto(
     Guid Id,
-    string Forma,
+    string? Forma,
     decimal Valor,
     decimal ValorRecebido,
     decimal Troco);
