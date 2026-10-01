@@ -448,6 +448,50 @@ h2 {
   min-height: 0;
 }
 
+.campo textarea {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.campo-dia input {
+  min-height: 48px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.riscado {
+  text-decoration: line-through;
+  color: var(--cor-texto-suave);
+}
+
+.paginacao,
+.acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.acoes {
+  margin-top: 0;
+}
+
+.acoes .botao {
+  flex: 1;
+}
+
+.botao-perigo {
+  background: var(--cor-erro);
+}
+
 /* Celular: menu fixo embaixo, ao alcance do polegar. */
 .menu {
   position: fixed;
