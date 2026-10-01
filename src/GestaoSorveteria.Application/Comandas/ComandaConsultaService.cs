@@ -39,15 +39,7 @@ public sealed class ComandaConsultaService
     {
         var ate = ateDia ?? DiaComercial.DataDe(_clock.UtcNow);
         var de = deDia ?? ate;
-        if (ate < de)
-        {
-            throw new DomainException("A data final não pode ser anterior à inicial.");
-        }
-
-        if (ate.DayNumber - de.DayNumber + 1 > MaximoDiasPeriodo)
-        {
-            throw new DomainException($"Escolha um período de até {MaximoDiasPeriodo} dias.");
-        }
+        PeriodoConsulta.Validar(de, ate, _clock.UtcNow, MaximoDiasPeriodo);
 
         var numeroPagina = pagina ?? 1;
         var itensPorPagina = tamanho ?? TamanhoPadrao;

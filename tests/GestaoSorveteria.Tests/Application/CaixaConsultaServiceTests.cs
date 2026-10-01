@@ -172,6 +172,8 @@ public class CaixaConsultaServiceTests
     [Theory]
     [InlineData(2026, 9, 18, 2026, 9, 17)]
     [InlineData(2026, 1, 1, 2026, 4, 30)]
+    [InlineData(9999, 12, 30, 9999, 12, 31)]
+    [InlineData(1, 1, 1, 1, 1, 2)]
     public async Task Listar_PeriodoInvalido_Lanca(int a1, int m1, int d1, int a2, int m2, int d2)
     {
         await Assert.ThrowsAsync<DomainException>(() => _service.ListarAsync(

@@ -38,15 +38,7 @@ public sealed class CaixaConsultaService
     {
         var ate = ateDia ?? DiaComercial.DataDe(_clock.UtcNow);
         var de = deDia ?? ate.AddDays(-(DiasPadrao - 1));
-        if (ate < de)
-        {
-            throw new DomainException("A data final não pode ser anterior à inicial.");
-        }
-
-        if (ate.DayNumber - de.DayNumber + 1 > MaximoDiasPeriodo)
-        {
-            throw new DomainException($"Escolha um período de até {MaximoDiasPeriodo} dias.");
-        }
+        PeriodoConsulta.Validar(de, ate, _clock.UtcNow, MaximoDiasPeriodo);
 
         var (inicioUtc, fimUtc) = DiaComercial.IntervaloUtc(de, ate);
         var caixas = await _caixas.ListarAsync(inicioUtc, fimUtc, cancellationToken);
