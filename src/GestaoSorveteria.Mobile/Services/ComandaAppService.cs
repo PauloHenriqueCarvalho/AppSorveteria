@@ -87,6 +87,17 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
         });
 
     /// <summary>
+    /// RN-CM-08 / B10: cancela comanda aberta (motivo opcional). Nada é apagado: itens ficam gravados e a
+    /// comanda cancelada entra na fila de envio.
+    /// </summary>
+    public Task<Comanda> CancelarAsync(Guid comandaId, string? motivo) =>
+        AlterarAsync(comandaId, comanda =>
+        {
+            comanda.Cancelar(string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim(), DateTime.UtcNow);
+            return Task.CompletedTask;
+        });
+
+    /// <summary>
     /// RN-CM-10 / B1: abre a comanda, lança "Venda avulsa" e fecha com o pagamento numa única gravação.
     /// Se o pagamento for recusado, nada é gravado (não sobra comanda aberta).
     /// </summary>
