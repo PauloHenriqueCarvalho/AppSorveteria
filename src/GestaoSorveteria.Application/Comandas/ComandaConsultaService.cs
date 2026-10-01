@@ -91,6 +91,9 @@ public sealed class ComandaConsultaService
             comanda.FechadaEm,
             comanda.CanceladaEm,
             comanda.MotivoCancelamento,
+            comanda.EstornadaEm,
+            comanda.EstornadaPorUsuarioId is { } estornadaPor ? Nome(nomes, estornadaPor) : null,
+            comanda.MotivoEstorno,
             comanda.RecebidaAposFechamentoCaixa,
             Nome(nomes, comanda.UsuarioId),
             comanda.Itens

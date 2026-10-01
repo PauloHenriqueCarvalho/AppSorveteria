@@ -135,7 +135,7 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
         Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.CaixaId == caixaId && (status is null || c.Status == status)).ToList());
 
     public Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.EstaFechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
+        Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.ContaNoCaixa && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
 
     public Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
         DateTime deUtc, DateTime ateUtc, StatusComanda? status, int pular, int quantidade, CancellationToken cancellationToken = default)
@@ -155,7 +155,7 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
         Task.FromResult(Comandas.Any(c => c.CaixaId == caixaId && c.EstaAberta));
 
     public Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Comandas.Where(c => c.CaixaId == caixaId && c.EstaFechada).Sum(c => c.TotalEmDinheiro));
+        Task.FromResult(Comandas.Where(c => c.CaixaId == caixaId && c.ContaNoCaixa).Sum(c => c.TotalEmDinheiro));
 
     public Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default) =>
         Task.FromResult(Comandas.Any(c => c.CaixaId == caixaId && c.Numero == numero));

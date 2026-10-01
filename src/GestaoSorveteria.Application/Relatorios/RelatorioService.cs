@@ -29,8 +29,10 @@ public sealed class RelatorioService
         PeriodoConsulta.Validar(data, data, _clock.UtcNow, maximoDias: 1);
         var (inicioUtc, fimUtc) = DiaComercial.IntervaloUtc(data);
 
-        // RN-RL-01: faturamento = comandas fechadas no dia.
-        var fechadas = await _comandas.ListarFechadasAsync(inicioUtc, fimUtc, cancellationToken);
+        // RN-RL-01: faturamento = comandas fechadas no dia; as estornadas depois ficam à parte, no dia da venda.
+        var vendas = await _comandas.ListarFechadasAsync(inicioUtc, fimUtc, cancellationToken);
+        var fechadas = vendas.Where(c => c.Status == StatusComanda.Fechada).ToList();
+        var estornadas = vendas.Where(c => c.Status == StatusComanda.Estornada).ToList();
         var total = Moeda.Arredondar(fechadas.Sum(c => c.Total));
         var ticketMedio = fechadas.Count == 0 ? 0m : Moeda.Arredondar(total / fechadas.Count);
 
@@ -43,6 +45,8 @@ public sealed class RelatorioService
             fechadas.Count,
             ticketMedio,
             CaixaConsultaService.TotaisPorForma(fechadas),
+            Moeda.Arredondar(estornadas.Sum(c => c.Total)),
+            estornadas.Count,
             canceladas,
             fechadas.Count(c => c.RecebidaAposFechamentoCaixa),
             await _caixas.ObterAtualAsync(cancellationToken));

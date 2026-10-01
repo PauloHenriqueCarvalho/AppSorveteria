@@ -25,10 +25,14 @@ internal sealed class ComandaConfiguration : IEntityTypeConfiguration<Comanda>
         builder.Property(c => c.FechadaEm);
         builder.Property(c => c.CanceladaEm);
         builder.Property(c => c.MotivoCancelamento).HasMaxLength(300);
+        builder.Property(c => c.EstornadaEm);
+        builder.Property(c => c.EstornadaPorUsuarioId);
+        builder.Property(c => c.MotivoEstorno).HasMaxLength(300);
         builder.Property(c => c.RecebidaAposFechamentoCaixa).IsRequired();
 
         builder.Ignore(c => c.EstaAberta);
         builder.Ignore(c => c.EstaFechada);
+        builder.Ignore(c => c.ContaNoCaixa);
         builder.Ignore(c => c.TotalEmDinheiro);
         builder.Ignore(c => c.TotalTroco);
 
@@ -45,6 +49,11 @@ internal sealed class ComandaConfiguration : IEntityTypeConfiguration<Comanda>
         builder.HasOne<Usuario>()
             .WithMany()
             .HasForeignKey(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Usuario>()
+            .WithMany()
+            .HasForeignKey(c => c.EstornadaPorUsuarioId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(c => c.Itens)

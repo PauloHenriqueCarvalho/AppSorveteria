@@ -7,7 +7,7 @@ namespace GestaoSorveteria.Domain.Comandas;
 /// <summary>
 /// Agregado de venda (RN-CM-*). Nasce aberta dentro de um caixa aberto, recebe itens,
 /// fecha com pagamentos que somam exatamente o total, ou é cancelada. Depois de fechada é imutável;
-/// só Admin estorna (vira Cancelada, nada é apagado).
+/// só Admin estorna (vira Estornada, nada é apagado).
 /// </summary>
 public sealed class Comanda : Entity
 {
@@ -36,6 +36,12 @@ public sealed class Comanda : Entity
     public DateTime? CanceladaEm { get; private set; }
     public string? MotivoCancelamento { get; private set; }
 
+    /// <summary>RN-CM-09: preenchidos só quando <see cref="Status"/> é <see cref="StatusComanda.Estornada"/>.</summary>
+    public DateTime? EstornadaEm { get; private set; }
+
+    public Guid? EstornadaPorUsuarioId { get; private set; }
+    public string? MotivoEstorno { get; private set; }
+
     /// <summary>RN-CX-08: chegou depois do fechamento do caixa a que pertence (sincronização atrasada).</summary>
     public bool RecebidaAposFechamentoCaixa { get; private set; }
 
@@ -44,6 +50,12 @@ public sealed class Comanda : Entity
 
     public bool EstaAberta => Status == StatusComanda.Aberta;
     public bool EstaFechada => Status == StatusComanda.Fechada;
+
+    /// <summary>
+    /// Venda que passou pela gaveta: fechada ou estornada depois. O estorno não altera caixa nenhum (RN-CM-09, RN-CX-07),
+    /// então as contas de dinheiro do caixa usam isto, e não <see cref="EstaFechada"/>.
+    /// </summary>
+    public bool ContaNoCaixa => Status is StatusComanda.Fechada or StatusComanda.Estornada;
 
     /// <summary>RN-PG-05: só o que entrou na gaveta.</summary>
     public decimal TotalEmDinheiro => _pagamentos.Where(p => p.Forma == FormaPagamento.Dinheiro).Sum(p => p.Valor);
@@ -295,13 +307,19 @@ public sealed class Comanda : Entity
         Status = StatusComanda.Cancelada;
     }
 
-    /// <summary>RN-CM-09: só comanda fechada, motivo obrigatório. Quem pode (Admin) é decidido na Application.</summary>
-    public void Estornar(string motivo, DateTime agoraUtc)
+    /// <summary>
+    /// RN-CM-09: só comanda fechada, motivo obrigatório. Quem pode (Admin) é decidido na Application.
+    /// Itens, pagamentos e <see cref="FechadaEm"/> ficam como estavam: a venda continua no caixa e no dia em que foi feita.
+    /// </summary>
+    public void Estornar(string motivo, Guid usuarioId, DateTime agoraUtc)
     {
+        Guard.Contra(Status == StatusComanda.Estornada, "Esta venda já foi estornada.");
         Guard.Contra(!EstaFechada, "Só é possível estornar uma comanda fechada.");
-        MotivoCancelamento = Guard.Texto(motivo, "o motivo do estorno", 3, 300);
-        CanceladaEm = Guard.Utc(agoraUtc, "a data do estorno");
-        Status = StatusComanda.Cancelada;
+        MotivoEstorno = Guard.Texto(motivo, "o motivo do estorno", 3, 300);
+        EstornadaPorUsuarioId = Guard.NaoVazio(usuarioId, "o usuário");
+        // Sem comparar com FechadaEm: é a hora do celular, e a do estorno é a do servidor (RN-CM-12).
+        EstornadaEm = Guard.Utc(agoraUtc, "a data do estorno");
+        Status = StatusComanda.Estornada;
     }
 
     /// <summary>RN-CX-08.</summary>
@@ -335,6 +353,7 @@ public sealed class Comanda : Entity
         Guard.Contra(numero < 1, "O número da comanda deve ser maior que zero.");
         Guard.Contra(!Enum.IsDefined(tipo), "Tipo de comanda desconhecido.");
         Guard.Contra(!Enum.IsDefined(status), "Status de comanda desconhecido.");
+        Guard.Contra(status == StatusComanda.Estornada, "Estorno é feito só pelo painel, nunca vem do app (RN-CM-09).");
 
         var comanda = new Comanda(
             id,

@@ -4,7 +4,7 @@ namespace GestaoSorveteria.Contracts.Caixas;
 // o painel só mostra. Enums como texto ("Aberto"/"Fechado", "Sangria"/"Suprimento", "Dinheiro"...).
 
 /// <summary>
-/// Um caixa na lista do painel. Vendas = comandas <c>Fechada</c> do caixa.
+/// Um caixa na lista do painel. Vendas = comandas <c>Fechada</c> e também as <c>Estornada</c> depois: o estorno não altera o caixa (RN-CM-09).
 /// Caixa fechado: <paramref name="TotalVendasDinheiro"/>, <paramref name="ValorEsperado"/>, <paramref name="ValorContado"/>
 /// e <paramref name="Diferenca"/> são os gravados no fechamento (RN-CX-06/07).
 /// Caixa aberto: <paramref name="TotalVendasDinheiro"/> e <paramref name="ValorEsperado"/> são "até agora"
