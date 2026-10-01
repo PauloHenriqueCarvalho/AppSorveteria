@@ -4,6 +4,7 @@ import { useSessao } from '../sessao/contexto.ts'
 // Itens do menu. Cada tela nova do painel entra aqui.
 const MENU = [
   { para: '/', texto: 'Início', fim: true },
+  { para: '/caixas', texto: 'Caixas', fim: false },
   { para: '/produtos', texto: 'Produtos', fim: false },
 ]
 

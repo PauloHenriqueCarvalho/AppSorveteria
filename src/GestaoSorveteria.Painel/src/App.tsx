@@ -5,6 +5,8 @@ import Layout from './componentes/Layout.tsx'
 import RotaProtegida from './componentes/RotaProtegida.tsx'
 import Inicio from './paginas/Inicio.tsx'
 import Login from './paginas/Login.tsx'
+import DetalheCaixa from './paginas/caixas/DetalheCaixa.tsx'
+import ListaCaixas from './paginas/caixas/ListaCaixas.tsx'
 import NaoEncontrada from './paginas/NaoEncontrada.tsx'
 import EditarProduto from './paginas/produtos/EditarProduto.tsx'
 import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
@@ -31,6 +33,8 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Inicio /> },
+          { path: 'caixas', element: <ListaCaixas /> },
+          { path: 'caixas/:id', element: <DetalheCaixa /> },
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },
           { path: 'produtos/:id', element: <EditarProduto /> },
