@@ -47,7 +47,7 @@ O que **não** dá para aproveitar como está: a camada de dados/cálculo (`Data
 | B9 | Self-service e venda rápida criam `ProdutoId = "MANUAL_..."/"RAPIDA_..."` que não existe → vai quebrar a sincronização (chave estrangeira) |
 | B10 | Não existe cancelar comanda (status 2 existe, mas nenhuma tela usa) — comanda aberta por engano fica para sempre |
 | ~~B11~~ | ~~`DisplayAlert("Sucesso")` a cada item adicionado → um toque extra por item (contra a meta de rapidez)~~ — corrigido: toast nativo do Android; mesmo produto soma na linha pelo Domain (RN-CM-04) |
-| B12 | Busca de produto não funciona: a tela faz binding em `FiltroNome` / `BuscarCommand`, que não existem no ViewModel |
+| ~~B12~~ | ~~Busca de produto não funciona: a tela faz binding em `FiltroNome` / `BuscarCommand`, que não existem no ViewModel~~ — corrigido: busca sem acento enquanto digita + faixa de categorias |
 | B13 | Categorias inconsistentes: seed usa `Tipo` 0=Sorvete, 1=Açaí, 2=Bebida; cadastro usa índice de "Picolé, Pote, Bebida, Acompanhamento, Self-Service" |
 | B14 | Datas em `DateTime.Now` (hora local) → sincronização precisa de UTC |
 | B15 | Não há caixa, login, delivery, histórico do turno, pagamento dividido nem sincronização implementada (só os campos) |
@@ -107,7 +107,7 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [x] Venda rápida funcionando em uma operação (B1) — entrou com a Etapa A (#15)
 - [ ] Cancelar comanda aberta com confirmação (B10)
 - [x] Toast em vez de `DisplayAlert` ao adicionar item; mesmo produto soma na linha (B11)
-- [ ] Busca e filtro por categoria na seleção de produto (B12)
+- [x] Busca e filtro por categoria na seleção de produto (B12)
 - [x] Marcar Delivery + observação
 
 ### Etapa C — Caixa, login e sincronização (3–4 dias)
