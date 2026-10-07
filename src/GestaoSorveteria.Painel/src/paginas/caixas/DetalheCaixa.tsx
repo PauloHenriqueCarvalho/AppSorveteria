@@ -4,6 +4,7 @@ import { CHAVE_CAIXAS, obterCaixa } from '../../api/caixas.ts'
 import Consulta from '../../componentes/Consulta.tsx'
 import { ConferenciaCaixa, ResultadoCaixa } from '../../componentes/ConferenciaCaixa.tsx'
 import { formatarDataHora, formatarHora, formatarMoeda, nomeDaForma } from '../../formatacao.ts'
+import FechamentoForcado from './FechamentoForcado.tsx'
 
 export default function DetalheCaixa() {
   const { id = '' } = useParams()
@@ -29,6 +30,14 @@ export default function DetalheCaixa() {
               <ConferenciaCaixa caixa={resumo} />
               {observacao && <p>Observação: {observacao}</p>}
             </section>
+
+            {resumo.fechamentoForcado && (
+              <p className="alerta alerta-aviso">
+                Este caixa foi fechado pelo painel, sem contar a gaveta (contado {formatarMoeda(0)}). A diferença acima é
+                o que deveria ter na gaveta; acerte no próximo caixa.
+              </p>
+            )}
+            {resumo.status === 'Aberto' && <FechamentoForcado caixa={resumo} />}
 
             {resumo.divergenciaSincronizacao && (
               <p className="alerta alerta-aviso">

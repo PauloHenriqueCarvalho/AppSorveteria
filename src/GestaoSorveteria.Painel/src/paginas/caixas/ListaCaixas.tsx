@@ -53,6 +53,7 @@ export default function ListaCaixas() {
                       {(c.divergenciaSincronizacao || c.vendasRecebidasAposFechamento > 0) && (
                         <span className="etiqueta etiqueta-aviso">Conferir</span>
                       )}
+                      {c.fechamentoForcado && <span className="etiqueta">Fechado pelo painel</span>}
                     </span>
                   </Link>
                 </li>

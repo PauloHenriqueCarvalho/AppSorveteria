@@ -90,7 +90,7 @@ Detalhes em docs/07.
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app — script `scripts/publicar-apk.ps1` e passo a passo (keystore fora do Git, link fixo, instalação) prontos (docs/07, 07/10); falta gerar o APK oficial e publicar o link
 - [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; em andamento na Sessão A do docs/08)
   - [ ] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada
-  - [ ] Painel: botão no detalhe do caixa aberto
+  - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
