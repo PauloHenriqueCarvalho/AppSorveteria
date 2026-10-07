@@ -27,7 +27,7 @@
         <VerticalStackLayout Padding="24,32" Spacing="16" MaximumWidthRequest="440" HorizontalOptions="Center">
 
             <Label Text="🍦 Sorveteria" FontSize="32" FontAttributes="Bold" TextColor="#6200EE" HorizontalOptions="Center" />
-            <Label Text="Entre com o seu PIN para começar o turno" FontSize="16" TextColor="#555" HorizontalOptions="Center" />
+            <Label Text="{Binding Subtitulo}" FontSize="16" TextColor="#555" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
 
             <Frame Padding="16" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
                 <VerticalStackLayout Spacing="12">
@@ -75,26 +75,43 @@
                     CornerRadius="12"
                     Command="{Binding EntrarCommand}" />
 
+            <!-- Renovar sessão (token vencido): volta para a tela de onde veio sem trocar o atendente -->
+            <Button Text="Voltar sem entrar"
+                    IsVisible="{Binding Renovar}"
+                    FontSize="16"
+                    BackgroundColor="Transparent"
+                    TextColor="#6200EE"
+                    Command="{Binding VoltarCommand}" />
+
             <ActivityIndicator IsRunning="{Binding Ocupado}" IsVisible="{Binding Ocupado}" Color="#6200EE" />
 
-            <Label Text="{Binding Mensagem}"
-                   IsVisible="{Binding TemMensagem}"
+            <Label Text="{Binding Status}"
+                   IsVisible="{Binding TemStatus}"
+                   FontSize="16"
+                   TextColor="#555"
+                   HorizontalTextAlignment="Center" />
+
+            <Label Text="{Binding Erro}"
+                   IsVisible="{Binding TemErro}"
                    FontSize="16"
                    TextColor="#B71C1C"
                    HorizontalTextAlignment="Center" />
 
-            <!-- Endereço da API: 10.0.2.2 no emulador; IP do PC no tablet; URL do Render em produção (docs/07) -->
-            <Button Text="{Binding UrlApi, StringFormat='Servidor: {0}'}"
-                    FontSize="12"
-                    BackgroundColor="Transparent"
-                    TextColor="#757575"
-                    Command="{Binding AlternarServidorCommand}" />
-            <Entry Text="{Binding UrlApi}"
-                   IsVisible="{Binding MostrarServidor}"
-                   Placeholder="http://192.168.0.10:5080"
-                   Keyboard="Url"
-                   FontSize="14"
-                   IsEnabled="{Binding Livre}" />
+            <!-- Endereço da API, só no build Debug: 10.0.2.2 no emulador; IP do PC no tablet de teste.
+                 No Release o campo não existe: a URL vem do build (docs/07). -->
+            <VerticalStackLayout IsVisible="{Binding UrlEditavel}" Spacing="8">
+                <Button Text="{Binding UrlApi, StringFormat='Servidor: {0}'}"
+                        FontSize="12"
+                        BackgroundColor="Transparent"
+                        TextColor="#757575"
+                        Command="{Binding AlternarServidorCommand}" />
+                <Entry Text="{Binding UrlApi}"
+                       IsVisible="{Binding MostrarServidor}"
+                       Placeholder="http://192.168.0.10:5080"
+                       Keyboard="Url"
+                       FontSize="14"
+                       IsEnabled="{Binding Livre}" />
+            </VerticalStackLayout>
 
         </VerticalStackLayout>
     </ScrollView>

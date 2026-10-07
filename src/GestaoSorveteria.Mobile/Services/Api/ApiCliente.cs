@@ -80,7 +80,7 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
             return await resposta.Content.ReadFromJsonAsync(tipo, cancellationToken)
                 ?? throw new ApiException("O servidor devolveu uma resposta vazia.");
         }
-        catch (Exception ex) when (ex is not ApiException)
+        catch (Exception ex) when (ex is not ApiException and not OperationCanceledException)
         {
             Debug.WriteLine($"[Sorveteria] Resposta inesperada da API: {ex}");
             throw new ApiException("O servidor devolveu uma resposta que o app não entendeu. Confira o endereço do servidor.");
@@ -132,6 +132,14 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
 
         // Erros de validação (400) vêm por campo; mostra o primeiro, que já está em português.
         var validacao = problema.Errors?.Values.SelectMany(e => e).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
-        return validacao ?? problema.Detail ?? problema.Title;
+        if (validacao is not null)
+        {
+            return validacao;
+        }
+
+        // ProblemDetails: título + detalhe (ex.: "Login ou senha inválidos. Confira o login e a senha/PIN…")
+        return string.Join(" ", new[] { problema.Title, problema.Detail }.Where(t => !string.IsNullOrWhiteSpace(t))) is { Length: > 0 } texto
+            ? texto
+            : null;
     }
 }
