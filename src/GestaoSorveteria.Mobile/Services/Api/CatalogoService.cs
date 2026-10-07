@@ -10,9 +10,10 @@ namespace SorveteriaMaui.Services.Api;
 /// O app guarda o <c>GeradoEmUtc</c> da última resposta e manda de volta em <c>desde</c>, baixando só o que mudou.
 /// Sem internet a venda usa o cache do SQLite; o catálogo nunca trava a venda.
 /// </summary>
-public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos)
+public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos, ConfiguracaoApi configuracao)
 {
     private const string ChaveGeradoEm = "catalogo_gerado_em_ticks";
+    private const string ChaveUrl = "catalogo_url"; // de qual servidor veio o carimbo
 
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
     private bool _tentouAoAbrir;
@@ -37,11 +38,18 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos)
         await _umaPorVez.WaitAsync(cancellationToken);
         try
         {
-            var desde = UltimaAtualizacaoUtc;
+            // Carga cheia quando nunca baixou, quando o cache está vazio (banco novo) ou quando o servidor mudou
+            // (URL trocada em Debug / APK apontando para outro lugar): um "desde" de outro servidor deixaria o catálogo
+            // incompleto em silêncio. Senão, incremental.
+            var cargaCheia = UltimaAtualizacaoUtc is null
+                || Preferences.Default.Get(ChaveUrl, string.Empty) != configuracao.UrlBase
+                || await produtos.ContarAsync() == 0;
+            var desde = cargaCheia ? null : UltimaAtualizacaoUtc;
+
             var catalogo = await api.ObterCatalogoAsync(desde, cancellationToken);
             var linhas = catalogo.Produtos.Select(ParaLinha).ToList();
 
-            if (desde is null)
+            if (cargaCheia)
             {
                 await produtos.SubstituirTudoAsync(linhas);
             }
@@ -51,6 +59,7 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos)
             }
 
             Preferences.Default.Set(ChaveGeradoEm, DateTime.SpecifyKind(catalogo.GeradoEmUtc, DateTimeKind.Utc).Ticks);
+            Preferences.Default.Set(ChaveUrl, configuracao.UrlBase);
             return linhas.Count;
         }
         finally
@@ -59,9 +68,13 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos)
         }
     }
 
+    /// <summary>Volta a permitir a atualização automática (chamado quando o app volta do segundo plano).</summary>
+    public void PermitirNovaAtualizacaoAoAbrir() => _tentouAoAbrir = false;
+
     /// <summary>
-    /// Ao abrir o app, uma vez por execução e em segundo plano. Sem conexão fica quieto (o cache serve para vender);
-    /// sessão vencida ou outro erro aparece como aviso rápido, e a aba Produtos tem o botão "Atualizar" para tentar de novo.
+    /// Ao abrir o app (e ao voltar do segundo plano), uma vez por vez e sem segurar a tela. Sem conexão fica quieto
+    /// (o cache serve para vender); sessão vencida ou outro erro aparece como aviso rápido, e a aba Produtos tem o
+    /// botão "Atualizar" para tentar de novo. O C4 traz o ciclo de 1 min, que também passa a atualizar o catálogo.
     /// </summary>
     public async Task AtualizarAoAbrirAsync()
     {
@@ -71,6 +84,12 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos)
         }
 
         _tentouAoAbrir = true;
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            Debug.WriteLine("[Sorveteria] Sem internet ao abrir: catálogo do aparelho.");
+            return;
+        }
+
         try
         {
             var quantidade = await AtualizarAsync();

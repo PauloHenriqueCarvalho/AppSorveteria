@@ -24,6 +24,7 @@
                     TextColor="White"
                     HeightRequest="56"
                     CornerRadius="10"
+                    IsEnabled="{Binding Livre}"
                     Command="{Binding AtualizarCommand}" />
         </Grid>
 

@@ -28,7 +28,8 @@ public class ListarProdutosViewModel : BindableObject
         _produtos = produtos;
         _catalogo = catalogo;
         _sessao = sessao;
-        AtualizarCommand = new Command(async () => await AtualizarAsync(), () => !Ocupado);
+        // Sem canExecute: o RefreshView espelha CanExecute em IsEnabled e derrubaria IsRefreshing no meio; o botão usa Livre
+        AtualizarCommand = new Command(async () => await AtualizarAsync());
     }
 
     public ObservableCollection<Produto> Produtos { get; } = new();
@@ -43,7 +44,6 @@ public class ListarProdutosViewModel : BindableObject
             _ocupado = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Livre));
-            ((Command)AtualizarCommand).ChangeCanExecute();
         }
     }
 
