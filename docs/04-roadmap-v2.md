@@ -1,6 +1,6 @@
 # 04 — Roadmap v2
 
-> Atualizado em 29/09/2026: repositório único, modelo local-first, app a partir do MVP (docs/06), painel estático e hospedagem gratuita (docs/07). O quadro do Trello "Sorveteria" espelha este roadmap.
+> Atualizado em 07/10/2026 (sincronizado com a `develop`): Sprint 1 inteiro, Etapas A e B do app e Sprint 3 menos usuários estão entregues. Plano para fechar a Fase 1 em docs/08. O quadro do Trello "Sorveteria" espelha este roadmap.
 
 **Proposta** fala em *Fases* (o que a dona recebe). **Roadmap** fala em *Sprints* (semanas de trabalho). A Fase 1 tem 5 sprints (Sprint 0 + 4). Cada sprint termina com algo **funcionando e demonstrável**.
 
@@ -29,30 +29,36 @@ Fase 4 — Expansões ................. a combinar
 
 **Pronto quando:** `POST /api/auth/login` devolve token no Swagger e `dotnet test` está verde.
 
-### Sprint 1 — API de sincronização (semana 1)
+### Sprint 1 — API de sincronização ✅ (concluído em 06/10/2026)
 
 - [x] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento) — `Contracts/Sync/SyncContracts.cs`
-- [ ] `SyncService` + `SyncController`: `POST /api/sync/caixas` e `POST /api/sync/comandas` (lote, idempotente pelo `Id`, resultado por item: aceita / já recebida / rejeitada)
-- [ ] Reconstruir os agregados com as regras do Domain; marcar vendas recebidas após o fechamento do caixa (RN-CX-08)
+- [x] `SyncService` + `SyncController`: `POST /api/sync/caixas` e `POST /api/sync/comandas` (lote, idempotente pelo `Id`, resultado por item: aceita / já recebida / rejeitada) (#21, #31)
+- [x] Reconstruir os agregados com as regras do Domain; marcar vendas recebidas após o fechamento do caixa (RN-CX-08)
   - [x] Regras RN-CX-05/07/08/10 e RN-SY-01/03/04/05/06 no docs/02; Domain: `Comanda.Remontar` (preço da venda, caixa fechado), troco conferido, `Caixa.FecharSincronizado` + migração `CaixaDivergenciaSincronizacao`
   - [x] `POST /api/sync/caixas` (SyncService + SyncController): documento por documento, `DomainException` → `rejeitada`; falha de banco → erro HTTP e o app reenvia
   - [x] `POST /api/sync/comandas` (SyncService + SyncController): `Comanda.Remontar`, número/Ids/produto conferidos antes (rejeição em vez de 409/500), reenvio → `ja_recebida`
 - [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
 - [x] `ProdutosController`: criar, editar, ativar/desativar (Admin)
-- [ ] `POST /api/comandas/{id}/estornar` (Admin)
+- [x] `POST /api/comandas/{id}/estornar` (Admin) — status `Estornada`, não altera o caixa (RN-CM-09) (#37)
 - [x] `GET /api/versao`
-- [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida
-- [x] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas — `src/GestaoSorveteria.Server/Sync.http` (falta rodar contra o PostgreSQL local)
+- [x] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida (`SyncCaixasTests`, `SyncComandasTests`)
+- [x] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas → fechamento — `src/GestaoSorveteria.Server/Sync.http` (#35)
+- [x] Consultas para o painel (adiantadas do Sprint 3): `GET /api/caixas*` (#27), `GET /api/comandas*` (#30), `GET /api/relatorios/resumo-dia` (#34)
 
-**Pronto quando:** um lote enviado duas vezes grava cada venda uma única vez e os totais do caixa batem no banco.
+**Pronto quando:** um lote enviado duas vezes grava cada venda uma única vez e os totais do caixa batem no banco. ✅ (`FluxoCompleto_CaixaComandasEFechamento_TotaisDoCaixaBatem`)
 
 ### Sprint 2 — App do atendente: refatoração do MVP (semana 2)
 
 Plano detalhado em docs/06, seção 4.
 
-- [ ] **Etapa A — base sólida:** referências a Domain/Contracts, `decimal`, UTC, enums, camada de dados nova, erros visíveis, numeração por caixa
-- [ ] **Etapa B — vendas:** pagamento com troco correto e dividido, venda rápida, cancelar comanda, busca, delivery, aviso rápido em vez de alerta
-- [ ] **Etapa C — caixa, login e sincronização:** abrir/sangria/fechar caixa, login com PIN, `SyncService`, indicador "aguardando envio"
+- [x] **Etapa A — base sólida:** referências a Domain/Contracts, `decimal`, UTC, enums, camada de dados nova, erros visíveis, numeração por caixa — testada no tablet em 30/09/2026, modo avião incluído (docs/06, seção 2.1)
+- [x] **Etapa B — vendas:** pagamento com troco correto e dividido (#23), venda rápida (#15), cancelar comanda (#24), busca (#28), delivery (#29), toast em vez de alerta (#26)
+- [ ] **Etapa C — caixa, login e sincronização** (sequência C1–C5 em docs/08, Sessão B):
+  - [ ] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração)
+  - [ ] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16)
+  - [ ] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio`
+  - [ ] C4 — `SyncService` + indicador "X vendas aguardando envio"
+  - [ ] C5 — Histórico do turno com status de envio
 - [ ] Teste no emulador (API em `10.0.2.2`) e no celular real com a internet desligada
 
 **Pronto quando:** venda completa no celular real sem internet, sincronizada ao religar, com o caixa batendo.
@@ -67,10 +73,12 @@ Plano detalhado em docs/06, seção 4.
 - [x] Vendas por data com itens e pagamentos; estorno (status `Estornada` — RN-CM-09)
 - [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
 - [x] Caixas: histórico de fechamentos com diferenças (`GET /api/caixas*` + tela do painel)
-- [ ] Usuários: criar atendente, redefinir PIN
+- [ ] Usuários: criar atendente, redefinir PIN (RN-US-01…08)
+  - [ ] API: `GET/POST /api/usuarios`, `POST /api/usuarios/{id}/redefinir-senha`, `POST /api/usuarios/{id}/ativar|desativar` (Admin)
+  - [ ] Painel: tela "Usuários"
 - [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 
-**Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu.
+**Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu. (Só falta a tela de usuários; o resto está entregue.)
 
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)
 
@@ -80,7 +88,9 @@ Detalhes em docs/07.
 - [ ] Painel no Cloudflare Pages apontando para a API
 - [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app
-- [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3)
+- [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; em andamento na Sessão A do docs/08)
+  - [ ] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada
+  - [ ] Painel: botão no detalhe do caixa aberto
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel
