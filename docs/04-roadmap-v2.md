@@ -75,7 +75,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] Caixas: histórico de fechamentos com diferenças (`GET /api/caixas*` + tela do painel)
 - [ ] Usuários: criar atendente, redefinir PIN (RN-US-01…08)
   - [ ] API: `GET/POST /api/usuarios`, `POST /api/usuarios/{id}/redefinir-senha`, `POST /api/usuarios/{id}/ativar|desativar` (Admin)
-  - [ ] Painel: tela "Usuários"
+  - [x] Painel: tela "Usuários" — lista, novo usuário (atendente com PIN ou Admin com senha), redefinir PIN/senha, ativar/desativar
 - [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 
 **Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu. (Só falta a tela de usuários; o resto está entregue.)
