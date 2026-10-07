@@ -7,6 +7,8 @@ using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Relatorios;
 using GestaoSorveteria.Application.Sync;
+using GestaoSorveteria.Application.Usuarios;
+using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Infrastructure;
 using GestaoSorveteria.Infrastructure.Seed;
 using GestaoSorveteria.Server.Configuracao;
@@ -55,6 +57,7 @@ builder.Services.AddScoped<CaixaConsultaService>();
 builder.Services.AddScoped<ComandaConsultaService>();
 builder.Services.AddScoped<ComandaService>();
 builder.Services.AddScoped<RelatorioService>();
+builder.Services.AddScoped<UsuarioService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------
 var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();
@@ -84,6 +87,24 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1),
             NameClaimType = JwtTokenService.ClaimNome,
             RoleClaimType = JwtTokenService.ClaimPerfil,
+        };
+        // RN-US-07: desativar vale na hora, não só no próximo login. O token dura 12 h (RN-US-06); sem esta
+        // conferência, um atendente desativado continuaria sincronizando vendas até o token vencer.
+        // Uma consulta por chave primária por requisição — irrelevante no volume de uma sorveteria.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async contexto =>
+            {
+                var usuarios = contexto.HttpContext.RequestServices.GetRequiredService<IUsuarioRepository>();
+                var id = contexto.Principal?.FindFirst(JwtTokenService.ClaimId)?.Value;
+                var usuario = Guid.TryParse(id, out var usuarioId)
+                    ? await usuarios.ObterPorIdAsync(usuarioId, contexto.HttpContext.RequestAborted)
+                    : null;
+                if (usuario is null || !usuario.Ativo)
+                {
+                    contexto.Fail("Usuário desativado ou inexistente.");
+                }
+            },
         };
     });
 
