@@ -56,3 +56,6 @@ _pkginfo.txt
 PublishScripts/
 node_modules/
 Generated_Code/
+
+# Permissões locais do Claude Code (por máquina)
+.claude/settings.local.json
