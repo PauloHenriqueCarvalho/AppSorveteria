@@ -26,6 +26,7 @@ Sistema de gestão para sorveteria, tudo num repositório só:
 | [docs/05-correcoes-da-proposta.md](docs/05-correcoes-da-proposta.md) | Ajustes na proposta comercial |
 | [docs/06-analise-mvp-maui.md](docs/06-analise-mvp-maui.md) | Análise do MVP, bugs B1–B15 e plano de refatoração do app |
 | [docs/07-hospedagem.md](docs/07-hospedagem.md) | Hospedagem gratuita (Render + Neon + Cloudflare Pages) e limites |
+| [docs/09-guia-de-uso.md](docs/09-guia-de-uso.md) | Guia de 1 página para a dona e o atendente (abrir caixa, vender, fechar caixa, painel) |
 | [docs/contexto-mvp/](docs/contexto-mvp/) | Documentos originais do MVP (histórico) |
 
 ## Começar em qualquer computador

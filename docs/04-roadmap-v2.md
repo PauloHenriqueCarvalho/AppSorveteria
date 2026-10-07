@@ -93,7 +93,7 @@ Detalhes em docs/07.
   - [ ] Painel: botão no detalhe do caixa aberto
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
-- [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel
+- [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
 
