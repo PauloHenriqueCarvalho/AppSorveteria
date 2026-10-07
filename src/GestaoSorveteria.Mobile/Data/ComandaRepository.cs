@@ -4,6 +4,9 @@ using Dominio = GestaoSorveteria.Domain.Comandas;
 
 namespace SorveteriaMaui.Data;
 
+/// <summary>Vendas de um caixa para a tela e para o fechamento (C3). Só comandas fechadas contam; abertas só são contadas.</summary>
+public sealed record ResumoVendasCaixa(decimal TotalDinheiro, decimal TotalVendido, int ComandasFechadas, int ComandasAbertas);
+
 /// <summary>
 /// Comandas no SQLite. Leitura para a tela devolve as linhas; para alterar, devolve a comanda do Domain
 /// (<see cref="Dominio.Comanda.Restaurar"/>) e grava tudo de volta numa transação só.
@@ -29,6 +32,30 @@ public sealed class ComandaRepository(BancoLocal banco)
     {
         var db = await banco.ConexaoAsync();
         return await db.Table<ItemComanda>().Where(i => i.ComandaId == comandaId).ToListAsync();
+    }
+
+    /// <summary>
+    /// RN-CX-05/06 / RN-PG-05: comandas abertas (impedem fechar), fechadas, total vendido e só o **dinheiro**
+    /// (campo <c>Valor</c>, o que abateu a comanda — o troco não fica na gaveta) para o esperado do caixa.
+    /// </summary>
+    public async Task<ResumoVendasCaixa> ResumoVendasNoCaixaAsync(Guid caixaId)
+    {
+        var db = await banco.ConexaoAsync();
+        var abertas = await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.Status == Dominio.StatusComanda.Aberta).CountAsync();
+        var fechadas = await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.Status == Dominio.StatusComanda.Fechada).ToListAsync();
+        var dinheiroCentavos = await db.ExecuteScalarAsync<long>(
+            "SELECT COALESCE(SUM(p.valor_centavos), 0) FROM pagamentos p " +
+            "JOIN comandas c ON c.id = p.comanda_id " +
+            "WHERE c.caixa_id = ? AND c.status = ? AND p.forma = ?",
+            caixaId, (int)Dominio.StatusComanda.Fechada, (int)Dominio.FormaPagamento.Dinheiro);
+
+        return new ResumoVendasCaixa(
+            Conversoes.ParaReais(dinheiroCentavos),
+            Conversoes.ParaReais(fechadas.Sum(c => c.TotalCentavos)),
+            fechadas.Count,
+            abertas);
     }
 
     /// <summary>RN-CM-02 / B8: sequencial dentro do caixa, contando também as fechadas.</summary>

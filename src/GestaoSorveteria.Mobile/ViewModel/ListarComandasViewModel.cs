@@ -14,8 +14,17 @@ public class ListarComandasViewModel : BindableObject
     private readonly IPaymentService _paymentService;
     private readonly SessaoUsuario _sessao;
     private readonly CatalogoService _catalogo;
+    private readonly CaixaAppService _caixa;
 
     public ObservableCollection<Comanda> Comandas { get; set; } = new();
+
+    private string _estadoCaixa = string.Empty;
+    /// <summary>C3: "Caixa aberto desde HH:mm" ou aviso de caixa fechado.</summary>
+    public string EstadoCaixa
+    {
+        get => _estadoCaixa;
+        set { _estadoCaixa = value; OnPropertyChanged(); }
+    }
 
     /// <summary>Quem está no turno (C1). Vazio se ninguém entrou.</summary>
     public string NomeAtendente => _sessao.Nome;
@@ -35,13 +44,14 @@ public class ListarComandasViewModel : BindableObject
     public ICommand VerDetalhesCommand { get; }
     public ICommand SairCommand { get; }
 
-    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo)
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa)
     {
         _comandas = comandas;
         _repositorio = repositorio;
         _paymentService = paymentService;
         _sessao = sessao;
         _catalogo = catalogo;
+        _caixa = caixa;
 
         SairCommand = new Command(async () => await Sair());
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
@@ -60,14 +70,38 @@ public class ListarComandasViewModel : BindableObject
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _repositorio.ListarAbertasAsync();
+            var caixa = await _caixa.ObterAbertoAsync();
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 Comandas.Clear();
                 foreach (var c in lista) Comandas.Add(c);
                 TotalComandasAbertas = Comandas.Count;
+                EstadoCaixa = caixa is null
+                    ? "⚠ Caixa fechado — abra na aba Caixa"
+                    : $"Caixa aberto desde {caixa.AbertoEm.ToLocalTime():HH:mm}";
             });
         });
+    }
+
+    /// <summary>RN-CX-03 / C3: sem caixa aberto não há venda; leva o atendente para a aba Caixa.</summary>
+    private async Task<bool> GarantirCaixaAberto()
+    {
+        GestaoSorveteria.Domain.Caixas.Caixa? caixa = null;
+        if (!await Operacao.CarregarAsync(async () => caixa = await _caixa.ObterAbertoAsync())) return false;
+        if (caixa is not null) return true;
+
+        bool abrir = await Shell.Current.DisplayAlertAsync(
+            "Caixa fechado",
+            "Não há caixa aberto. Abra o caixa (com o fundo de troco) antes de vender.",
+            "Abrir caixa",
+            "Agora não");
+        if (abrir)
+        {
+            await Shell.Current.GoToAsync("//CaixaView");
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -107,6 +141,8 @@ public class ListarComandasViewModel : BindableObject
 
     private async Task AbrirNovaComanda()
     {
+        if (!await GarantirCaixaAberto()) return;
+
         string nome = await Shell.Current.DisplayPromptAsync("Nova Comanda", "Nome do Cliente (Opcional):", "Abrir", "Cancelar");
 
         if (nome != null) // Se não cancelou
@@ -119,6 +155,8 @@ public class ListarComandasViewModel : BindableObject
     /// <summary>RN-CM-11: delivery na F1 é marcação + observação (nome/endereço); sem taxa.</summary>
     private async Task AbrirDelivery()
     {
+        if (!await GarantirCaixaAberto()) return;
+
         string nome = await Shell.Current.DisplayPromptAsync("Delivery", "Nome do cliente (opcional):", "Próximo", "Cancelar");
         if (nome == null) return;
 
@@ -150,6 +188,8 @@ public class ListarComandasViewModel : BindableObject
 
     private async Task ExecutarVendaRapida()
     {
+        if (!await GarantirCaixaAberto()) return;
+
         string resultado = await Shell.Current.DisplayPromptAsync(
             "Venda Rápida",
             "Valor da Venda:",

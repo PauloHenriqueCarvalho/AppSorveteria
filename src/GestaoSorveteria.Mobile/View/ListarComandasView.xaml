@@ -19,8 +19,11 @@
                     <Label Text="Comandas Ativas:" TextColor="White" VerticalOptions="Center"/>
                     <Label Text="{Binding TotalComandasAbertas}" TextColor="White" FontAttributes="Bold" FontSize="20"/>
                 </HorizontalStackLayout>
-                <Label Grid.Column="1" Text="{Binding NomeAtendente, StringFormat='👤 {0}'}"
-                       TextColor="White" FontSize="14" VerticalOptions="Center"/>
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                    <Label Text="{Binding NomeAtendente, StringFormat='👤 {0}'}" TextColor="White" FontSize="14" HorizontalTextAlignment="End"/>
+                    <!-- C3 -->
+                    <Label Text="{Binding EstadoCaixa}" TextColor="White" FontSize="12" HorizontalTextAlignment="End"/>
+                </VerticalStackLayout>
             </Grid>
         </Frame>
 

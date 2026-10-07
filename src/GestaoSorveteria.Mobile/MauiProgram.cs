@@ -32,7 +32,8 @@ namespace SorveteriaMaui
             builder.Services.AddSingleton<BancoLocal>();
             builder.Services.AddSingleton<ComandaRepository>();
             builder.Services.AddSingleton<ProdutoRepository>();
-            builder.Services.AddSingleton<CaixaProvisorio>();
+            builder.Services.AddSingleton<CaixaRepository>();
+            builder.Services.AddSingleton<CaixaAppService>(); // C3: abrir, sangria/suprimento, fechar com conferência
             builder.Services.AddSingleton<ComandaAppService>();
             // Diálogos de pagamento (não gravam nada)
             builder.Services.AddSingleton<IPaymentService, PaymentService>();
@@ -48,6 +49,10 @@ namespace SorveteriaMaui
             // Produtos
             builder.Services.AddTransient<ListarProdutosView>();
             builder.Services.AddTransient<ListarProdutosViewModel>();
+
+            // Caixa (C3)
+            builder.Services.AddTransient<CaixaView>();
+            builder.Services.AddTransient<CaixaViewModel>();
 
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();

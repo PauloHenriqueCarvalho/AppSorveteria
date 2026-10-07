@@ -11,7 +11,7 @@ namespace SorveteriaMaui.Services;
 /// Casos de uso da comanda no aparelho: carrega do SQLite → aplica a regra do Domain → grava tudo numa transação.
 /// Total, troco e validações vêm do Domain (mesmo código da API). Erros de regra saem como <see cref="DomainException"/>.
 /// </summary>
-public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaProvisorio caixa, SessaoUsuario sessao)
+public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaRepository caixas, SessaoUsuario sessao)
 {
     // Uma operação por vez: dois toques rápidos não podem ler a mesma versão da comanda
     // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
@@ -117,7 +117,10 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
         // A comanda leva quem vendeu (atendente logado, C1). Sem login o app nem chega nesta tela.
         var usuarioId = sessao.UsuarioId
             ?? throw new InvalidOperationException("Nenhum atendente conectado. Entre com o PIN para vender.");
-        var caixaAtual = caixa.Atual(usuarioId);
+
+        // RN-CX-03 / C3: não há venda sem caixa aberto (a tela já avisa antes; aqui é a garantia).
+        var caixaAtual = await caixas.ObterAbertoAsync()
+            ?? throw new DomainException("Não há caixa aberto. Abra o caixa na aba Caixa antes de vender (RN-CX-03).");
         var numero = await comandas.ProximoNumeroAsync(caixaAtual.Id);
         var agora = DateTime.UtcNow;
         return Comanda.Abrir(caixaAtual, usuarioId, numero, tipo, agora, agora, observacao);
