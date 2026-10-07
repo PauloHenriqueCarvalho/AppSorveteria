@@ -25,3 +25,11 @@ export async function obterCaixaAtual(): Promise<CaixaResumoDto | null> {
 export function obterCaixa(id: string): Promise<CaixaDetalheDto> {
   return requisicao<CaixaDetalheDto>(`/api/caixas/${encodeURIComponent(id)}`)
 }
+
+/** POST /api/caixas/{id}/fechar-forcado (Admin, RN-CX-09). Contado = 0; só o motivo é informado. */
+export function fecharCaixaForcado(id: string, motivo: string): Promise<CaixaDetalheDto> {
+  return requisicao<CaixaDetalheDto>(`/api/caixas/${encodeURIComponent(id)}/fechar-forcado`, {
+    metodo: 'POST',
+    corpo: { motivo },
+  })
+}

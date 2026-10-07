@@ -43,11 +43,11 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 ## Estado atual (atualize esta seção ao terminar um sprint)
 
 - **Sprint 0 (fundação da API): concluído (29/09/2026).** Migração `InitialCreate` aplicada no PostgreSQL local (porta 5433), login/`/api/auth/me` testados.
-- **Sprint 1 (API de sincronização): concluído (06/10/2026).** `POST /api/sync/caixas` e `/api/sync/comandas` idempotentes com remontagem pelo Domain, produtos (app e painel), estorno (RN-CM-09), `/api/versao`, consultas de caixas/vendas/resumo do dia para o painel, `Sync.http`. 269 testes passam, CI verde.
+- **Sprint 1 (API de sincronização): concluído (06/10/2026).** `POST /api/sync/caixas` e `/api/sync/comandas` idempotentes com remontagem pelo Domain, produtos (app e painel), estorno (RN-CM-09), `/api/versao`, consultas de caixas/vendas/resumo do dia para o painel, `Sync.http`. Em 07/10: usuários (`/api/usuarios`, RN-US-10) e fechamento forçado do caixa (`/api/caixas/{id}/fechar-forcado`, RN-CX-09). 300 testes passam, CI verde.
 - **App MAUI: Etapas A e B concluídas** (docs/06). B1–B14 corrigidos e conferidos no tablet (30/09/2026); pagamento dividido, cancelar, busca, delivery e toast entregues. **Falta a Etapa C inteira** (login com PIN, caixa de verdade, `SyncService`, histórico do turno) — hoje o app usa um `CaixaProvisorio` e não fala com a API. B16 (cadastro local de produto sem Domain) some quando o catálogo vier da API (C2).
-- **Painel (Sprint 3): quase concluído.** Login, dashboard do dia, vendas com estorno, produtos, caixas, "Conectando ao servidor…". Falta só a tela de usuários.
+- **Painel (Sprint 3): concluído (07/10/2026).** Login, dashboard do dia, vendas com estorno, produtos, caixas (com fechamento forçado), usuários, "Conectando ao servidor…". Falta só publicar (Sprint 4).
 - **Deploy (Sprint 4): nada publicado ainda.** `Dockerfile`, `/health` e docs/07 prontos.
-- **Próximo:** docs/08 — Sessão A (usuários na API e no painel, fechamento forçado RN-CX-09), Sessão B (Etapa C do app, C1→C5), Sessão C (deploy).
+- **Próximo:** docs/08 — Sessão B (Etapa C do app, C2→C5; C1 entregue no #44), Sessão C (deploy, espera as contas Neon/Render/Cloudflare). Sessão A concluída.
 
 ## Comandos
 
