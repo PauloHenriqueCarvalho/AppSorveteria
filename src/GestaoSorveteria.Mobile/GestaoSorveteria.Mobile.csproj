@@ -33,7 +33,19 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+
+		<!-- http (API local) só em Debug; em Release o manifesto fica com usesCleartextTraffic="false" (ver AndroidManifest.xml) -->
+		<AndroidManifestPlaceholders Condition="'$(Configuration)' == 'Debug'">cleartext=true</AndroidManifestPlaceholders>
+		<AndroidManifestPlaceholders Condition="'$(Configuration)' != 'Debug'">cleartext=false</AndroidManifestPlaceholders>
+
+		<!-- URL da API no APK Release: dotnet publish ... -p:ApiUrlPadrao=https://<servico>.onrender.com (docs/07).
+		     Vazia por padrão de propósito: o app avisa "sem endereço do servidor" em vez de falar com um host chutado. -->
+		<ApiUrlPadrao Condition="'$(ApiUrlPadrao)' == ''"></ApiUrlPadrao>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyMetadata Include="ApiUrlPadrao" Value="$(ApiUrlPadrao)" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->

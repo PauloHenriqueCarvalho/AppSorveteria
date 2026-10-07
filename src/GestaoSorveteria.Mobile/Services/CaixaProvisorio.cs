@@ -15,6 +15,9 @@ public sealed class CaixaProvisorio
 
     public Caixa Atual(Guid usuarioId)
     {
+        // C1: a chave do antigo "usuário do aparelho" não é mais usada; limpa nos aparelhos que já tinham o app.
+        Preferences.Default.Remove("usuario_aparelho_id");
+
         var abertoEmTicks = Preferences.Default.Get(ChaveAbertoEm, 0L);
         if (abertoEmTicks == 0)
         {

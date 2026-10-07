@@ -116,7 +116,7 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     {
         // A comanda leva quem vendeu (atendente logado, C1). Sem login o app nem chega nesta tela.
         var usuarioId = sessao.UsuarioId
-            ?? throw new DomainException("Nenhum atendente conectado. Entre com o PIN para vender.");
+            ?? throw new InvalidOperationException("Nenhum atendente conectado. Entre com o PIN para vender.");
         var caixaAtual = caixa.Atual(usuarioId);
         var numero = await comandas.ProximoNumeroAsync(caixaAtual.Id);
         var agora = DateTime.UtcNow;
