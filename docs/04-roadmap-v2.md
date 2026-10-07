@@ -86,7 +86,7 @@ Detalhes em docs/07.
 
 - [ ] API no Render Free (Docker) + PostgreSQL no Neon Free; variáveis de ambiente; `/health`
 - [ ] Painel no Cloudflare Pages apontando para a API
-- [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração
+- [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração — script `scripts/backup.ps1` e passo a passo de restauração prontos (docs/07, 07/10); falta agendar contra o Neon
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app
 - [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; em andamento na Sessão A do docs/08)
   - [ ] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada

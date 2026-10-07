@@ -76,6 +76,7 @@ AppSorveteria/
 ├── docker-compose.yml                PostgreSQL local
 ├── Dockerfile                        imagem da API (Render)
 ├── render.yaml                       Blueprint do Render: serviço da API e lista de variáveis (sem segredos)
+├── scripts/backup.ps1                pg_dump semanal do banco do Neon para o PC (docs/07)
 ├── .github/workflows/ci.yml          build + testes da API a cada push
 ├── docs/
 ├── src/
