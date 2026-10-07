@@ -9,6 +9,11 @@
             <VerticalStackLayout>
                 <Label Text="{Binding ComandaAtual.NomeCliente, TargetNullValue='Cliente s/ Nome'}" FontSize="24" FontAttributes="Bold"/>
                 <Label Text="{Binding ComandaAtual.Numero, StringFormat='Comanda #{0}'}" TextColor="Gray"/>
+                <!-- RN-CM-11: delivery = marcação + observação -->
+                <Label Text="🛵 Delivery" IsVisible="{Binding ComandaAtual.EhDelivery}" FontAttributes="Bold" TextColor="#1976D2"/>
+                <Label Text="{Binding ComandaAtual.Observacao}" IsVisible="{Binding ComandaAtual.TemObservacao}" TextColor="#555"/>
+                <Button Text="📝 Observação" Command="{Binding EditarObservacaoCommand}"
+                        BackgroundColor="#EEEEEE" TextColor="#333" HeightRequest="40" CornerRadius="8" Margin="0,6,0,0"/>
             </VerticalStackLayout>
             <ImageButton Source="edit_icon.png" Command="{Binding EditarNomeCommand}" VerticalOptions="Start" HeightRequest="30"/>
         </HorizontalStackLayout>
@@ -32,13 +37,13 @@
                                 <!-- Nome -->
                                 <Label Grid.Row="0" 
                Grid.Column="0"
-               Text="{Binding ProdutoNome}" 
+               Text="{Binding Descricao}" 
                FontAttributes="Bold"  TextColor="Gray" />
 
                                 <!-- Total -->
                                 <Label Grid.Row="0" 
                Grid.Column="1"
-               Text="{Binding Total, StringFormat='R$ {0:F2}'}" 
+               Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" 
                FontAttributes="Bold"
                VerticalOptions="Center" TextColor="Gray"/>
 
@@ -86,6 +91,15 @@
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="10" HorizontalOptions="End">
+                    <!-- RN-CM-08 / B10 -->
+                    <Button Text="Cancelar comanda"
+                            BackgroundColor="Transparent"
+                            BorderColor="White"
+                            BorderWidth="1"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="48"
+                            Command="{Binding CancelarComandaCommand}"/>
                     <Button Text="Pagar" 
                             BackgroundColor="#FF9800" 
                             TextColor="White" 

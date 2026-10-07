@@ -1,21 +1,20 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SorveteriaMaui.ViewModel;
 
 [QueryProperty(nameof(ComandaAtual), "ComandaSelecionada")]
 public class DetalhesComandaViewModel : BindableObject
 {
-    private readonly DatabaseService _dbService;
+    private readonly ComandaAppService _comandas;
+    private readonly ComandaRepository _repositorio;
     private readonly IPaymentService _paymentService;
-    private Comanda _comandaAtual;
+    private Comanda? _comandaAtual;
 
-    public Comanda ComandaAtual
+    public Comanda? ComandaAtual
     {
         get => _comandaAtual;
         set
@@ -30,103 +29,105 @@ public class DetalhesComandaViewModel : BindableObject
     public ObservableCollection<ItemComanda> Itens { get; set; } = new();
     public ICommand RemoverItemCommand { get; }
     public ICommand EditarNomeCommand { get; }
+    public ICommand EditarObservacaoCommand { get; }
     public ICommand FinalizarComandaCommand { get; }
+    public ICommand CancelarComandaCommand { get; }
 
-    public DetalhesComandaViewModel(DatabaseService dbService, IPaymentService paymentService)
+    public DetalhesComandaViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService)
     {
-        _dbService = dbService;
+        _comandas = comandas;
+        _repositorio = repositorio;
         _paymentService = paymentService;
         RemoverItemCommand = new Command<ItemComanda>(async (item) => await RemoverItem(item));
         EditarNomeCommand = new Command(async () => await EditarNome());
-        AumentarQuantidadeCommand = new Command<ItemComanda>(async (item) => await AumentarQuantidade(item));
+        EditarObservacaoCommand = new Command(async () => await EditarObservacao());
+        AumentarQuantidadeCommand = new Command<ItemComanda>(async (item) => await AlterarQuantidade(item, item.Quantidade + 1));
         DiminuirQuantidadeCommand = new Command<ItemComanda>(async (item) => await DiminuirQuantidade(item));
         FinalizarComandaCommand = new Command(async () => await FinalizarComanda());
+        CancelarComandaCommand = new Command(async () => await CancelarComanda());
     }
 
     private async Task DiminuirQuantidade(ItemComanda item)
     {
         if (item.Quantidade > 1)
         {
-            item.Quantidade--;
-            item.Total = item.Quantidade * item.PrecoUnitario;
-
-            await _dbService.SalvarComandaCompleta(ComandaAtual, Itens.ToList());
-            await CarregarItens();
+            await AlterarQuantidade(item, item.Quantidade - 1);
+            return;
         }
-        else
+
+        bool confirmar = await Shell.Current.DisplayAlertAsync(
+            "Excluir item",
+            $"Remover {item.Descricao} da comanda?",
+            "Remover",
+            "Cancelar");
+
+        if (confirmar)
         {
-            bool confirmar = await Application.Current.MainPage.DisplayAlert(
-                "Excluir item",
-                $"Remover {item.ProdutoNome} da comanda?",
-                "Remover",
-                "Cancelar");
-
-            if (confirmar)
-            {
-                await _dbService.RemoverProdutoDaComanda(item);
-                await CarregarItens();
-            }
+            await Executar(() => _comandas.RemoverItemAsync(item.ComandaId, item.Id));
         }
-
-        RecalcularTotal();
     }
 
-    private void RecalcularTotal()
-    {
-        ComandaAtual.Subtotal = Itens.Sum(i => i.Total);
-        ComandaAtual.Total = (ComandaAtual.Subtotal + ComandaAtual.AcrescimoManual)
-                             - ComandaAtual.DescontoManual;
-
-        OnPropertyChanged(nameof(ComandaAtual));
-    }
-
-    private async Task AumentarQuantidade(ItemComanda item)
-    {
-        item.Quantidade++;
-        item.Total = item.Quantidade * item.PrecoUnitario;
-
-        await _dbService.SalvarComandaCompleta(ComandaAtual, Itens.ToList());
-        await CarregarItens();
-        RecalcularTotal();
-    }
+    // B4: grava a quantidade e o total juntos (Domain recalcula) e recarrega do banco
+    private Task AlterarQuantidade(ItemComanda item, int quantidade) =>
+        Executar(() => _comandas.AlterarQuantidadeAsync(item.ComandaId, item.Id, quantidade));
 
     public async Task CarregarItens()
     {
         if (ComandaAtual == null) return;
 
-        var lista = await _dbService.GetItensDaComanda(ComandaAtual.Id);
+        var comandaId = ComandaAtual.Id;
+        await Operacao.CarregarAsync(async () =>
+        {
+            var atualizada = await _repositorio.ObterLinhaAsync(comandaId);
+            var lista = await _repositorio.ListarItensAsync(comandaId);
 
-        MainThread.BeginInvokeOnMainThread(() => {
-            Itens.Clear();
-            foreach (var i in lista) Itens.Add(i);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (atualizada != null) ComandaAtual = atualizada;
+                Itens.Clear();
+                foreach (var i in lista) Itens.Add(i);
+            });
         });
-
-        var atualizada = await _dbService.GetComandaPorId(ComandaAtual.Id);
-        if (atualizada != null) ComandaAtual = atualizada;
     }
 
     private async Task RemoverItem(ItemComanda item)
     {
-        bool confirm = await Application.Current.MainPage.DisplayAlert("Remover",
-            $"Deseja remover {item.ProdutoNome}?", "Sim", "Não");
+        bool confirm = await Shell.Current.DisplayAlertAsync("Remover",
+            $"Deseja remover {item.Descricao}?", "Sim", "Não");
 
         if (confirm)
         {
-            await _dbService.RemoverProdutoDaComanda(item);
-            await CarregarItens();
+            // B5: o Domain recalcula o total ao remover
+            await Executar(() => _comandas.RemoverItemAsync(item.ComandaId, item.Id));
         }
     }
 
     private async Task EditarNome()
     {
-        string novoNome = await Application.Current.MainPage.DisplayPromptAsync("Editar",
+        if (ComandaAtual == null) return;
+
+        var comandaId = ComandaAtual.Id;
+        string novoNome = await Shell.Current.DisplayPromptAsync("Editar",
             "Nome do Cliente:", "Salvar", "Cancelar", initialValue: ComandaAtual.NomeCliente);
 
         if (novoNome != null)
         {
-            await _dbService.AtualizarNomeComanda(ComandaAtual.Id, novoNome);
-            ComandaAtual.NomeCliente = novoNome;
-            OnPropertyChanged(nameof(ComandaAtual));
+            await Executar(() => _comandas.AlterarNomeClienteAsync(comandaId, novoNome));
+        }
+    }
+
+    private async Task EditarObservacao()
+    {
+        if (ComandaAtual == null) return;
+
+        var comandaId = ComandaAtual.Id;
+        string observacao = await Shell.Current.DisplayPromptAsync("Observação",
+            ComandaAtual.EhDelivery ? "Endereço / observação do delivery:" : "Observação:",
+            "Salvar", "Cancelar", maxLength: 300, initialValue: ComandaAtual.Observacao);
+
+        if (observacao != null)
+        {
+            await Executar(() => _comandas.AlterarObservacaoAsync(comandaId, observacao));
         }
     }
 
@@ -134,11 +135,53 @@ public class DetalhesComandaViewModel : BindableObject
     {
         if (ComandaAtual == null) return;
 
-        var sucesso = await _paymentService.ProcessarPagamentoAsync(ComandaAtual);
-        if (sucesso)
+        var comandaId = ComandaAtual.Id;
+        var pagamentos = await _paymentService.PerguntarPagamentosAsync(ComandaAtual.Total);
+        if (pagamentos is null) return;
+
+        GestaoSorveteria.Domain.Comandas.Comanda? fechada = null;
+        var fechou = await Executar(async () => fechada = await _comandas.FecharAsync(comandaId, pagamentos));
+
+        // B7: troco e saída da tela só depois de gravado
+        if (fechou && fechada is not null)
         {
-            var atualizada = await _dbService.GetComandaPorId(ComandaAtual.Id);
-            if (atualizada != null) ComandaAtual = atualizada;
+            if (fechada.TotalTroco > 0)
+            {
+                await _paymentService.MostrarTrocoAsync(fechada.TotalTroco);
+            }
+
+            await Shell.Current.GoToAsync(".."); // comanda fechada não fica na tela de edição
         }
+    }
+
+    /// <summary>RN-CM-08 / B10: confirmação antes, motivo opcional; volta para a lista depois de gravado.</summary>
+    private async Task CancelarComanda()
+    {
+        if (ComandaAtual == null) return;
+
+        var comandaId = ComandaAtual.Id;
+        bool confirmar = await Shell.Current.DisplayAlertAsync(
+            "Cancelar comanda",
+            $"Cancelar a comanda #{ComandaAtual.Numero} (R$ {ComandaAtual.Total:F2})? Ela sai da lista e não entra no faturamento.",
+            "Cancelar comanda",
+            "Voltar");
+        if (!confirmar) return;
+
+        // null = desistiu no motivo; vazio = cancela sem motivo
+        var motivo = await Shell.Current.DisplayPromptAsync("Motivo (opcional)", "Por que está cancelando?", "Confirmar", "Voltar", maxLength: 300);
+        if (motivo is null) return;
+
+        if (await Executar(() => _comandas.CancelarAsync(comandaId, motivo)))
+        {
+            await Shell.Current.GoToAsync("..");
+        }
+    }
+
+    /// <summary>Falha aparece para o atendente (B7); depois recarrega o que de fato está gravado.</summary>
+    private async Task<bool> Executar(Func<Task> acao)
+    {
+        var gravou = await Operacao.GravarAsync(acao);
+        await CarregarItens();
+        return gravou;
     }
 }

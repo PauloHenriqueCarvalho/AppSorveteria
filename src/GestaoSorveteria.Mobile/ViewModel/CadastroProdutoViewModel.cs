@@ -1,3 +1,4 @@
+using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
 using System.Collections.ObjectModel;
@@ -8,12 +9,12 @@ namespace SorveteriaMaui.ViewModel
     [QueryProperty(nameof(ProdutoId), "ProdutoId")]
     public class CadastroProdutoViewModel : BindableObject
     {
-        private readonly DatabaseService _dbService;
+        private readonly ProdutoRepository _produtos;
 
-        public CadastroProdutoViewModel(DatabaseService dbService)
+        public CadastroProdutoViewModel(ProdutoRepository produtos)
         {
-            _dbService = dbService;
-            Categorias = new ObservableCollection<string> { "Picolé", "Pote", "Bebida", "Acompanhamento", "Self-Service" };
+            _produtos = produtos;
+            Categorias = new ObservableCollection<string>(Produto.Categorias);
             SalvarCommand = new Command(async () => await Salvar());
         }
 
@@ -34,20 +35,30 @@ namespace SorveteriaMaui.ViewModel
         private string _precoString;
         public string PrecoString { get => _precoString; set { _precoString = value; OnPropertyChanged(); } }
 
-        private int _categoriaIndex = 0;
-        public int CategoriaIndex { get => _categoriaIndex; set { _categoriaIndex = value; OnPropertyChanged(); } }
+        // B13: categoria pelo nome, não pelo índice
+        private string _categoria = Produto.Categorias[0];
+        public string Categoria { get => _categoria; set { _categoria = value; OnPropertyChanged(); } }
+
+        private Produto? _existente;
 
         public async Task LoadIfNeeded()
         {
             if (string.IsNullOrEmpty(ProdutoId)) return;
 
-            var lista = await _dbService.GetProdutosAtivos();
-            var p = lista.FirstOrDefault(x => x.Id == ProdutoId);
+            Produto? p = null;
+            if (!Guid.TryParse(ProdutoId, out var id)
+                || !await Operacao.CarregarAsync(async () => p = await _produtos.ObterAsync(id)))
+            {
+                return;
+            }
+
             if (p != null)
             {
+                _existente = p;
                 Nome = p.Nome;
                 PrecoString = p.Preco.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-                CategoriaIndex = p.Tipo; // assume mapeamento por índice
+                if (!Categorias.Contains(p.Categoria)) Categorias.Add(p.Categoria);
+                Categoria = p.Categoria;
             }
         }
 
@@ -60,23 +71,20 @@ namespace SorveteriaMaui.ViewModel
                 return;
             }
 
-            if (!double.TryParse((PrecoString ?? "0").Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double preco))
+            if (!Conversoes.TentarLerDinheiro(string.IsNullOrWhiteSpace(PrecoString) ? "0" : PrecoString, out decimal preco))
             {
                 await Application.Current.MainPage.DisplayAlert("Erro", "Preço inválido", "OK");
                 return;
             }
 
-            var produto = new Produto
-            {
-                Id = string.IsNullOrEmpty(ProdutoId) ? Guid.NewGuid().ToString() : ProdutoId,
-                Nome = Nome,
-                Preco = preco,
-                Tipo = CategoriaIndex,
-                Ativo = 1,
-                DataCriacao = DateTime.Now
-            };
+            var produto = _existente ?? new Produto { CriadoEm = DateTime.UtcNow };
+            produto.Nome = Nome;
+            produto.Preco = preco;
+            produto.Categoria = Categoria;
+            if (_existente != null) produto.AtualizadoEm = DateTime.UtcNow;
 
-            await _dbService.SalvarProduto(produto);
+            // B7: se não gravou, fica na tela com o que foi digitado
+            if (!await Operacao.GravarAsync(() => _produtos.SalvarAsync(produto))) return;
             await Shell.Current.GoToAsync("..");
         }
     }

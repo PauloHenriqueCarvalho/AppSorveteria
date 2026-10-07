@@ -9,8 +9,24 @@ public interface IComandaRepository
 
     Task<IReadOnlyList<Comanda>> ListarPorCaixaAsync(Guid caixaId, StatusComanda? status = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Comandas fechadas num intervalo (para relatórios e "vendas do dia").</summary>
+    /// <summary>
+    /// Vendas com fechamento no intervalo (relatórios e "vendas do dia"): <c>Fechada</c> e também <c>Estornada</c>,
+    /// que continua no dia da venda (RN-CM-09, RN-RL-01). Quem precisa separar filtra pelo <see cref="Comanda.Status"/>.
+    /// </summary>
     Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Vendas para o painel: comandas cuja data da venda (fechamento, senão cancelamento, senão criação) está em
+    /// [<paramref name="deUtc"/>, <paramref name="ateUtc"/>), mais recente primeiro, paginadas. Devolve também o total sem paginação.
+    /// Só para leitura: as comandas vêm <b>sem os itens</b> (só pagamentos) e não rastreadas — não altere nem salve.
+    /// </summary>
+    Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
+        DateTime deUtc,
+        DateTime ateUtc,
+        StatusComanda? status,
+        int pular,
+        int quantidade,
+        CancellationToken cancellationToken = default);
 
     /// <summary>RN-CM-02: próximo número sequencial dentro do caixa.</summary>
     Task<int> ProximoNumeroAsync(Guid caixaId, CancellationToken cancellationToken = default);
@@ -18,8 +34,14 @@ public interface IComandaRepository
     /// <summary>RN-CX-05.</summary>
     Task<bool> ExisteAbertaNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
 
-    /// <summary>RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das comandas fechadas do caixa.</summary>
+    /// <summary>RN-CX-06 / RN-PG-05: soma dos pagamentos em dinheiro das vendas do caixa (fechadas e estornadas — o estorno não altera o caixa).</summary>
     Task<decimal> TotalDinheiroFechadasNoCaixaAsync(Guid caixaId, CancellationToken cancellationToken = default);
+
+    /// <summary>RN-CM-02: número já usado no caixa (sincronização: vira rejeição, não 409).</summary>
+    Task<bool> ExisteNumeroNoCaixaAsync(Guid caixaId, int numero, CancellationToken cancellationToken = default);
+
+    /// <summary>Algum desses Ids já existe como item ou pagamento (sincronização: vira rejeição, não 409).</summary>
+    Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 
     Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default);
 }

@@ -57,16 +57,30 @@ public sealed class Produto : Entity
         AtualizadoEm = Guard.Utc(agoraUtc, "a data");
     }
 
+    /// <summary>Sem efeito se já estiver ativo: não marca AtualizadoEm, então o app não baixa o produto de novo à toa.</summary>
     public void Ativar(DateTime agoraUtc)
     {
+        var agora = Guard.Utc(agoraUtc, "a data");
+        if (Ativo)
+        {
+            return;
+        }
+
         Ativo = true;
-        AtualizadoEm = Guard.Utc(agoraUtc, "a data");
+        AtualizadoEm = agora;
     }
 
+    /// <summary>RN-PR-03. Sem efeito se já estiver inativo (mesmo motivo de <see cref="Ativar"/>).</summary>
     public void Desativar(DateTime agoraUtc)
     {
+        var agora = Guard.Utc(agoraUtc, "a data");
+        if (!Ativo)
+        {
+            return;
+        }
+
         Ativo = false;
-        AtualizadoEm = Guard.Utc(agoraUtc, "a data");
+        AtualizadoEm = agora;
     }
 
     public static string NormalizarNome(string? nome) => (nome ?? string.Empty).Trim().ToLowerInvariant();

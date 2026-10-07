@@ -1,121 +1,191 @@
-﻿using SorveteriaMaui.Model;
-using SorveteriaMaui.Services;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
 using System.Windows.Input;
+using SorveteriaMaui.Data;
+using SorveteriaMaui.Model;
+using SorveteriaMaui.Services;
 
-namespace SorveteriaMaui.ViewModel
+namespace SorveteriaMaui.ViewModel;
+
+[QueryProperty(nameof(ComandaAtual), "ComandaSelecionada")]
+public class SelecaoProdutoViewModel : BindableObject
 {
-    [QueryProperty(nameof(ComandaAtual), "ComandaSelecionada")]
-    public class SelecaoProdutoViewModel : BindableObject
+    private readonly ComandaAppService _comandas;
+    private readonly ProdutoRepository _produtos;
+    private Comanda? _comandaAtual;
+
+    public Comanda? ComandaAtual
     {
-        private readonly DatabaseService _dbService;
-        private Comanda _comandaAtual;
+        get => _comandaAtual;
+        set { _comandaAtual = value; OnPropertyChanged(); }
+    }
 
-        public Comanda ComandaAtual
+    public ObservableCollection<Produto> Produtos { get; set; } = new();
+
+    // B12: busca por nome e filtro por categoria sobre a lista carregada
+    public const string TodasCategorias = "Todas";
+    private List<Produto> _todos = new();
+
+    public ObservableCollection<string> Categorias { get; } = new() { TodasCategorias };
+
+    private string _filtroNome = string.Empty;
+    public string FiltroNome
+    {
+        get => _filtroNome;
+        set
         {
-            get => _comandaAtual;
-            set { _comandaAtual = value; OnPropertyChanged(); }
+            if (_filtroNome == value) return;
+            _filtroNome = value ?? string.Empty;
+            OnPropertyChanged();
+            AplicarFiltro(); // filtra enquanto digita
         }
+    }
 
-        public ObservableCollection<Produto> Produtos { get; set; } = new();
-
-        // Propriedade de Quantidade controlada pela tela
-        private double _quantidade = 1;
-        public double Quantidade
+    private string _categoriaSelecionada = TodasCategorias;
+    public string CategoriaSelecionada
+    {
+        get => _categoriaSelecionada;
+        set
         {
-            get => _quantidade;
-            set
+            var nova = string.IsNullOrEmpty(value) ? TodasCategorias : value;
+            if (_categoriaSelecionada == nova) return;
+            _categoriaSelecionada = nova;
+            OnPropertyChanged();
+            AplicarFiltro();
+        }
+    }
+
+    public ICommand BuscarCommand { get; }
+
+    // Propriedade de Quantidade controlada pela tela
+    private int _quantidade = 1;
+    public int Quantidade
+    {
+        get => _quantidade;
+        set
+        {
+            if (_quantidade != value)
             {
-                if (_quantidade != value)
-                {
-                    _quantidade = value;
-                    OnPropertyChanged(); // ISSO AQUI FAZ O NÚMERO APARECER NA TELA
-                }
+                _quantidade = value;
+                OnPropertyChanged();
             }
         }
+    }
 
-        // Comandos chamados pela Interface (XAML)
-        public ICommand SelecionarProdutoCommand { get; }
-        public ICommand PrecoManualCommand { get; }
-        public ICommand AumentarQtdeCommand { get; }
-        public ICommand DiminuirQtdeCommand { get; }
+    // Comandos chamados pela Interface (XAML)
+    public ICommand SelecionarProdutoCommand { get; }
+    public ICommand PrecoManualCommand { get; }
+    public ICommand AumentarQtdeCommand { get; }
+    public ICommand DiminuirQtdeCommand { get; }
 
-        public SelecaoProdutoViewModel(DatabaseService dbService)
+    public SelecaoProdutoViewModel(ComandaAppService comandas, ProdutoRepository produtos)
+    {
+        _comandas = comandas;
+        _produtos = produtos;
+
+        SelecionarProdutoCommand = new Command<Produto>(async (p) => await AdicionarItem(p));
+        PrecoManualCommand = new Command(async () => await AdicionarPrecoManual());
+
+        AumentarQtdeCommand = new Command(() => Quantidade++);
+        DiminuirQtdeCommand = new Command(() => { if (Quantidade > 1) Quantidade--; });
+        BuscarCommand = new Command(AplicarFiltro);
+
+        _ = CarregarProdutos();
+    }
+
+    async Task CarregarProdutos()
+    {
+        await Operacao.CarregarAsync(async () =>
         {
-            _dbService = dbService;
-
-            // Inicializando os Comandos
-            SelecionarProdutoCommand = new Command<Produto>(async (p) => await AdicionarItem(p));
-            PrecoManualCommand = new Command(async () => await AdicionarPrecoManual());
-
-            AumentarQtdeCommand = new Command(() => Quantidade++);
-            DiminuirQtdeCommand = new Command(() => { if (Quantidade > 1) Quantidade--; });
-
-            _ = CarregarProdutos();
-        }
-
-        async Task CarregarProdutos()
-        {
-            await _dbService.PopularBancoSeVazio();
-            var lista = await _dbService.GetProdutosAtivos();
+            await _produtos.PopularSeVazioAsync();
+            var lista = await _produtos.ListarAtivosAsync();
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                Produtos.Clear();
-                foreach (var item in lista) Produtos.Add(item);
-            });
-        }
-
-        async Task AdicionarPrecoManual()
-        {
-            string resultado = await Application.Current.MainPage.DisplayPromptAsync(
-          "Self-Service",
-          "Digite o valor (ex: 15,50):",
-          "Adicionar",
-          "Cancelar",
-          keyboard: Keyboard.Telephone);
-
-            if (string.IsNullOrWhiteSpace(resultado)) return;
-
-            // TRATAMENTO DE STRING:
-            // 1. Troca vírgula por ponto para o C# entender
-            string valorTratado = resultado.Replace(",", ".");
-
-            // 2. Tenta converter usando a cultura invariante (ponto como decimal)
-            if (double.TryParse(valorTratado, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double valor))
-            {
-                var prodManual = new Produto
+                _todos = lista;
+                var categoriaAtual = CategoriaSelecionada; // Clear() zera a seleção da tela
+                Categorias.Clear();
+                Categorias.Add(TodasCategorias);
+                foreach (var categoria in lista.Select(p => p.Categoria).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().Order())
                 {
-                    Id = "MANUAL_" + Guid.NewGuid().ToString(),
-                    Nome = "Self-Service",
-                    Preco = valor,
-                    Ativo = 1
-                };
+                    Categorias.Add(categoria);
+                }
 
-                await _dbService.AdicionarProdutoNaComanda(ComandaAtual.Id, prodManual, 1);
+                _categoriaSelecionada = Categorias.Contains(categoriaAtual) ? categoriaAtual : TodasCategorias;
+                OnPropertyChanged(nameof(CategoriaSelecionada));
+                AplicarFiltro();
+            });
+        });
+    }
 
-                await Application.Current.MainPage.DisplayAlert("Sucesso", $"Valor de R$ {valor:F2} adicionado!", "OK");
+    async Task AdicionarPrecoManual()
+    {
+        if (ComandaAtual == null) return;
 
-                // Opcional: Voltar para a lista ou ficar na tela
-                await Shell.Current.GoToAsync("..");
-            }
-            else
-            {
-                await Application.Current.MainPage.DisplayAlert("Erro", "Formato de preço inválido!", "Tentar novamente");
-            }
+        string resultado = await Shell.Current.DisplayPromptAsync(
+            "Self-Service",
+            "Digite o valor (ex: 15,50):",
+            "Adicionar",
+            "Cancelar",
+            keyboard: Keyboard.Telephone);
+
+        if (string.IsNullOrWhiteSpace(resultado)) return;
+
+        if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor) || valor <= 0) // RN-CM-03: item livre > 0
+        {
+            await Shell.Current.DisplayAlertAsync("Atenção", "Formato de preço inválido!", "Tentar novamente");
+            return;
         }
 
-        async Task AdicionarItem(Produto produto)
+        // B9: self-service é item livre (ProdutoId nulo), não um produto inventado
+        if (await Executar(() => _comandas.AdicionarItemLivreAsync(ComandaAtual.Id, "Self-Service", valor)))
         {
-            // Usa a variável Quantidade ao invés de fixar 1
-            await _dbService.AdicionarProdutoNaComanda(ComandaAtual.Id, produto, Quantidade);
+            AvisoRapido.Mostrar($"Self-Service R$ {valor:F2} adicionado"); // B11: sem toque extra
+            await Shell.Current.GoToAsync("..");
+        }
+    }
 
-            // Mostra um aviso rápido tipo "Toast" para não atrapalhar o fluxo
-            await Application.Current.MainPage.DisplayAlert("Sucesso", $"{Quantidade}x {produto.Nome} adicionado!", "OK");
+    async Task AdicionarItem(Produto produto)
+    {
+        if (ComandaAtual == null) return;
+
+        var quantidade = Quantidade;
+        if (await Executar(() => _comandas.AdicionarProdutoAsync(ComandaAtual.Id, produto.Id, quantidade)))
+        {
+            AvisoRapido.Mostrar($"{quantidade}x {produto.Nome} adicionado"); // B11: sem toque extra
 
             // Reseta a quantidade para 1 para o próximo clique
             Quantidade = 1;
-
-            // REMOVI o GoToAsync("..") daqui para que o atendente possa continuar lançando outros itens!
         }
     }
+
+    private void AplicarFiltro()
+    {
+        var termo = SemAcento(FiltroNome.Trim());
+        var filtrados = _todos.Where(p =>
+            (CategoriaSelecionada == TodasCategorias || p.Categoria == CategoriaSelecionada)
+            && (termo.Length == 0 || SemAcento(p.Nome).Contains(termo, StringComparison.OrdinalIgnoreCase)));
+
+        Produtos.Clear();
+        foreach (var produto in filtrados) Produtos.Add(produto);
+    }
+
+    /// <summary>"picole" encontra "Picolé", "acai" encontra "Açaí".</summary>
+    private static string SemAcento(string texto)
+    {
+        var decomposto = texto.Normalize(NormalizationForm.FormD);
+        var resultado = new StringBuilder(decomposto.Length);
+        foreach (var c in decomposto)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                resultado.Append(c);
+            }
+        }
+
+        return resultado.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    /// <summary>B7: falha aparece para o atendente e o fluxo para (sem "Sucesso").</summary>
+    private static Task<bool> Executar(Func<Task> acao) => Operacao.GravarAsync(acao);
 }

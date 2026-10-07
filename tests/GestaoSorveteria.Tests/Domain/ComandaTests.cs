@@ -323,17 +323,59 @@ public class ComandaTests
     }
 
     [Fact]
-    public void Estornar_Fechada_ComMotivo_ViraCancelada()
+    public void Estornar_Fechada_ComMotivo_ViraEstornadaEMantemVenda()
+    {
+        var comanda = Cenario.ComandaAberta();
+        comanda.AdicionarProduto(Cenario.Picole(5m), 1);
+        comanda.Fechar([new DadosPagamento(FormaPagamento.Dinheiro, 5m, 10m)], Cenario.Agora);
+
+        comanda.Estornar("cobrado em duplicidade", Cenario.Dona, Cenario.Agora.AddMinutes(5));
+
+        Assert.Equal(StatusComanda.Estornada, comanda.Status);
+        Assert.Equal("cobrado em duplicidade", comanda.MotivoEstorno);
+        Assert.Equal(Cenario.Dona, comanda.EstornadaPorUsuarioId);
+        Assert.Equal(Cenario.Agora.AddMinutes(5), comanda.EstornadaEm);
+        // RN-CM-09 / RN-CX-07: a venda continua no caixa e no dia em que foi feita.
+        Assert.Equal(Cenario.Agora, comanda.FechadaEm);
+        Assert.Null(comanda.CanceladaEm);
+        Assert.Null(comanda.MotivoCancelamento);
+        Assert.Equal(5m, comanda.TotalEmDinheiro);
+        Assert.True(comanda.ContaNoCaixa);
+        Assert.False(comanda.EstaFechada);
+    }
+
+    [Fact]
+    public void Estornar_DuasVezes_Lanca()
     {
         var comanda = Cenario.ComandaAberta();
         comanda.AdicionarProduto(Cenario.Picole(5m), 1);
         comanda.Fechar([new DadosPagamento(FormaPagamento.Pix, 5m)], Cenario.Agora);
+        comanda.Estornar("duplicada", Cenario.Dona, Cenario.Agora);
 
-        comanda.Estornar("cobrado em duplicidade", Cenario.Agora.AddMinutes(5));
+        var erro = Assert.Throws<DomainException>(() => comanda.Estornar("de novo", Cenario.Dona, Cenario.Agora));
+        Assert.Equal("Esta venda já foi estornada.", erro.Message);
+    }
 
-        Assert.Equal(StatusComanda.Cancelada, comanda.Status);
-        Assert.Equal("cobrado em duplicidade", comanda.MotivoCancelamento);
-        Assert.Single(comanda.Pagamentos);
+    [Fact]
+    public void Estornar_RelogioDoCelularAdiantado_Estorna()
+    {
+        // RN-CM-12: FechadaEm é a hora do celular; o estorno usa a do servidor e não depende dela.
+        var comanda = Cenario.ComandaAberta();
+        comanda.AdicionarProduto(Cenario.Picole(5m), 1);
+        comanda.Fechar([new DadosPagamento(FormaPagamento.Pix, 5m)], Cenario.Agora.AddMinutes(10));
+
+        comanda.Estornar("motivo", Cenario.Dona, Cenario.Agora);
+
+        Assert.Equal(StatusComanda.Estornada, comanda.Status);
+    }
+
+    [Fact]
+    public void Estornar_Cancelada_Lanca()
+    {
+        var comanda = Cenario.ComandaAberta();
+        comanda.Cancelar(null, Cenario.Agora);
+
+        Assert.Throws<DomainException>(() => comanda.Estornar("motivo", Cenario.Dona, Cenario.Agora));
     }
 
     [Fact]
@@ -343,7 +385,7 @@ public class ComandaTests
         comanda.AdicionarProduto(Cenario.Picole(5m), 1);
         comanda.Fechar([new DadosPagamento(FormaPagamento.Pix, 5m)], Cenario.Agora);
 
-        Assert.Throws<DomainException>(() => comanda.Estornar(" ", Cenario.Agora));
+        Assert.Throws<DomainException>(() => comanda.Estornar(" ", Cenario.Dona, Cenario.Agora));
     }
 
     [Fact]
@@ -351,7 +393,7 @@ public class ComandaTests
     {
         var comanda = Cenario.ComandaAberta();
 
-        Assert.Throws<DomainException>(() => comanda.Estornar("motivo", Cenario.Agora));
+        Assert.Throws<DomainException>(() => comanda.Estornar("motivo", Cenario.Dona, Cenario.Agora));
     }
 
     [Fact]

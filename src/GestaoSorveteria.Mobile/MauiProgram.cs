@@ -2,6 +2,7 @@
 using SorveteriaMaui.View;
 using SorveteriaMaui.ViewModel;
 using SorveteriaMaui.Services;
+using SorveteriaMaui.Data;
 
 namespace SorveteriaMaui
 {
@@ -17,9 +18,13 @@ namespace SorveteriaMaui
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
-            // Registrar o Banco
-            builder.Services.AddSingleton<DatabaseService>();
-            // Registrar serviço de pagamento (via interface)
+            // Banco local, repositórios e casos de uso (carrega → Domain → grava numa transação)
+            builder.Services.AddSingleton<BancoLocal>();
+            builder.Services.AddSingleton<ComandaRepository>();
+            builder.Services.AddSingleton<ProdutoRepository>();
+            builder.Services.AddSingleton<CaixaProvisorio>();
+            builder.Services.AddSingleton<ComandaAppService>();
+            // Diálogos de pagamento (não gravam nada)
             builder.Services.AddSingleton<IPaymentService, PaymentService>();
 
             // Listagem

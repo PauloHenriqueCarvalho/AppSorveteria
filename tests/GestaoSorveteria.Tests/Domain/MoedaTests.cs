@@ -16,6 +16,17 @@ public class MoedaTests
     }
 
     [Fact]
+    public void Dinheiro_AcimaDoMaximo_Lanca()
+    {
+        // RN-TD-02: acima disso não cabe na coluna numeric(12,2) — o banco daria erro 500 e travaria a sincronização.
+        var comanda = Cenario.ComandaAberta();
+
+        Assert.Throws<GestaoSorveteria.Domain.Common.DomainException>(() => comanda.AdicionarItemLivre("Venda avulsa", Moeda.ValorMaximo + 0.01m));
+        comanda.AdicionarItemLivre("Venda avulsa", Moeda.ValorMaximo);
+        Assert.Equal(Moeda.ValorMaximo, comanda.Total);
+    }
+
+    [Fact]
     public void TemNoMaximoDuasCasas()
     {
         Assert.True(Moeda.TemNoMaximoDuasCasas(12.50m));

@@ -14,7 +14,7 @@
             <Entry Text="{Binding PrecoString}" Keyboard="Numeric" Placeholder="0.00" />
 
             <Label Text="Categoria" FontAttributes="Bold" />
-            <Picker ItemsSource="{Binding Categorias}" SelectedIndex="{Binding CategoriaIndex}" />
+            <Picker ItemsSource="{Binding Categorias}" SelectedItem="{Binding Categoria}" />
 
             <Button Text="Salvar" BackgroundColor="#4CAF50" TextColor="White" FontAttributes="Bold" HeightRequest="56" Command="{Binding SalvarCommand}" />
 

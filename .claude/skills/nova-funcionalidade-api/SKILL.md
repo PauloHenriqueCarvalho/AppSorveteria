@@ -14,9 +14,9 @@ Ordem de dentro para fora. Não pule etapas; cada uma compila sozinha.
 ## 2. Contracts (`src/GestaoSorveteria.Contracts/<Modulo>/`)
 ```csharp
 public sealed record CriarProdutoRequest(
-    [property: Required(ErrorMessage = "Informe o nome.")] string Nome,
-    [property: Required(ErrorMessage = "Informe a categoria.")] string Categoria,
-    [property: Range(0, 99999.99, ErrorMessage = "Preço inválido.")] decimal Preco,
+    [Required(ErrorMessage = "Informe o nome.")] string Nome,
+    [Required(ErrorMessage = "Informe a categoria.")] string Categoria,
+    [Range(0, 99999.99, ErrorMessage = "Preço inválido.")] decimal Preco,
     bool PermiteValorLivre,
     int Ordem);
 public sealed record ProdutoDto(Guid Id, string Nome, decimal Preco, bool Ativo);

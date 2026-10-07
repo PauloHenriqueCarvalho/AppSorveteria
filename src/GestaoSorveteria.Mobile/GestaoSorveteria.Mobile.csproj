@@ -3,15 +3,12 @@
 	<PropertyGroup>
 		<DebugSymbols>true</DebugSymbols>
 		<AndroidIncludeDebugSymbols>true</AndroidIncludeDebugSymbols>
-		<TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<!-- Só Android (o celular do balcão). No Windows, também net10.0-windows para testar no PC. -->
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
-
-		<!-- Note for MacCatalyst:
-		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
-		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
-		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
-		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
-		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+		<!-- Restore em grafo estático: respeita o GlobalPropertiesToRemove das referências abaixo, para que
+		     "-p:TargetFrameworks=net10.0-android" (CI e linha de comando) não vaze para Domain/Contracts (net10.0). -->
+		<RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
 
 		<OutputType>Exe</OutputType>
 		<RootNamespace>SorveteriaMaui</RootNamespace>
@@ -24,7 +21,7 @@
 		<ApplicationTitle>Sorveteria</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.sorveteriamaui</ApplicationId>
+		<ApplicationId>br.com.sorveteria.atendente</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -33,8 +30,6 @@
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
@@ -63,6 +58,12 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLiteNetExtensions" Version="2.1.0" />
+	</ItemGroup>
+
+	<!-- Mesmas regras no celular e na API: total, troco e caixa vêm do Domain; DTOs de sincronização vêm do Contracts. -->
+	<ItemGroup>
+		<ProjectReference Include="..\GestaoSorveteria.Domain\GestaoSorveteria.Domain.csproj" GlobalPropertiesToRemove="TargetFrameworks" />
+		<ProjectReference Include="..\GestaoSorveteria.Contracts\GestaoSorveteria.Contracts.csproj" GlobalPropertiesToRemove="TargetFrameworks" />
 	</ItemGroup>
 
 	<ItemGroup>

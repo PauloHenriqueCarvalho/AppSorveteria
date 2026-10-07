@@ -1,0 +1,206 @@
+# Fluxo de sincronização do app (Sprint 1): login → produtos → sync de caixa → sync de comandas → fechamento.
+# Rode as requisições em ordem (VS Code REST Client ou Visual Studio 17.12+; usam variáveis de resposta "# @name").
+#
+# Pré-requisitos: `docker compose up -d`, migrações aplicadas e a API rodando (`dotnet run --project src/GestaoSorveteria.Server`).
+# Não pode haver outro caixa aberto no banco (RN-CX-01).
+# Os Ids são fixos para o reenvio mostrar "ja_recebida". Para rodar do zero de novo, troque o final dos Ids (…0001 → …0002)
+# e as datas do caixa.
+
+@host = http://localhost:5080
+@caixaId = 5a1c0000-0000-4000-8000-000000000001
+@abertura = 2026-10-01T12:00:00Z
+
+### 1. Login (Admin do seed em Development)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "login": "admin",
+  "senha": "admin12345"
+}
+
+###
+@token = {{login.response.body.$.token}}
+@usuarioId = {{login.response.body.$.usuario.id}}
+
+### 2. Um produto para a venda (rode uma vez; na segunda vez dá 400 "nome repetido" — então use o GET abaixo)
+# @name produto
+POST {{host}}/api/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Picolé de morango (teste sync)",
+  "categoria": "Picolés",
+  "preco": 5.00,
+  "permiteValorLivre": false,
+  "ordem": 1
+}
+
+###
+@produtoId = {{produto.response.body.$.id}}
+
+### 2b. Catálogo que o app baixa (pegue o id do produto aqui se o POST acima deu 400)
+GET {{host}}/api/produtos
+Authorization: Bearer {{token}}
+
+### 3. Caixa aberto no celular, com uma sangria → "aceita"
+POST {{host}}/api/sync/caixas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "caixas": [
+    {
+      "id": "{{caixaId}}",
+      "abertoPorUsuarioId": "{{usuarioId}}",
+      "abertoEm": "{{abertura}}",
+      "fundoTroco": 100.00,
+      "movimentos": [
+        { "id": "5a1c0000-0000-4000-8000-0000000000a1", "tipo": "Sangria", "valor": 20.00, "motivo": "depósito no banco", "usuarioId": "{{usuarioId}}", "em": "2026-10-01T14:00:00Z" }
+      ]
+    }
+  ]
+}
+
+### 4. Comandas fechadas/cancelada → três "aceita"
+# A: 2 picolés (preço da venda 5,00) pagos em dinheiro com 20,00 → troco 10,00
+# B: self-service (item livre, sem produto) 23,45 no Pix
+# C: cancelada ainda aberta, sem itens
+POST {{host}}/api/sync/comandas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "comandas": [
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c1",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 1, "tipo": "Balcao", "status": "Fechada",
+      "total": 10.00, "criadaEm": "2026-10-01T12:10:00Z", "fechadaEm": "2026-10-01T12:12:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001a1", "produtoId": "{{produtoId}}", "descricao": "Picolé de morango", "quantidade": 2, "precoUnitario": 5.00, "subtotal": 10.00 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002a1", "forma": "Dinheiro", "valor": 10.00, "valorRecebido": 20.00, "troco": 10.00 } ]
+    },
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c2",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 2, "tipo": "Balcao", "status": "Fechada",
+      "total": 23.45, "criadaEm": "2026-10-01T13:00:00Z", "fechadaEm": "2026-10-01T13:03:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001b1", "produtoId": null, "descricao": "Self-service", "quantidade": 1, "precoUnitario": 23.45, "subtotal": 23.45 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002b1", "forma": "Pix", "valor": 23.45, "valorRecebido": 23.45, "troco": 0.00 } ]
+    },
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c3",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 3, "tipo": "Delivery", "status": "Cancelada",
+      "total": 0.00, "criadaEm": "2026-10-01T15:00:00Z", "canceladaEm": "2026-10-01T15:05:00Z", "motivoCancelamento": "cliente desistiu",
+      "itens": [], "pagamentos": []
+    }
+  ]
+}
+
+### 5. O mesmo lote de novo (internet caiu no meio da resposta) → três "ja_recebida", nada duplica
+# Repita exatamente o corpo do passo 4.
+POST {{host}}/api/sync/comandas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "comandas": [
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c1",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 1, "tipo": "Balcao", "status": "Fechada",
+      "total": 10.00, "criadaEm": "2026-10-01T12:10:00Z", "fechadaEm": "2026-10-01T12:12:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001a1", "produtoId": "{{produtoId}}", "descricao": "Picolé de morango", "quantidade": 2, "precoUnitario": 5.00, "subtotal": 10.00 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002a1", "forma": "Dinheiro", "valor": 10.00, "valorRecebido": 20.00, "troco": 10.00 } ]
+    },
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c2",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 2, "tipo": "Balcao", "status": "Fechada",
+      "total": 23.45, "criadaEm": "2026-10-01T13:00:00Z", "fechadaEm": "2026-10-01T13:03:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001b1", "produtoId": null, "descricao": "Self-service", "quantidade": 1, "precoUnitario": 23.45, "subtotal": 23.45 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002b1", "forma": "Pix", "valor": 23.45, "valorRecebido": 23.45, "troco": 0.00 } ]
+    },
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c3",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 3, "tipo": "Delivery", "status": "Cancelada",
+      "total": 0.00, "criadaEm": "2026-10-01T15:00:00Z", "canceladaEm": "2026-10-01T15:05:00Z", "motivoCancelamento": "cliente desistiu",
+      "itens": [], "pagamentos": []
+    }
+  ]
+}
+
+### 6. Lote com uma comanda inválida → "rejeitada" (pagamentos 19,99 ≠ total 20,00) e a outra "aceita"
+POST {{host}}/api/sync/comandas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "comandas": [
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c4",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 4, "tipo": "Balcao", "status": "Fechada",
+      "total": 20.00, "criadaEm": "2026-10-01T16:00:00Z", "fechadaEm": "2026-10-01T16:01:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001c1", "produtoId": null, "descricao": "Venda avulsa", "quantidade": 1, "precoUnitario": 20.00, "subtotal": 20.00 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002c1", "forma": "Pix", "valor": 19.99, "valorRecebido": 19.99, "troco": 0.00 } ]
+    },
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c5",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 5, "tipo": "Balcao", "status": "Fechada",
+      "total": 7.50, "criadaEm": "2026-10-01T16:30:00Z", "fechadaEm": "2026-10-01T16:31:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001d1", "produtoId": null, "descricao": "Venda avulsa", "quantidade": 1, "precoUnitario": 7.50, "subtotal": 7.50 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002d1", "forma": "CartaoDebito", "valor": 7.50, "valorRecebido": 7.50, "troco": 0.00 } ]
+    }
+  ]
+}
+
+### 7. Fechamento do caixa no celular → "aceita"
+# Esperado (RN-CX-06) = fundo 100,00 + vendas em dinheiro 10,00 − sangria 20,00 = 90,00. Contado 90,00 → diferença 0,00.
+POST {{host}}/api/sync/caixas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "caixas": [
+    {
+      "id": "{{caixaId}}",
+      "abertoPorUsuarioId": "{{usuarioId}}",
+      "abertoEm": "{{abertura}}",
+      "fundoTroco": 100.00,
+      "movimentos": [
+        { "id": "5a1c0000-0000-4000-8000-0000000000a1", "tipo": "Sangria", "valor": 20.00, "motivo": "depósito no banco", "usuarioId": "{{usuarioId}}", "em": "2026-10-01T14:00:00Z" }
+      ],
+      "fechamento": {
+        "fechadoPorUsuarioId": "{{usuarioId}}",
+        "fechadoEm": "2026-10-01T20:00:00Z",
+        "valorContado": 90.00,
+        "totalVendasDinheiro": 10.00,
+        "valorEsperado": 90.00,
+        "diferenca": 0.00
+      }
+    }
+  ]
+}
+
+### 8. Conferência no painel: vendas 40,95 (10,00 + 23,45 + 7,50), dinheiro 10,00, esperado 90,00, diferença 0,00, sem divergência
+GET {{host}}/api/caixas/{{caixaId}}
+Authorization: Bearer {{token}}
+
+### 9. Venda que só subiu depois do fechamento → "aceita", marcada para conferência; o caixa não muda (RN-CX-07/08)
+POST {{host}}/api/sync/comandas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "comandas": [
+    {
+      "id": "5a1c0000-0000-4000-8000-0000000000c6",
+      "caixaId": "{{caixaId}}", "usuarioId": "{{usuarioId}}", "numero": 6, "tipo": "Balcao", "status": "Fechada",
+      "total": 5.00, "criadaEm": "2026-10-01T19:30:00Z", "fechadaEm": "2026-10-01T19:31:00Z",
+      "itens": [ { "id": "5a1c0000-0000-4000-8000-0000000001e1", "produtoId": "{{produtoId}}", "descricao": "Picolé de morango", "quantidade": 1, "precoUnitario": 5.00, "subtotal": 5.00 } ],
+      "pagamentos": [ { "id": "5a1c0000-0000-4000-8000-0000000002e1", "forma": "Dinheiro", "valor": 5.00, "valorRecebido": 5.00, "troco": 0.00 } ]
+    }
+  ]
+}
+
+### 10. O caixa continua com os mesmos valores; o resumo mostra 1 venda recebida após o fechamento
+GET {{host}}/api/caixas/{{caixaId}}
+Authorization: Bearer {{token}}

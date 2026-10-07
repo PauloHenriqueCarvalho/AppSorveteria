@@ -7,7 +7,7 @@ namespace GestaoSorveteria.Domain.Comandas;
 /// <summary>
 /// Agregado de venda (RN-CM-*). Nasce aberta dentro de um caixa aberto, recebe itens,
 /// fecha com pagamentos que somam exatamente o total, ou é cancelada. Depois de fechada é imutável;
-/// só Admin estorna (vira Cancelada, nada é apagado).
+/// só Admin estorna (vira Estornada, nada é apagado).
 /// </summary>
 public sealed class Comanda : Entity
 {
@@ -36,6 +36,12 @@ public sealed class Comanda : Entity
     public DateTime? CanceladaEm { get; private set; }
     public string? MotivoCancelamento { get; private set; }
 
+    /// <summary>RN-CM-09: preenchidos só quando <see cref="Status"/> é <see cref="StatusComanda.Estornada"/>.</summary>
+    public DateTime? EstornadaEm { get; private set; }
+
+    public Guid? EstornadaPorUsuarioId { get; private set; }
+    public string? MotivoEstorno { get; private set; }
+
     /// <summary>RN-CX-08: chegou depois do fechamento do caixa a que pertence (sincronização atrasada).</summary>
     public bool RecebidaAposFechamentoCaixa { get; private set; }
 
@@ -44,6 +50,12 @@ public sealed class Comanda : Entity
 
     public bool EstaAberta => Status == StatusComanda.Aberta;
     public bool EstaFechada => Status == StatusComanda.Fechada;
+
+    /// <summary>
+    /// Venda que passou pela gaveta: fechada ou estornada depois. O estorno não altera caixa nenhum (RN-CM-09, RN-CX-07),
+    /// então as contas de dinheiro do caixa usam isto, e não <see cref="EstaFechada"/>.
+    /// </summary>
+    public bool ContaNoCaixa => Status is StatusComanda.Fechada or StatusComanda.Estornada;
 
     /// <summary>RN-PG-05: só o que entrou na gaveta.</summary>
     public decimal TotalEmDinheiro => _pagamentos.Where(p => p.Forma == FormaPagamento.Dinheiro).Sum(p => p.Valor);
@@ -86,6 +98,92 @@ public sealed class Comanda : Entity
             Guard.Utc(criadaEmUtc, "a data de criação"),
             Guard.Utc(recebidaEmUtc, "a data de recebimento"),
             Guard.TextoOpcional(observacao, "a observação", 300));
+    }
+
+    /// <summary>
+    /// RN-SY-06 / RN-CX-08: remonta no servidor a comanda que o app já fechou ou cancelou, sobre o
+    /// <see cref="Restaurar"/> (mesmas regras de itens, total, pagamentos e troco) com as conferências da sincronização:
+    /// <list type="bullet">
+    /// <item>descrição e preço praticados na venda (RN-PR-04), mesmo que o produto tenha mudado ou sido desativado depois;</item>
+    /// <item>subtotal, total e troco enviados pelo app precisam bater com os calculados;</item>
+    /// <item>só <c>Fechada</c> ou <c>Cancelada</c>; cancelada no celular não tem pagamentos (estorno é só pelo painel, RN-CM-09);</item>
+    /// <item>dispensa o caixa aberto (exceção à RN-CX-03): comanda de caixa já fechado é aceita e marcada para conferência,
+    /// sem mudar os valores do caixa (RN-CX-07).</item>
+    /// </list>
+    /// </summary>
+    public static Comanda Remontar(
+        Caixa caixa,
+        Guid id,
+        Guid usuarioId,
+        int numero,
+        TipoComanda tipo,
+        StatusComanda status,
+        DateTime criadaEmUtc,
+        DateTime recebidaEmUtc,
+        string? observacao,
+        IEnumerable<DadosItemRecebido> itens,
+        decimal totalInformado,
+        IEnumerable<DadosPagamento>? pagamentos = null,
+        DateTime? fechadaEmUtc = null,
+        DateTime? canceladaEmUtc = null,
+        string? motivoCancelamento = null)
+    {
+        Guard.Contra(caixa is null, "Informe o caixa da comanda.");
+        Guard.Contra(status is not (StatusComanda.Fechada or StatusComanda.Cancelada),
+            "Só comandas fechadas ou canceladas são sincronizadas.");
+        Guard.Utc(criadaEmUtc, "a data de criação");
+        // Abertura do caixa e criação da comanda vêm do mesmo relógio (o celular): venda antes da abertura não existe.
+        Guard.Contra(criadaEmUtc < caixa!.AbertoEm, "A comanda foi criada antes da abertura do caixa (RN-CX-03).");
+
+        var listaPagamentos = (pagamentos ?? Enumerable.Empty<DadosPagamento>()).ToList();
+        if (status == StatusComanda.Cancelada)
+        {
+            Guard.Contra(listaPagamentos.Count > 0 || fechadaEmUtc is not null,
+                "Comanda cancelada no celular não pode ter pagamentos nem fechamento (estorno é só pelo painel, RN-CM-09).");
+            Guard.Contra(canceladaEmUtc is { } cancelada && cancelada < criadaEmUtc,
+                "A data de cancelamento é anterior à criação da comanda.");
+        }
+        else
+        {
+            Guard.Contra(canceladaEmUtc is not null || motivoCancelamento is not null,
+                "Comanda fechada não pode ter cancelamento (estorno é só pelo painel, RN-CM-09).");
+            Guard.Contra(fechadaEmUtc is { } fechada && fechada < criadaEmUtc,
+                "A data de fechamento é anterior à criação da comanda.");
+        }
+
+        // Conferências do que o app calculou vêm antes do Restaurar, para o motivo da rejeição apontar o erro certo.
+        var listaItens = (itens ?? Enumerable.Empty<DadosItemRecebido>()).ToList();
+        foreach (var dados in listaItens)
+        {
+            Guard.NaoVazio(dados.Id, "o Id do item");
+            Guard.Contra(dados.ProdutoId == Guid.Empty, "Item livre deve vir sem produto (RN-CM-03).");
+            var subtotal = Moeda.Arredondar(dados.Quantidade * dados.PrecoUnitario);
+            Guard.Contra(subtotal != dados.Subtotal,
+                $"O subtotal de \"{dados.Descricao}\" enviado ({dados.Subtotal:N2}) não confere com o calculado ({subtotal:N2}) (RN-CM-05).");
+        }
+
+        var total = Moeda.Arredondar(listaItens.Sum(d => d.Subtotal));
+        Guard.Contra(total != totalInformado,
+            $"O total enviado ({totalInformado:N2}) não confere com a soma dos itens ({total:N2}) (RN-CM-05).");
+
+        var comanda = Restaurar(
+            id,
+            caixa.Id,
+            usuarioId,
+            numero,
+            tipo,
+            status,
+            criadaEmUtc,
+            recebidaEmUtc,
+            observacao,
+            listaItens.Select(d => new DadosItem(d.Id, d.ProdutoId, d.Descricao, d.Quantidade, d.PrecoUnitario)),
+            listaPagamentos,
+            fechadaEmUtc,
+            canceladaEmUtc,
+            motivoCancelamento);
+
+        comanda.RecebidaAposFechamentoCaixa = !caixa.EstaAberto;
+        return comanda;
     }
 
     /// <summary>
@@ -209,23 +307,107 @@ public sealed class Comanda : Entity
         Status = StatusComanda.Cancelada;
     }
 
-    /// <summary>RN-CM-09: só comanda fechada, motivo obrigatório. Quem pode (Admin) é decidido na Application.</summary>
-    public void Estornar(string motivo, DateTime agoraUtc)
+    /// <summary>
+    /// RN-CM-09: só comanda fechada, motivo obrigatório. Quem pode (Admin) é decidido na Application.
+    /// Itens, pagamentos e <see cref="FechadaEm"/> ficam como estavam: a venda continua no caixa e no dia em que foi feita.
+    /// </summary>
+    public void Estornar(string motivo, Guid usuarioId, DateTime agoraUtc)
     {
+        Guard.Contra(Status == StatusComanda.Estornada, "Esta venda já foi estornada.");
         Guard.Contra(!EstaFechada, "Só é possível estornar uma comanda fechada.");
-        MotivoCancelamento = Guard.Texto(motivo, "o motivo do estorno", 3, 300);
-        CanceladaEm = Guard.Utc(agoraUtc, "a data do estorno");
-        Status = StatusComanda.Cancelada;
+        MotivoEstorno = Guard.Texto(motivo, "o motivo do estorno", 3, 300);
+        EstornadaPorUsuarioId = Guard.NaoVazio(usuarioId, "o usuário");
+        // Sem comparar com FechadaEm: é a hora do celular, e a do estorno é a do servidor (RN-CM-12).
+        EstornadaEm = Guard.Utc(agoraUtc, "a data do estorno");
+        Status = StatusComanda.Estornada;
     }
 
     /// <summary>RN-CX-08.</summary>
     public void MarcarRecebidaAposFechamentoCaixa() => RecebidaAposFechamentoCaixa = true;
 
+    /// <summary>
+    /// Reconstrói uma comanda já gravada (ex.: SQLite do app) para aplicar as regras de novo.
+    /// Não é regra nova: itens e pagamentos passam pelas mesmas validações, o total é recalculado
+    /// (RN-CM-05) e dados incoerentes com o status lançam <see cref="DomainException"/>.
+    /// Não confere o caixa (RN-CX-03 vale só na abertura).
+    /// </summary>
+    public static Comanda Restaurar(
+        Guid id,
+        Guid caixaId,
+        Guid usuarioId,
+        int numero,
+        TipoComanda tipo,
+        StatusComanda status,
+        DateTime criadaEmUtc,
+        DateTime recebidaEmUtc,
+        string? observacao,
+        IEnumerable<DadosItem> itens,
+        IEnumerable<DadosPagamento>? pagamentos = null,
+        DateTime? fechadaEmUtc = null,
+        DateTime? canceladaEmUtc = null,
+        string? motivoCancelamento = null)
+    {
+        Guard.NaoVazio(id, "a comanda");
+        Guard.NaoVazio(caixaId, "o caixa");
+        Guard.NaoVazio(usuarioId, "o usuário");
+        Guard.Contra(numero < 1, "O número da comanda deve ser maior que zero.");
+        Guard.Contra(!Enum.IsDefined(tipo), "Tipo de comanda desconhecido.");
+        Guard.Contra(!Enum.IsDefined(status), "Status de comanda desconhecido.");
+        Guard.Contra(status == StatusComanda.Estornada, "Estorno é feito só pelo painel, nunca vem do app (RN-CM-09).");
+
+        var comanda = new Comanda(
+            id,
+            caixaId,
+            usuarioId,
+            numero,
+            tipo,
+            Guard.Utc(criadaEmUtc, "a data de criação"),
+            Guard.Utc(recebidaEmUtc, "a data de recebimento"),
+            Guard.TextoOpcional(observacao, "a observação", 300));
+
+        foreach (var dados in itens ?? Enumerable.Empty<DadosItem>())
+        {
+            Guard.Contra(comanda._itens.Any(i => i.Id == dados.Id), "Item repetido na comanda.");
+            comanda._itens.Add(new ItemComanda(id, dados.ProdutoId, dados.Descricao, dados.Quantidade, dados.PrecoUnitario, dados.Id));
+        }
+
+        comanda.RecalcularTotal();
+
+        var listaPagamentos = (pagamentos ?? Enumerable.Empty<DadosPagamento>()).ToList();
+        switch (status)
+        {
+            case StatusComanda.Aberta:
+                Guard.Contra(listaPagamentos.Count > 0, "Comanda aberta não tem pagamentos.");
+                break;
+
+            case StatusComanda.Fechada:
+                Guard.Contra(fechadaEmUtc is null, "Comanda fechada sem data de fechamento.");
+                comanda.Fechar(listaPagamentos, fechadaEmUtc!.Value); // mesmas regras: RN-CM-07, RN-PG-*
+                break;
+
+            case StatusComanda.Cancelada:
+                Guard.Contra(canceladaEmUtc is null, "Comanda cancelada sem data de cancelamento.");
+                comanda._pagamentos.AddRange(listaPagamentos.Select(dados => new Pagamento(id, dados)));
+                comanda.FechadaEm = fechadaEmUtc is { } fechada ? Guard.Utc(fechada, "a data de fechamento") : null;
+                comanda.CanceladaEm = Guard.Utc(canceladaEmUtc!.Value, "a data de cancelamento");
+                comanda.MotivoCancelamento = Guard.TextoOpcional(motivoCancelamento, "o motivo", 300);
+                comanda.Status = StatusComanda.Cancelada;
+                break;
+        }
+
+        return comanda;
+    }
+
     private ItemComanda ObterItem(Guid itemId) =>
         _itens.FirstOrDefault(i => i.Id == itemId)
         ?? throw new DomainException("Item não encontrado nesta comanda.");
 
-    private void RecalcularTotal() => Total = Moeda.Arredondar(_itens.Sum(i => i.Subtotal));
+    private void RecalcularTotal()
+    {
+        var total = Moeda.Arredondar(_itens.Sum(i => i.Subtotal));
+        Guard.Contra(total > Moeda.LimiteColuna, "O total da comanda passa do máximo aceito.");
+        Total = total;
+    }
 
     private void ExigirAberta() => Guard.Contra(!EstaAberta, "Esta comanda não está aberta (RN-CM-07).");
 }

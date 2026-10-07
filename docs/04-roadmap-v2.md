@@ -22,21 +22,27 @@ Fase 4 — Expansões ................. a combinar
 - [x] JWT + `POST /api/auth/login` + `GET /api/auth/me`, rate limit no login, Swagger com botão Authorize, ProblemDetails
 - [x] Testes de domínio e aplicação (xUnit v3) — regras de comanda, pagamento/troco, caixa, política de senha, dia comercial
 - [x] `docker-compose.yml` (PostgreSQL local), `Dockerfile`, CI no GitHub Actions, `.gitignore`, `.editorconfig`
-- [ ] **Você:** rodar `dotnet ef migrations add InitialCreate` e `dotnet ef database update` (ver README) e conferir as 7 tabelas no DBeaver
+- [x] Migração `InitialCreate` gerada e aplicada no PostgreSQL local (7 tabelas conferidas); login e `/api/auth/me` testados com a API rodando (29/09/2026)
 - [x] Repositório único `AppSorveteria` com o MVP em `src/GestaoSorveteria.Mobile` (histórico preservado) + solução do Sprint 0 + docs — branch `develop`
-- [ ] **Você:** `git push -u origin develop` e proteger a `main`
+- [x] `git push -u origin develop`
+- [x] **Você:** proteger a `main` no GitHub (PR obrigatório + check "backend")
 
 **Pronto quando:** `POST /api/auth/login` devolve token no Swagger e `dotnet test` está verde.
 
 ### Sprint 1 — API de sincronização (semana 1)
 
-- [ ] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento)
+- [x] Contracts de sincronização: comanda completa (itens + pagamentos) e caixa (movimentos + fechamento) — `Contracts/Sync/SyncContracts.cs`
 - [ ] `SyncService` + `SyncController`: `POST /api/sync/caixas` e `POST /api/sync/comandas` (lote, idempotente pelo `Id`, resultado por item: aceita / já recebida / rejeitada)
 - [ ] Reconstruir os agregados com as regras do Domain; marcar vendas recebidas após o fechamento do caixa (RN-CX-08)
-- [ ] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app; criar, editar, ativar/desativar (Admin)
-- [ ] `POST /api/comandas/{id}/estornar` (Admin) e `GET /api/versao`
+  - [x] Regras RN-CX-05/07/08/10 e RN-SY-01/03/04/05/06 no docs/02; Domain: `Comanda.Remontar` (preço da venda, caixa fechado), troco conferido, `Caixa.FecharSincronizado` + migração `CaixaDivergenciaSincronizacao`
+  - [x] `POST /api/sync/caixas` (SyncService + SyncController): documento por documento, `DomainException` → `rejeitada`; falha de banco → erro HTTP e o app reenvia
+  - [x] `POST /api/sync/comandas` (SyncService + SyncController): `Comanda.Remontar`, número/Ids/produto conferidos antes (rejeição em vez de 409/500), reenvio → `ja_recebida`
+- [x] `ProdutoService` + `ProdutosController`: `GET /api/produtos?desde=` para o app (inclui inativos; `geradoEmUtc` vira o próximo `desde`)
+- [x] `ProdutosController`: criar, editar, ativar/desativar (Admin)
+- [ ] `POST /api/comandas/{id}/estornar` (Admin)
+- [x] `GET /api/versao`
 - [ ] Testes de aplicação com fakes, incluindo reenvio duplicado e lote com uma comanda inválida
-- [ ] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas
+- [x] Arquivo `.http` com o fluxo: login → produtos → sync de caixa → sync de comandas — `src/GestaoSorveteria.Server/Sync.http` (falta rodar contra o PostgreSQL local)
 
 **Pronto quando:** um lote enviado duas vezes grava cada venda uma única vez e os totais do caixa batem no banco.
 
@@ -53,15 +59,16 @@ Plano detalhado em docs/06, seção 4.
 
 ### Sprint 3 — Painel da dona (site estático) (semana 3)
 
-- [ ] Decidir a tecnologia: Blazor WebAssembly (C#, reaproveita Contracts) ou React + Vite
-- [ ] Projeto do painel no repositório; publicação no Cloudflare Pages; CORS na API
-- [ ] Login da dona pela API (JWT, perfil Admin)
-- [ ] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
-- [ ] Vendas por data com itens e pagamentos; estorno
-- [ ] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões
-- [ ] Caixas: histórico de fechamentos com diferenças
+- [x] Decidir a tecnologia: **React + Vite + TypeScript** em `src/GestaoSorveteria.Painel` (ADR 018, docs/01)
+- [x] Projeto do painel no repositório (Vite + React + TS, React Router, TanStack Query, ESLint, CI `Painel`); configuração do Cloudflare Pages documentada (docs/07)
+- [x] CORS na API com a origem do painel vinda de configuração (`Cors:PainelOrigem`)
+- [x] Login da dona pela API (JWT, perfil Admin; sai sozinho quando o token vence ou a API responde 401)
+- [x] Dashboard do dia: total vendido, nº de comandas, ticket médio, por forma de pagamento, caixa atual (esperado × contado)
+- [x] Vendas por data com itens e pagamentos; estorno (status `Estornada` — RN-CM-09)
+- [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
+- [x] Caixas: histórico de fechamentos com diferenças (`GET /api/caixas*` + tela do painel)
 - [ ] Usuários: criar atendente, redefinir PIN
-- [ ] Tela "Conectando ao servidor…" enquanto a API acorda
+- [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 
 **Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu.
 
@@ -73,6 +80,7 @@ Detalhes em docs/07.
 - [ ] Painel no Cloudflare Pages apontando para a API
 - [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app
+- [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3)
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel

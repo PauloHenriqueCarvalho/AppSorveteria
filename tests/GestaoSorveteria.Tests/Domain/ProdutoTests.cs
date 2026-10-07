@@ -71,4 +71,44 @@ public class ProdutoTests
         produto.Ativar(Cenario.Agora);
         Assert.True(produto.Ativo);
     }
+
+    [Fact]
+    public void Ativar_JaAtivo_NaoAlteraAtualizadoEm()
+    {
+        var produto = Cenario.Picole();
+
+        produto.Ativar(Cenario.Agora.AddDays(1));
+
+        Assert.True(produto.Ativo);
+        Assert.Null(produto.AtualizadoEm);
+    }
+
+    [Fact]
+    public void Desativar_JaInativo_NaoAlteraAtualizadoEm()
+    {
+        var produto = Cenario.Picole();
+        produto.Desativar(Cenario.Agora);
+
+        produto.Desativar(Cenario.Agora.AddDays(1));
+
+        Assert.False(produto.Ativo);
+        Assert.Equal(Cenario.Agora, produto.AtualizadoEm);
+    }
+
+    [Fact]
+    public void Ativar_DataSemUtc_LancaMesmoJaAtivo()
+    {
+        var produto = Cenario.Picole();
+
+        Assert.Throws<DomainException>(() => produto.Ativar(DateTime.SpecifyKind(Cenario.Agora, DateTimeKind.Local)));
+    }
+
+    [Fact]
+    public void Desativar_DataSemUtc_LancaMesmoJaInativo()
+    {
+        var produto = Cenario.Picole();
+        produto.Desativar(Cenario.Agora);
+
+        Assert.Throws<DomainException>(() => produto.Desativar(DateTime.SpecifyKind(Cenario.Agora, DateTimeKind.Local)));
+    }
 }

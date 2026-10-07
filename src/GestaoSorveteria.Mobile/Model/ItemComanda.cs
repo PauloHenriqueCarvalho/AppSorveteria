@@ -1,27 +1,49 @@
-﻿using SQLite;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using SQLite;
+using static SorveteriaMaui.Model.Conversoes;
 
-namespace SorveteriaMaui.Model
+namespace SorveteriaMaui.Model;
+
+/// <summary>Linha da tabela local de itens. Espelha o <c>ItemComanda</c> do Domain.</summary>
+[Table("itens_comanda")]
+public class ItemComanda
 {
-    [Table("ItemComanda")]
-    public class ItemComanda
+    [PrimaryKey, Column("id")]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Indexed, Column("comanda_id")]
+    public Guid ComandaId { get; set; }
+
+    /// <summary>Nulo = item livre: self-service, venda avulsa (RN-CM-03, B9).</summary>
+    [Column("produto_id")]
+    public Guid? ProdutoId { get; set; }
+
+    /// <summary>Nome do produto no momento da venda ou texto livre (RN-PR-04).</summary>
+    [Column("descricao")]
+    public string Descricao { get; set; } = string.Empty;
+
+    [Column("quantidade")]
+    public int Quantidade { get; set; } = 1;
+
+    [Column("preco_unitario_centavos")]
+    public long PrecoUnitarioCentavos { get; set; }
+
+    [Column("subtotal_centavos")]
+    public long SubtotalCentavos { get; set; }
+
+    [Ignore]
+    public decimal PrecoUnitario
     {
-        [PrimaryKey]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        [Indexed(Name = "idx_item_comanda")]
-        public string ComandaId { get; set; }
-
-        public string ProdutoId { get; set; }
-        public string ProdutoNome { get; set; } // Adicione isso!
-        public double Quantidade { get; set; }
-
-        public double PrecoUnitario { get; set; }
-
-        public double Total { get; set; }
-
-        public int Cancelado { get; set; } = 0;
+        get => ParaReais(PrecoUnitarioCentavos);
+        set => PrecoUnitarioCentavos = ParaCentavos(value);
     }
+
+    [Ignore]
+    public decimal Subtotal
+    {
+        get => ParaReais(SubtotalCentavos);
+        set => SubtotalCentavos = ParaCentavos(value);
+    }
+
+    [Ignore]
+    public bool EhItemLivre => ProdutoId is null;
 }

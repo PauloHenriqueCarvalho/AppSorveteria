@@ -13,7 +13,7 @@ Sistema de gestão para sorveteria, tudo num repositório só:
 
 - [`CLAUDE.md`](CLAUDE.md): tudo sobre o projeto em uma página (decisões, invariantes, comandos, convenções). Leia antes de mexer.
 - `.claude/agents/`: `dev-api`, `dev-mobile`, `revisor-dominio`, `testador`.
-- `.claude/skills/`: `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
+- `.claude/skills/`: `proximo-passo` (ciclo automático: tarefa → PR → CI → merge na develop), `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
 
 ## Documentação
 

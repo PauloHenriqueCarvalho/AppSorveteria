@@ -2,8 +2,14 @@ using System.Text;
 using System.Threading.RateLimiting;
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
+using GestaoSorveteria.Application.Caixas;
+using GestaoSorveteria.Application.Comandas;
+using GestaoSorveteria.Application.Produtos;
+using GestaoSorveteria.Application.Relatorios;
+using GestaoSorveteria.Application.Sync;
 using GestaoSorveteria.Infrastructure;
 using GestaoSorveteria.Infrastructure.Seed;
+using GestaoSorveteria.Server.Configuracao;
 using GestaoSorveteria.Server.Middleware;
 using GestaoSorveteria.Server.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -43,6 +49,17 @@ builder.Services.Configure<SeedOptions>(builder.Configuration.GetSection(SeedOpt
 
 // ---------- Aplicação ----------
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ProdutoService>();
+builder.Services.AddScoped<SyncService>();
+builder.Services.AddScoped<CaixaConsultaService>();
+builder.Services.AddScoped<ComandaConsultaService>();
+builder.Services.AddScoped<ComandaService>();
+builder.Services.AddScoped<RelatorioService>();
+
+// ---------- Versão mínima do app (GET /api/versao) ----------
+var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();
+appVersao.Validar();
+builder.Services.AddSingleton(appVersao);
 
 // ---------- Autenticação JWT (app do atendente) ----------
 var jwt = builder.Configuration.GetSection(JwtOptions.Secao).Get<JwtOptions>() ?? new JwtOptions();
@@ -88,6 +105,18 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
+});
+
+// ---------- CORS: só o painel da dona chama a API pelo navegador (docs/07) ----------
+var origensPainel = CorsPainel.LerOrigens(builder.Configuration);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPainel.Politica, policy => policy
+        .WithOrigins(origensPainel)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        // A API gratuita demora a acordar: evita repetir a pré-verificação (OPTIONS) a cada chamada.
+        .SetPreflightMaxAge(TimeSpan.FromMinutes(10)));
 });
 
 // ---------- API ----------
@@ -137,6 +166,8 @@ if (app.Configuration.GetValue<bool>("Swagger:Habilitado"))
     });
 }
 
+// Antes do rate limit e da autenticação: a pré-verificação do navegador não conta como tentativa de login.
+app.UseCors(CorsPainel.Politica);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

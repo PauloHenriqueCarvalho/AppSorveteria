@@ -16,10 +16,10 @@
         </Frame>
 
         <!-- Topo fixo com Nova Comanda e Venda Rápida -->
-        <Grid Grid.Row="1" ColumnDefinitions="*, *" Padding="10" ColumnSpacing="10">
+        <Grid Grid.Row="1" ColumnDefinitions="*, *, *" Padding="10" ColumnSpacing="10">
             <Button Grid.Column="0"
                     Text="➕  Nova Comanda"
-                    FontSize="18"
+                    FontSize="16"
                     HeightRequest="56"
                     BackgroundColor="#4CAF50"
                     TextColor="White"
@@ -27,9 +27,20 @@
                     FontAttributes="Bold"
                     Command="{Binding NovaComandaCommand}" />
 
+            <!-- RN-CM-11 -->
             <Button Grid.Column="1"
+                    Text="🛵  Delivery"
+                    FontSize="16"
+                    HeightRequest="56"
+                    BackgroundColor="#1976D2"
+                    TextColor="White"
+                    CornerRadius="10"
+                    FontAttributes="Bold"
+                    Command="{Binding NovoDeliveryCommand}" />
+
+            <Button Grid.Column="2"
                     Text="⚡  Venda Rápida"
-                    FontSize="18"
+                    FontSize="16"
                     HeightRequest="56"
                     BackgroundColor="#FF5722"
                     TextColor="White"
@@ -64,8 +75,12 @@
                                 <VerticalStackLayout Grid.Column="1" Margin="15,0">
                                     <Label Text="{Binding NomeCliente, TargetNullValue='Cliente Avulso'}" 
                                            FontSize="18" FontAttributes="Bold" TextColor="#333"/>
-                                    <Label Text="{Binding DataAbertura, StringFormat='{0:HH:mm}'}" 
+                                    <Label Text="{Binding CriadaEmLocal, StringFormat='{0:HH:mm}'}" 
                                            FontSize="12" TextColor="Gray"/>
+                                    <Label Text="🛵 Delivery" IsVisible="{Binding EhDelivery}"
+                                           FontSize="12" FontAttributes="Bold" TextColor="#1976D2"/>
+                                    <Label Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}"
+                                           FontSize="12" TextColor="#555" LineBreakMode="TailTruncation" MaxLines="1"/>
                                 </VerticalStackLayout>
 
                                 <Label Grid.Column="2" 
@@ -75,11 +90,6 @@
                             </Grid>
 
                             <BoxView HeightRequest="1" Color="#EEE" HorizontalOptions="Fill"/>
-
-                            <HorizontalStackLayout Spacing="20" HorizontalOptions="Center">
-                                <Label Text="{Binding Subtotal, StringFormat='Produtos: R${0:F2}'}" FontSize="11" TextColor="Gray"/>
-                                <Label Text="{Binding AcrescimoManual, StringFormat='Extras: R${0:F2}'}" FontSize="11" TextColor="Gray"/>
-                            </HorizontalStackLayout>
 
                             <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,5,0,0">
                                 <Button Grid.Column="0" 

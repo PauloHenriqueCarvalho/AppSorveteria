@@ -11,7 +11,7 @@ Sistema de gestão para uma sorveteria pequena, feito por Paulo (dev .NET) para 
 | App do atendente (balcão, Android, **funciona offline**) | `src/GestaoSorveteria.Mobile` | .NET MAUI + SQLite (`sqlite-net-pcl`) |
 | API | `src/GestaoSorveteria.Server` + `Domain`, `Contracts`, `Application`, `Infrastructure` | ASP.NET Core 10, EF Core 10, PostgreSQL (Npgsql), JWT |
 | Testes | `tests/GestaoSorveteria.Tests` | xUnit v3 |
-| Painel da dona | a criar (Sprint 3) | site estático — Blazor WebAssembly ou React + Vite (a decidir) |
+| Painel da dona (site estático, Cloudflare Pages) | `src/GestaoSorveteria.Painel` | React + Vite + TypeScript, npm (ADR 018) — nunca calcula dinheiro, só mostra o que a API devolve |
 
 Problemas que o sistema resolve: pedidos em papel, estoque "no olhômetro", não saber o que vende mais, **caixa que não bate**, reposição sem planejamento.
 
@@ -40,14 +40,14 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 
 ## Estado atual (atualize esta seção ao terminar um sprint)
 
-- **Sprint 0 (fundação da API): escrito.** Domain/Application compilam e 100 testes passam; Infrastructure/Server aguardam o primeiro build no Visual Studio e a migração `InitialCreate`.
+- **Sprint 0 (fundação da API): concluído (29/09/2026).** Solução inteira compila sem avisos, 100 testes passam, migração `InitialCreate` aplicada no PostgreSQL local (porta 5433) e login/`/api/auth/me` testados.
 - **App MAUI: MVP funcionando, com bugs de dinheiro** (docs/06 — B1 venda rápida quebrada, B2 pagamento grava valor entregue, B3 aceita dinheiro insuficiente, B4/B5 totais desatualizados, B6 `double`, B7 erros silenciosos).
 - **Próximo:** Etapa A do app (base sólida) e Sprint 1 da API (sincronização).
 
 ## Comandos
 
 ```powershell
-docker compose up -d                                   # PostgreSQL local (localhost:5432, sorveteria/postgres/postgres)
+docker compose up -d                                   # PostgreSQL local (localhost:5433, sorveteria/postgres/postgres — 5433 para não brigar com PostgreSQL instalado no Windows)
 dotnet build src/GestaoSorveteria.Server               # API
 dotnet test  tests/GestaoSorveteria.Tests              # testes
 dotnet run --project src/GestaoSorveteria.Server       # Swagger: http://localhost:5080/swagger (admin / admin12345 em Development)
@@ -55,6 +55,13 @@ dotnet run --project src/GestaoSorveteria.Server       # Swagger: http://localho
 # Migrações (sempre com -p Infrastructure -s Server)
 dotnet ef migrations add <Nome> -p src/GestaoSorveteria.Infrastructure -s src/GestaoSorveteria.Server -o Persistence/Migrations
 dotnet ef database update      -p src/GestaoSorveteria.Infrastructure -s src/GestaoSorveteria.Server
+
+# Painel da dona (Node LTS) — rodar dentro de src/GestaoSorveteria.Painel
+npm ci                                                 # instala dependências (package-lock.json)
+npm run dev                                            # http://localhost:5173 (API em VITE_API_URL, padrão http://localhost:5080)
+npm run lint                                           # ESLint
+npm test                                               # Vitest (conversão de preço digitado, formatação em R$)
+npm run build                                          # gera dist/ (o que vai para o Cloudflare Pages)
 ```
 
 Os testes rodam no **Microsoft Testing Platform** (`"test": { "runner": "Microsoft.Testing.Platform" }` no `global.json`), exigido pelo xUnit v3 4.x no .NET 10 — não adicione `Microsoft.NET.Test.Sdk` nem `xunit.runner.visualstudio`. Filtro: `dotnet test --project tests/GestaoSorveteria.Tests --filter-class "<Namespace.Classe>"`.
@@ -102,6 +109,14 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - Commit: `tipo(escopo): descrição` em português — tipos `feat`, `fix`, `refactor`, `test`, `docs`, `chore`; escopos `app`, `api`, `domain`, `infra`, `painel`, `repo`, `docs`. Ex.: `fix(app): recusa dinheiro insuficiente no pagamento (B3)`.
 - Antes de commitar: `dotnet build` + `dotnet test` verdes; nenhum segredo no diff.
 
+## Desenvolvimento automático (Claude Code)
+
+- **Ciclo:** a skill `proximo-passo` pega a próxima tarefa do `docs/04`, cria a branch, implementa com os agentes, roda build/testes, passa pelo `revisor-dominio`, abre PR para a `develop`, acompanha o CI e faz o merge quando verde. PR de app que precisa de teste no celular fica aberto para o Paulo.
+- **Permissões:** `.claude/settings.json` libera build/test/ef/docker/git/gh sem perguntar e **bloqueia** push na `main`, `--force`, `reset --hard`, `rm -rf` e apagar o banco.
+- **Duas frentes em paralelo:** use `git worktree` (ex.: `../AppSorveteria-app` na branch do app) e uma sessão do Claude Code em cada pasta, para API e app não se atropelarem.
+- **CI:** `CI` (API + testes, Ubuntu) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam; `Painel` (npm ci, lint, testes, build) quando `src/GestaoSorveteria.Painel` muda.
+- **Merge na `main`:** só o Paulo, por PR da `develop`.
+
 ## Como trabalhar aqui (para o Claude)
 
 - Comece lendo o doc relevante (tabela acima) e o cartão do Trello da tarefa.
@@ -109,5 +124,5 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - Mudança de schema: gere migração (skill `migracao-ef`), nunca edite migração já aplicada.
 - Ao terminar uma tarefa: use a skill `fechar-tarefa` (build/test, commit, docs, Trello).
 - Agentes disponíveis em `.claude/agents/`: `dev-api`, `dev-mobile`, `revisor-dominio`, `testador`.
-- Skills em `.claude/skills/`: `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
+- Skills em `.claude/skills/`: `proximo-passo` (ciclo automático), `nova-funcionalidade-api`, `corrigir-bug-mvp`, `migracao-ef`, `sincronizacao-local-first`, `fechar-tarefa`.
 - Linguagem com a dona (docs, guias, mensagens do app): sem jargão técnico.

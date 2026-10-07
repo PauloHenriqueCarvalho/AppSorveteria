@@ -1,85 +1,126 @@
+using GestaoSorveteria.Domain.Comandas;
+using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Model;
-using System;
-using System.Threading.Tasks;
 using System.Globalization;
 
-namespace SorveteriaMaui.Services
-{
-    public class PaymentService : IPaymentService
-    {
-        private readonly DatabaseService _dbService;
+namespace SorveteriaMaui.Services;
 
-        public PaymentService(DatabaseService dbService)
+public class PaymentService : IPaymentService
+{
+    private const string Dinheiro = "Dinheiro";
+    private const string Pix = "Pix";
+    private const string CartaoDebito = "Cartão débito";
+    private const string CartaoCredito = "Cartão crédito";
+    private const string Dividir = "Dividir pagamento";
+
+    // RN-PG-01
+    private static readonly Dictionary<string, FormaPagamento> Formas = new()
+    {
+        [Dinheiro] = FormaPagamento.Dinheiro,
+        [Pix] = FormaPagamento.Pix,
+        [CartaoDebito] = FormaPagamento.CartaoDebito,
+        [CartaoCredito] = FormaPagamento.CartaoCredito,
+    };
+
+    public async Task<IReadOnlyList<DadosPagamento>?> PerguntarPagamentosAsync(decimal total)
+    {
+        var opcao = await Shell.Current.DisplayActionSheetAsync($"Pagamento — R$ {total:F2}", "Cancelar", null,
+            Dinheiro, Pix, CartaoDebito, CartaoCredito, Dividir);
+
+        if (opcao == Dividir)
         {
-            _dbService = dbService;
+            return await PerguntarDivididoAsync(total);
         }
 
-        // Processa o fluxo de pagamento para uma comanda: exibe opções, pede valor recebido (se necessário), registra pagamento e finaliza comanda.
-        // Retorna true se pagamento e finalização foram realizados com sucesso.
-        public async Task<bool> ProcessarPagamentoAsync(Comanda comanda)
+        if (opcao is null || !Formas.TryGetValue(opcao, out var forma))
         {
-            if (comanda == null) return false;
+            return null;
+        }
 
-            // Validação simples: não permitir vendas com valor zero ou negativo
-            if (comanda.Total <= 0)
+        // Uma forma só: paga o total (mesmos toques de antes)
+        var pagamento = await CompletarAsync(forma, total);
+        return pagamento is null ? null : [pagamento.Value];
+    }
+
+    public Task MostrarTrocoAsync(decimal troco) =>
+        Shell.Current.DisplayAlertAsync("Troco", $"Troco a devolver: R$ {troco:F2}", "OK");
+
+    /// <summary>
+    /// RN-PG-02: várias formas na mesma comanda (ex.: metade Pix, metade dinheiro). Pergunta forma e valor
+    /// até cobrir o total; a soma exata e o troco são conferidos pelo Domain ao fechar (RN-CM-07, RN-PG-03).
+    /// </summary>
+    private static async Task<IReadOnlyList<DadosPagamento>?> PerguntarDivididoAsync(decimal total)
+    {
+        var pagina = Shell.Current;
+        var pagamentos = new List<DadosPagamento>();
+        var restante = total;
+
+        while (restante > 0)
+        {
+            var titulo = pagamentos.Count == 0
+                ? $"Dividir R$ {total:F2} — 1ª forma"
+                : $"Falta R$ {restante:F2} — {pagamentos.Count + 1}ª forma";
+
+            var opcao = await pagina.DisplayActionSheetAsync(titulo, "Cancelar", null, Dinheiro, Pix, CartaoDebito, CartaoCredito);
+            if (opcao is null || !Formas.TryGetValue(opcao, out var forma))
             {
-                await Application.Current.MainPage.DisplayAlert("Erro", "Não é possível processar pagamento para vendas com valor zero.", "OK");
-                return false;
+                return null; // cancelou: nada é gravado
             }
 
-            string opcao = await Application.Current.MainPage.DisplayActionSheet("Forma de Pagamento", "Cancelar", null, "Dinheiro", "Pix", "Cartão");
-            if (string.IsNullOrEmpty(opcao) || opcao == "Cancelar") return false;
-
-            int tipoPagamento = 0;
-            double valorRecebido = comanda.Total;
-
-            if (opcao == "Dinheiro")
+            var texto = await pagina.DisplayPromptAsync(opcao, $"Quanto em {opcao}? (falta R$ {restante:F2})", "Confirmar", "Cancelar",
+                keyboard: Keyboard.Telephone, initialValue: Formatar(restante));
+            if (texto is null)
             {
-                // pré-preencher o valor recebido com o total da comanda para agilizar pagamento exato
-                string initial = comanda.Total.ToString("F2", CultureInfo.InvariantCulture);
-                string recebido = await Application.Current.MainPage.DisplayPromptAsync("Pagamento", "Valor Recebido:", "Confirmar", "Cancelar", keyboard: Keyboard.Telephone, initialValue: initial);
-                if (string.IsNullOrWhiteSpace(recebido)) return false;
-                string recebidoTratado = recebido.Replace(",", ".");
-                if (!double.TryParse(recebidoTratado, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double r))
-                {
-                    await Application.Current.MainPage.DisplayAlert("Erro", "Valor recebido inválido", "OK");
-                    return false;
-                }
-                valorRecebido = r;
-                tipoPagamento = 0;
-            }
-            else if (opcao == "Cartão")
-            {
-                tipoPagamento = 1;
-                valorRecebido = comanda.Total;
-            }
-            else if (opcao == "Pix")
-            {
-                tipoPagamento = 2;
-                valorRecebido = comanda.Total;
+                return null;
             }
 
-            double troco = Math.Round(valorRecebido - comanda.Total, 2);
-            if (troco < 0) troco = 0;
-
-            if (opcao == "Dinheiro")
+            if (!Conversoes.TentarLerDinheiro(texto, out var valor) || valor <= 0 || valor > restante)
             {
-                await Application.Current.MainPage.DisplayAlert("Troco", $"Troco a devolver: R$ {troco:F2}", "OK");
+                await pagina.DisplayAlertAsync("Atenção", $"Informe um valor maior que zero e até R$ {restante:F2}.", "OK");
+                continue;
             }
 
-            var pagamento = new Pagamento
+            var pagamento = await CompletarAsync(forma, valor);
+            if (pagamento is null)
             {
-                Id = Guid.NewGuid().ToString(),
-                ComandaId = comanda.Id,
-                Tipo = tipoPagamento,
-                Valor = valorRecebido,
-                DataPagamento = DateTime.Now
-            };
+                return null;
+            }
 
-            await _dbService.RegistrarPagamento(pagamento);
-            await _dbService.FinalizarComanda(comanda.Id);
+            pagamentos.Add(pagamento.Value);
+            restante = Moeda.Arredondar(restante - valor);
+        }
 
-            return true;
+        return pagamentos;
+    }
+
+    /// <summary>Em dinheiro, pergunta quanto o cliente entregou (pré-preenchido com o valor exato).</summary>
+    private static async Task<DadosPagamento?> CompletarAsync(FormaPagamento forma, decimal valor)
+    {
+        if (forma != FormaPagamento.Dinheiro)
+        {
+            return new DadosPagamento(forma, valor);
+        }
+
+        var pagina = Shell.Current;
+        while (true)
+        {
+            var recebido = await pagina.DisplayPromptAsync($"Dinheiro — R$ {valor:F2}", "Valor recebido:", "Confirmar", "Cancelar",
+                keyboard: Keyboard.Telephone, initialValue: Formatar(valor));
+            if (recebido is null)
+            {
+                return null;
+            }
+
+            // RN-PG-03 (B3): recebido menor é recusado aqui para perguntar de novo só esta forma, sem perder a divisão;
+            // o Domain confere de novo ao fechar e calcula o troco.
+            if (Conversoes.TentarLerDinheiro(recebido, out var valorRecebido) && valorRecebido >= valor)
+            {
+                return new DadosPagamento(FormaPagamento.Dinheiro, valor, valorRecebido);
+            }
+
+            await pagina.DisplayAlertAsync("Atenção", $"Informe quanto o cliente entregou: pelo menos R$ {valor:F2}.", "OK");
         }
     }
+
+    private static string Formatar(decimal valor) => valor.ToString("F2", CultureInfo.InvariantCulture);
 }

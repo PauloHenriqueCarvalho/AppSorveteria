@@ -31,6 +31,14 @@ internal sealed class ProdutoRepository : IProdutoRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Produto>> ListarAlteradosDesdeAsync(DateTime desdeUtc, CancellationToken cancellationToken = default) =>
+        await _db.Produtos
+            .Where(p => (p.AtualizadoEm ?? p.CriadoEm) >= desdeUtc)
+            .OrderBy(p => p.Categoria)
+            .ThenBy(p => p.Ordem)
+            .ThenBy(p => p.Nome)
+            .ToListAsync(cancellationToken);
+
     public Task<bool> ExisteComNomeAsync(string nomeNormalizado, Guid? ignorarId = null, CancellationToken cancellationToken = default) =>
         _db.Produtos.AsQueryable().AnyAsync(
             p => p.NomeNormalizado == nomeNormalizado && (ignorarId == null || p.Id != ignorarId),
