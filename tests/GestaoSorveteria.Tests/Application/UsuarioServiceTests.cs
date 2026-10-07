@@ -84,7 +84,7 @@ public class UsuarioServiceTests
         await Assert.ThrowsAsync<DomainException>(() =>
             _service.CriarAsync(NovoUsuario(senha: senha, perfil: perfil), TestContext.Current.CancellationToken));
 
-        Assert.Empty(_usuarios.Usuarios.Where(u => u.Login == "ana"));
+        Assert.DoesNotContain(_usuarios.Usuarios, u => u.Login == "ana");
     }
 
     [Theory]

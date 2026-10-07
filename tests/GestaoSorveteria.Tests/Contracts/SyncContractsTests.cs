@@ -30,6 +30,8 @@ public class SyncContractsTests
         var comanda = Assert.Single(volta.Comandas);
         Assert.Equal(30.10m, comanda.Total);
         Assert.Equal(DateTimeKind.Utc, comanda.CriadaEm.Kind);
+        Assert.NotNull(comanda.Itens);
+        Assert.NotNull(comanda.Pagamentos);
         Assert.Null(Assert.Single(comanda.Itens).ProdutoId); // item livre (RN-CM-03)
         Assert.Equal(19.90m, Assert.Single(comanda.Pagamentos).Troco);
         Assert.Contains("\"comandas\":", json);
