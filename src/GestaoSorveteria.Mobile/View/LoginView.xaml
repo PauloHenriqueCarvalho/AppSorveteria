@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
+             x:Class="SorveteriaMaui.View.LoginView"
+             x:DataType="vm:LoginViewModel"
+             Title="Entrar"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="#F5F5F5">
+
+    <ContentPage.Resources>
+        <!-- Teclado grande: dedo do atendente, tablet no balcão -->
+        <Style x:Key="Tecla" TargetType="Button">
+            <Setter Property="FontSize" Value="30" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="HeightRequest" Value="72" />
+            <Setter Property="BackgroundColor" Value="White" />
+            <Setter Property="TextColor" Value="#333" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="BorderColor" Value="#E0E0E0" />
+            <Setter Property="BorderWidth" Value="1" />
+        </Style>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24,32" Spacing="16" MaximumWidthRequest="440" HorizontalOptions="Center">
+
+            <Label Text="🍦 Sorveteria" FontSize="32" FontAttributes="Bold" TextColor="#6200EE" HorizontalOptions="Center" />
+            <Label Text="Entre com o seu PIN para começar o turno" FontSize="16" TextColor="#555" HorizontalOptions="Center" />
+
+            <Frame Padding="16" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Login" FontSize="14" TextColor="#555" />
+                    <Entry Text="{Binding Login}"
+                           Placeholder="seu login"
+                           Keyboard="Plain"
+                           FontSize="20"
+                           IsEnabled="{Binding Livre}"
+                           ReturnType="Next" />
+
+                    <Label Text="PIN (ou senha)" FontSize="14" TextColor="#555" />
+                    <Entry Text="{Binding Pin}"
+                           Placeholder="••••"
+                           IsPassword="True"
+                           FontSize="28"
+                           HorizontalTextAlignment="Center"
+                           IsEnabled="{Binding Livre}"
+                           ReturnType="Go"
+                           ReturnCommand="{Binding EntrarCommand}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                <Button Grid.Row="0" Grid.Column="0" Text="1" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="1" />
+                <Button Grid.Row="0" Grid.Column="1" Text="2" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="2" />
+                <Button Grid.Row="0" Grid.Column="2" Text="3" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="3" />
+                <Button Grid.Row="1" Grid.Column="0" Text="4" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="4" />
+                <Button Grid.Row="1" Grid.Column="1" Text="5" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="5" />
+                <Button Grid.Row="1" Grid.Column="2" Text="6" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="6" />
+                <Button Grid.Row="2" Grid.Column="0" Text="7" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="7" />
+                <Button Grid.Row="2" Grid.Column="1" Text="8" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="8" />
+                <Button Grid.Row="2" Grid.Column="2" Text="9" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="9" />
+                <Button Grid.Row="3" Grid.Column="0" Text="Limpar" FontSize="18" Style="{StaticResource Tecla}" TextColor="#B71C1C" Command="{Binding LimparCommand}" />
+                <Button Grid.Row="3" Grid.Column="1" Text="0" Style="{StaticResource Tecla}" Command="{Binding DigitarCommand}" CommandParameter="0" />
+                <Button Grid.Row="3" Grid.Column="2" Text="⌫" Style="{StaticResource Tecla}" Command="{Binding ApagarCommand}" />
+            </Grid>
+
+            <Button Text="Entrar"
+                    FontSize="22"
+                    FontAttributes="Bold"
+                    HeightRequest="64"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="12"
+                    Command="{Binding EntrarCommand}" />
+
+            <ActivityIndicator IsRunning="{Binding Ocupado}" IsVisible="{Binding Ocupado}" Color="#6200EE" />
+
+            <Label Text="{Binding Mensagem}"
+                   IsVisible="{Binding TemMensagem}"
+                   FontSize="16"
+                   TextColor="#B71C1C"
+                   HorizontalTextAlignment="Center" />
+
+            <!-- Endereço da API: 10.0.2.2 no emulador; IP do PC no tablet; URL do Render em produção (docs/07) -->
+            <Button Text="{Binding UrlApi, StringFormat='Servidor: {0}'}"
+                    FontSize="12"
+                    BackgroundColor="Transparent"
+                    TextColor="#757575"
+                    Command="{Binding AlternarServidorCommand}" />
+            <Entry Text="{Binding UrlApi}"
+                   IsVisible="{Binding MostrarServidor}"
+                   Placeholder="http://192.168.0.10:5080"
+                   Keyboard="Url"
+                   FontSize="14"
+                   IsEnabled="{Binding Livre}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

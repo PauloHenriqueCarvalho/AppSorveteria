@@ -2,6 +2,7 @@
 using SorveteriaMaui.View;
 using SorveteriaMaui.ViewModel;
 using SorveteriaMaui.Services;
+using SorveteriaMaui.Services.Api;
 using SorveteriaMaui.Data;
 
 namespace SorveteriaMaui
@@ -18,6 +19,14 @@ namespace SorveteriaMaui
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
+            // Shell decide a tela inicial (login ou comandas) pela sessão guardada
+            builder.Services.AddSingleton<AppShell>();
+
+            // API: endereço configurável, sessão (token no SecureStorage) e cliente HTTP único com timeout de 90 s
+            builder.Services.AddSingleton<ConfiguracaoApi>();
+            builder.Services.AddSingleton<SessaoUsuario>();
+            builder.Services.AddSingleton<ApiCliente>();
+
             // Banco local, repositórios e casos de uso (carrega → Domain → grava numa transação)
             builder.Services.AddSingleton<BancoLocal>();
             builder.Services.AddSingleton<ComandaRepository>();
@@ -26,6 +35,10 @@ namespace SorveteriaMaui
             builder.Services.AddSingleton<ComandaAppService>();
             // Diálogos de pagamento (não gravam nada)
             builder.Services.AddSingleton<IPaymentService, PaymentService>();
+
+            // Login com PIN (C1)
+            builder.Services.AddTransient<LoginView>();
+            builder.Services.AddTransient<LoginViewModel>();
 
             // Listagem
             builder.Services.AddTransient<ListarComandasView>();

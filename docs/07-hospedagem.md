@@ -84,6 +84,18 @@ Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — 
 - Depois do primeiro deploy, colocar a URL `https://<projeto>.pages.dev` em `Cors__PainelOrigem` na API (Render).
 - Local: `npm run dev` usa `http://localhost:5080` quando `VITE_API_URL` não está definida; para outra API, criar `src/GestaoSorveteria.Painel/.env.local` com `VITE_API_URL=...` (ignorado pelo Git).
 
+## App do atendente: endereço da API
+
+O app guarda o endereço da API no aparelho (`Preferences`) e ele pode ser trocado na tela de login, em "Servidor: …":
+
+| Onde o app roda | Endereço |
+|---|---|
+| Emulador Android no PC do Paulo | `http://10.0.2.2:5080` (padrão do build Debug; `10.0.2.2` é o PC visto do emulador) |
+| Tablet na mesma rede Wi-Fi do PC | `http://<IP do PC>:5080` (ex.: `http://192.168.0.10:5080`; a API precisa escutar em `0.0.0.0`, ver abaixo) |
+| Produção | URL do Render (`https://…onrender.com`); é o padrão do build Release em `ConfiguracaoApi.UrlPadrao` — atualizar quando o deploy existir |
+
+Para a API local aceitar o tablet: `dotnet run --project src/GestaoSorveteria.Server --urls http://0.0.0.0:5080` e liberar a porta 5080 no firewall do Windows. O manifesto Android permite `http` (`usesCleartextTraffic`) justamente para esses testes; em produção a URL é `https`.
+
 ## Backup no piloto
 
 O Neon grátis guarda histórico curto de restauração. Mesmo assim: **`pg_dump` semanal** feito do PC do Paulo e guardado fora da nuvem. Vendas também ficam no SQLite do celular até serem confirmadas pela API.

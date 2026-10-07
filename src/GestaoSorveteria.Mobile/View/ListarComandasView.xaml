@@ -6,13 +6,22 @@
              Title="Comandas Abertas"
              BackgroundColor="#F5F5F5">
 
+    <!-- C1: trocar de atendente (volta para o PIN) -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Sair" Command="{Binding SairCommand}" />
+    </ContentPage.ToolbarItems>
+
     <Grid RowDefinitions="Auto, Auto, *">
 
         <Frame Grid.Row="0" Margin="10" BackgroundColor="#6200EE" CornerRadius="10" HasShadow="True" BorderColor="Transparent">
-            <HorizontalStackLayout Spacing="15" HorizontalOptions="Center">
-                <Label Text="Comandas Ativas:" TextColor="White" VerticalOptions="Center"/>
-                <Label Text="{Binding TotalComandasAbertas}" TextColor="White" FontAttributes="Bold" FontSize="20"/>
-            </HorizontalStackLayout>
+            <Grid ColumnDefinitions="*, Auto">
+                <HorizontalStackLayout Grid.Column="0" Spacing="15" HorizontalOptions="Center">
+                    <Label Text="Comandas Ativas:" TextColor="White" VerticalOptions="Center"/>
+                    <Label Text="{Binding TotalComandasAbertas}" TextColor="White" FontAttributes="Bold" FontSize="20"/>
+                </HorizontalStackLayout>
+                <Label Grid.Column="1" Text="{Binding NomeAtendente, StringFormat='👤 {0}'}"
+                       TextColor="White" FontSize="14" VerticalOptions="Center"/>
+            </Grid>
         </Frame>
 
         <!-- Topo fixo com Nova Comanda e Venda Rápida -->

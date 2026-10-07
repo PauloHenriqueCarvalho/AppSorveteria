@@ -54,7 +54,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] **Etapa A — base sólida:** referências a Domain/Contracts, `decimal`, UTC, enums, camada de dados nova, erros visíveis, numeração por caixa — testada no tablet em 30/09/2026, modo avião incluído (docs/06, seção 2.1)
 - [x] **Etapa B — vendas:** pagamento com troco correto e dividido (#23), venda rápida (#15), cancelar comanda (#24), busca (#28), delivery (#29), toast em vez de alerta (#26)
 - [ ] **Etapa C — caixa, login e sincronização** (sequência C1–C5 em docs/08, Sessão B):
-  - [ ] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração)
+  - [x] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração) — PR aberto para teste no tablet
   - [ ] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16)
   - [ ] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio`
   - [ ] C4 — `SyncService` + indicador "X vendas aguardando envio"
