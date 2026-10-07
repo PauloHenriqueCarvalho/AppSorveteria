@@ -23,6 +23,14 @@ public class SelecaoProdutoViewModel : BindableObject
 
     public ObservableCollection<Produto> Produtos { get; set; } = new();
 
+    private bool _semProdutos;
+    /// <summary>C2: o catálogo ainda não foi baixado neste aparelho (aba Produtos → Atualizar).</summary>
+    public bool SemProdutos
+    {
+        get => _semProdutos;
+        set { _semProdutos = value; OnPropertyChanged(); }
+    }
+
     // B12: busca por nome e filtro por categoria sobre a lista carregada
     public const string TodasCategorias = "Todas";
     private List<Produto> _todos = new();
@@ -98,11 +106,11 @@ public class SelecaoProdutoViewModel : BindableObject
     {
         await Operacao.CarregarAsync(async () =>
         {
-            await _produtos.PopularSeVazioAsync();
-            var lista = await _produtos.ListarAtivosAsync();
+            var lista = await _produtos.ListarAtivosAsync(); // cache do catálogo da API (C2)
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 _todos = lista;
+                SemProdutos = lista.Count == 0;
                 var categoriaAtual = CategoriaSelecionada; // Clear() zera a seleção da tela
                 Categorias.Clear();
                 Categorias.Add(TodasCategorias);

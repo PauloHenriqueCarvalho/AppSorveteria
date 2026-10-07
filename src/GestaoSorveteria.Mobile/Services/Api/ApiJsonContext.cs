@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using GestaoSorveteria.Contracts.Auth;
+using GestaoSorveteria.Contracts.Produtos;
 
 namespace SorveteriaMaui.Services.Api;
 
@@ -18,4 +19,6 @@ public sealed record ProblemaApi(string? Title, string? Detail, int? Status, Dic
 [JsonSerializable(typeof(LoginResponse))]
 [JsonSerializable(typeof(UsuarioDto))]
 [JsonSerializable(typeof(ProblemaApi))]
+[JsonSerializable(typeof(CatalogoProdutosResponse))]
+[JsonSerializable(typeof(ProdutoDto))]
 internal sealed partial class ApiJsonContext : JsonSerializerContext;

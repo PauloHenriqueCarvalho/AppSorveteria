@@ -13,6 +13,7 @@ public class ListarComandasViewModel : BindableObject
     private readonly ComandaRepository _repositorio;
     private readonly IPaymentService _paymentService;
     private readonly SessaoUsuario _sessao;
+    private readonly CatalogoService _catalogo;
 
     public ObservableCollection<Comanda> Comandas { get; set; } = new();
 
@@ -34,12 +35,13 @@ public class ListarComandasViewModel : BindableObject
     public ICommand VerDetalhesCommand { get; }
     public ICommand SairCommand { get; }
 
-    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao)
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo)
     {
         _comandas = comandas;
         _repositorio = repositorio;
         _paymentService = paymentService;
         _sessao = sessao;
+        _catalogo = catalogo;
 
         SairCommand = new Command(async () => await Sair());
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
@@ -54,6 +56,7 @@ public class ListarComandasViewModel : BindableObject
     public async Task CarregarComandas()
     {
         OnPropertyChanged(nameof(NomeAtendente));
+        _ = _catalogo.AtualizarAoAbrirAsync(); // C2: uma vez por execução, em segundo plano; nunca segura a tela
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _repositorio.ListarAbertasAsync();

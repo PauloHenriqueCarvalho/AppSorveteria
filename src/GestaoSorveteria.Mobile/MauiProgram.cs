@@ -26,6 +26,7 @@ namespace SorveteriaMaui
             builder.Services.AddSingleton<ConfiguracaoApi>();
             builder.Services.AddSingleton<SessaoUsuario>();
             builder.Services.AddSingleton<ApiCliente>();
+            builder.Services.AddSingleton<CatalogoService>(); // catálogo da API em cache no SQLite (C2)
 
             // Banco local, repositórios e casos de uso (carrega → Domain → grava numa transação)
             builder.Services.AddSingleton<BancoLocal>();
@@ -47,8 +48,6 @@ namespace SorveteriaMaui
             // Produtos
             builder.Services.AddTransient<ListarProdutosView>();
             builder.Services.AddTransient<ListarProdutosViewModel>();
-            builder.Services.AddTransient<CadastroProdutoView>();
-            builder.Services.AddTransient<CadastroProdutoViewModel>();
 
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();
