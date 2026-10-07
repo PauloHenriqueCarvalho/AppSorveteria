@@ -74,7 +74,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
 - [x] Caixas: histórico de fechamentos com diferenças (`GET /api/caixas*` + tela do painel)
 - [ ] Usuários: criar atendente, redefinir PIN (RN-US-01…08)
-  - [ ] API: `GET/POST /api/usuarios`, `POST /api/usuarios/{id}/redefinir-senha`, `POST /api/usuarios/{id}/ativar|desativar` (Admin)
+  - [x] API: `GET/POST /api/usuarios`, `POST /api/usuarios/{id}/redefinir-senha`, `POST /api/usuarios/{id}/ativar|desativar` (Admin; RN-US-10: não desativa a si mesmo)
   - [ ] Painel: tela "Usuários"
 - [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 

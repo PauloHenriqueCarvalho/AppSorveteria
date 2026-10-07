@@ -1,10 +1,10 @@
 using GestaoSorveteria.Domain.Common;
 
-namespace GestaoSorveteria.Application.Sync;
+namespace GestaoSorveteria.Application.Common;
 
 /// <summary>
-/// Converte o texto de enum dos Contracts (ex.: "Sangria", "Dinheiro") no enum do Domain.
-/// Só aceita o nome; número ("1") ou valor fora da lista vira <see cref="DomainException"/> (item rejeitado no lote).
+/// Converte o texto de enum dos Contracts (ex.: "Sangria", "Dinheiro", "Atendente") no enum do Domain.
+/// Só aceita o nome; número ("1") ou valor fora da lista vira <see cref="DomainException"/> (item rejeitado no lote; 400 nos endpoints do painel).
 /// </summary>
 internal static class TextoEnum
 {

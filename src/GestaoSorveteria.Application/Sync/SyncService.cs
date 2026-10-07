@@ -1,4 +1,5 @@
 using GestaoSorveteria.Application.Abstractions;
+using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
