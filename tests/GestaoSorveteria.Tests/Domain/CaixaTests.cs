@@ -127,7 +127,7 @@ public class CaixaTests
     }
 
     [Fact]
-    public void FecharForcado_ContadoZeroEDiferencaNegativa()
+    public void FecharForcado_CaixaAbertoComSuprimento_ContadoZeroEDiferencaNegativa()
     {
         // RN-CX-09
         var caixa = Cenario.CaixaAberto(fundoTroco: 100m);

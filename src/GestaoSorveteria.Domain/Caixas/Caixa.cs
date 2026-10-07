@@ -138,6 +138,8 @@ public sealed class Caixa : Entity
     /// RN-CX-09: a dona fecha pelo painel quando o atendente esqueceu. Contado = 0 (ninguém contou a gaveta),
     /// então a diferença gravada é −esperado; motivo obrigatório. Se o fechamento do celular chegar depois,
     /// a sincronização o rejeita (RN-CX-07) e as vendas atrasadas entram marcadas (RN-CX-08).
+    /// Não confere comanda aberta (RN-CX-05) de propósito: o servidor só tem comandas fechadas/canceladas;
+    /// as que ainda estão abertas no celular chegam depois, marcadas pela RN-CX-08.
     /// </summary>
     public void FecharForcado(decimal totalVendasDinheiro, Guid adminId, DateTime agoraUtc, string motivo)
     {

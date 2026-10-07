@@ -303,7 +303,7 @@ record CaixaResumoDto(Guid Id, string Status, DateTime AbertoEm, string AbertoPo
     decimal TotalVendas, int QuantidadeComandas,            // todas as formas, calculado na API
     decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca,
     bool DivergenciaSincronizacao, int VendasRecebidasAposFechamento, decimal DinheiroRecebidoAposFechamento,   // RN-CX-10 e RN-CX-08: pontos para a dona conferir
-    bool FechamentoForcado = false);            // RN-CX-09: fechado pela dona no painel, contado 0
+    bool FechamentoForcado);                    // RN-CX-09: fechado pela dona no painel, contado 0
 record FecharCaixaForcadoRequest([Required, StringLength(300, MinimumLength = 3)] string Motivo);
 record CaixaDetalheDto(CaixaResumoDto Resumo, IReadOnlyList<MovimentoCaixaDto> Movimentos,
     IReadOnlyList<TotalPorFormaDto> PorFormaPagamento, string? Observacao);

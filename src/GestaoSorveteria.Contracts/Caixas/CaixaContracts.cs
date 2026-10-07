@@ -33,7 +33,7 @@ public sealed record CaixaResumoDto(
     bool DivergenciaSincronizacao,
     int VendasRecebidasAposFechamento,
     decimal DinheiroRecebidoAposFechamento,
-    bool FechamentoForcado = false);
+    bool FechamentoForcado);
 
 /// <summary>POST /api/caixas/{id}/fechar-forcado (Admin, RN-CX-09). O valor contado é sempre 0; só o motivo é informado.</summary>
 public sealed record FecharCaixaForcadoRequest(
