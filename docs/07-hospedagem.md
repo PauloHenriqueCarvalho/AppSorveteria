@@ -84,6 +84,45 @@ Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — 
 - Depois do primeiro deploy, colocar a URL `https://<projeto>.pages.dev` em `Cors__PainelOrigem` na API (Render).
 - Local: `npm run dev` usa `http://localhost:5080` quando `VITE_API_URL` não está definida; para outra API, criar `src/GestaoSorveteria.Painel/.env.local` com `VITE_API_URL=...` (ignorado pelo Git).
 
+## APK assinado (app do atendente)
+
+O app não vai para a Play Store no piloto: é instalado pelo link do APK no celular da loja. Todo APK precisa ser **assinado com o mesmo keystore** — o Android só aceita atualizar um app instalado se a assinatura for a mesma. Keystore diferente = desinstalar o app (e perder o que ainda não foi sincronizado).
+
+### Gerar: `scripts/publicar-apk.ps1`
+
+Pré-requisitos no PC: Visual Studio com a carga do .NET MAUI (Android) e um JDK para o `keytool` (o script procura em `JAVA_HOME`, no PATH, no JDK do Android Studio e nos JDKs da Microsoft/Oracle; se não achar, `-Keytool "C:\...\bin\keytool.exe"`).
+
+```powershell
+.\scripts\publicar-apk.ps1 -CriarKeystore          # primeira vez: cria o keystore e gera o APK 1.0
+.\scripts\publicar-apk.ps1 -Versao 1.1 -Build 2    # versões seguintes
+```
+
+O script pede a senha do keystore na tela (ou lê `SORVETERIA_KEYSTORE_SENHA`), roda `dotnet publish -f net10.0-android -c Release` assinando com o keystore e copia o resultado para `%USERPROFILE%\Builds\sorveteria\sorveteria-<versão>.apk` (~30 MB). Leva uns 5 min.
+
+| O quê | Onde | Observação |
+|---|---|---|
+| Keystore | `%USERPROFILE%\.sorveteria\sorveteria.keystore` (padrão; `-Keystore` para outro caminho) | **Fora do Git** (`*.keystore` está no `.gitignore`). Guardar cópia + senha no gerenciador de senhas e num pendrive |
+| Senha | Só na cabeça do Paulo / gerenciador de senhas | Nunca no chat, no Git nem na linha de comando: o script passa por variável de ambiente (`-storepass:env`, `env:VARIAVEL` no MSBuild) |
+| `-Versao` (`ApplicationDisplayVersion`) | `.csproj` do app | Formato `maior.menor` (ex.: `1.1`). É o que o app compara com `GET /api/versao` |
+| `-Build` (`ApplicationVersion`) | `.csproj` do app | Inteiro que **sempre aumenta** (1, 2, 3…). Igual ou menor → o celular recusa a atualização |
+
+Depois de gerar, commitar no `.csproj` a versão e o build usados, para o próximo APK partir do número certo.
+
+Testado em 07/10/2026 com um keystore descartável: APK de 31 MB, assinatura V3 conferida com `apksigner verify --print-certs`. O build avisa `XA0141` (a biblioteca `libe_sqlite3.so` do pacote `SQLitePCLRaw.lib.e_sqlite3.android` 2.1.2 não usa páginas de 16 KB, exigidas pelo Android 16 em aparelhos novos). Não afeta o tablet da loja; ao atualizar o `sqlite-net-pcl`, pegar uma versão que traga o `SQLitePCLRaw` ≥ 2.1.11.
+
+### Publicar o link fixo e avisar o app
+
+1. Subir `sorveteria-<versão>.apk` num lugar com link direto e fixo. Opção recomendada: projeto do Cloudflare Pages por **Direct Upload** (Workers & Pages → Create → Pages → Upload assets, nome `sorveteria-apk`), arrastando uma pasta com o arquivo renomeado para `sorveteria.apk`. O link fica `https://sorveteria-apk.pages.dev/sorveteria.apk` e não muda entre versões (basta subir de novo). Alternativa: link de compartilhamento do Google Drive.
+2. No Render (Environment): `App__VersaoAtual=<versão>` e `App__LinkApk=<link>`. Se a versão antiga não puder mais ser usada (mudou a sincronização), `App__VersaoMinima=<versão>` também. O app lê isso em `GET /api/versao` e mostra o aviso com o link.
+3. Guardar o APK de cada versão (a pasta `Builds\sorveteria`) junto com o backup.
+
+### Instalar no celular da loja
+
+1. Abrir o link no navegador do celular e baixar.
+2. Na primeira vez, o Android pede para **permitir instalar de fontes desconhecidas** para o navegador: permitir só para ele.
+3. Abrir o arquivo baixado → Instalar. Atualização: mesmo caminho, os dados do app ficam.
+4. Pelo cabo USB (depuração ligada): `adb install -r sorveteria-<versão>.apk`.
+
 ## Backup no piloto
 
 O Neon grátis guarda histórico curto de restauração. Mesmo assim: **`pg_dump` semanal** feito do PC do Paulo e guardado fora da nuvem. Vendas também ficam no SQLite do celular até serem confirmadas pela API.
