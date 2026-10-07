@@ -48,6 +48,19 @@
 
 O `Dockerfile` da raiz já está pronto: o Render faz o build a partir dele e informa a porta pela variável `PORT`, que o `Program.cs` já lê. Health check: `/health`.
 
+### Criar o serviço pelo Blueprint (`render.yaml`)
+
+O arquivo `render.yaml` na raiz descreve o serviço inteiro (Docker, plano Free, região, health check, branch `main`, lista de variáveis). Não é preciso preencher nada à mão no formulário do Render:
+
+1. Render Dashboard → **New → Blueprint** → conectar o GitHub e escolher o repositório `AppSorveteria`.
+2. O Render mostra o serviço `sorveteria-api` e pede o valor das variáveis marcadas `sync: false`: `ConnectionStrings__Default` (string do Neon), `Seed__AdminSenha` e `Cors__PainelOrigem` (pode ficar vazia até o painel existir). `Jwt__Key` é gerada pelo próprio Render (`generateValue`).
+3. **Apply**. O primeiro build leva uns 5 min. A URL fica `https://sorveteria-api.onrender.com` (ou com sufixo, se o nome já estiver em uso).
+4. Testar: `GET https://<url>/health` deve responder `Healthy`.
+
+Região: `virginia` (AWS us-east-1), a mesma do projeto no Neon, para a API e o banco ficarem perto um do outro. O Render não tem região no Brasil; a latência Brasil ↔ Virgínia (~120 ms) é imperceptível para o app, que sincroniza em segundo plano.
+
+Depois de criado, o serviço continua ligado ao `render.yaml`: mudança no arquivo (nova variável, outro health check) vale no próximo commit da `main`. **Valor de segredo nunca vai para o arquivo**: só no painel do Render (Environment).
+
 ## Configuração do painel no Cloudflare Pages
 
 Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — ADR 018). Criar em **Workers & Pages → Create → Pages → Connect to Git**, repositório `AppSorveteria`:

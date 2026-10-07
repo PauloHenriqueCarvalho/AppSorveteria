@@ -1,0 +1,60 @@
+# Blueprint do Render (docs/07): descreve a API como Web Service Docker no plano gratuito.
+#
+# Como usar (uma vez): Render Dashboard → New → Blueprint → escolher o repositório AppSorveteria.
+# O Render lê este arquivo, cria o serviço e pede, na tela, o valor das variáveis marcadas com
+# "sync: false". Os segredos ficam só no painel do Render — NUNCA neste arquivo nem no Git.
+#
+# Depois disso, cada commit na branch abaixo faz um deploy novo (build pelo Dockerfile da raiz).
+# Mudou uma variável no painel do Render → o serviço reinicia sozinho.
+
+services:
+  - type: web
+    name: sorveteria-api
+    runtime: docker
+    plan: free
+    # Mesma região do projeto no Neon (AWS us-east-1 / N. Virginia): API e banco perto um do outro.
+    region: virginia
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # O Program.cs lê a variável PORT que o Render informa; o Docker expõe 8080 por padrão.
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # String do Neon no formato Npgsql, com "SSL Mode=Require" (copiar do painel do Neon).
+      - key: ConnectionStrings__Default
+        sync: false
+
+      # Segredo do JWT (32+ caracteres). O Render gera um valor aleatório na criação do serviço.
+      - key: Jwt__Key
+        generateValue: true
+
+      # Senha inicial da dona (usuário "admin"); trocar no primeiro acesso ao painel.
+      - key: Seed__AdminSenha
+        sync: false
+
+      # Versão mínima e atual do app do atendente (GET /api/versao). Atualizar ao publicar APK novo.
+      - key: App__VersaoMinima
+        value: "1.0"
+      - key: App__VersaoAtual
+        value: "1.0"
+
+      # Link fixo do APK assinado (aviso de atualização no app). Vazio até publicar o APK.
+      - key: App__LinkApk
+        value: ""
+
+      # URL do painel no Cloudflare Pages, só esquema e domínio (ex.: https://sorveteria-painel.pages.dev).
+      # Várias origens: separar por ";". Preencher depois do primeiro deploy do painel.
+      - key: Cors__PainelOrigem
+        sync: false
+
+      # Piloto: um único serviço, sem réplicas → a API aplica as migrações ao subir (docs/07).
+      # Em produção paga voltar a "false" e rodar "dotnet ef database update" no deploy.
+      - key: Database__MigrateOnStartup
+        value: "true"
+
+      - key: TZ
+        value: America/Sao_Paulo

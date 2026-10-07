@@ -75,6 +75,7 @@ AppSorveteria/
 ├── Directory.Build.props             configurações comuns a todos os projetos
 ├── docker-compose.yml                PostgreSQL local
 ├── Dockerfile                        imagem da API (Render)
+├── render.yaml                       Blueprint do Render: serviço da API e lista de variáveis (sem segredos)
 ├── .github/workflows/ci.yml          build + testes da API a cada push
 ├── docs/
 ├── src/
