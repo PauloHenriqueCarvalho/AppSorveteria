@@ -142,3 +142,17 @@ Authorization: Bearer {{token}}
 ###
 POST {{host}}/api/usuarios/00000000-0000-0000-0000-000000000000/ativar
 Authorization: Bearer {{token}}
+
+### Caixa aberto agora (Admin) — pegue o id para o fechamento forçado
+GET {{host}}/api/caixas/atual
+Authorization: Bearer {{token}}
+
+### Fechamento forçado pelo painel (Admin, RN-CX-09): contado = 0, motivo obrigatório — troque o id
+# Caixa já fechado → 400; fechamento do celular que chegar depois é rejeitado na sincronização.
+POST {{host}}/api/caixas/00000000-0000-0000-0000-000000000000/fechar-forcado
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "motivo": "Atendente esqueceu de fechar o caixa"
+}

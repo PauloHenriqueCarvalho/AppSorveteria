@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace GestaoSorveteria.Contracts.Caixas;
 
 // Leitura dos caixas pelo painel (docs/03 §6.1). Todo valor em dinheiro vem calculado pela API:
@@ -12,6 +14,7 @@ namespace GestaoSorveteria.Contracts.Caixas;
 /// <paramref name="TotalVendas"/>, <paramref name="QuantidadeComandas"/> e o total por forma incluem as vendas que chegaram
 /// depois do fechamento (RN-CX-08); o dinheiro delas vem separado em <paramref name="DinheiroRecebidoAposFechamento"/>,
 /// para a dona entender por que a linha "Dinheiro" não bate com <paramref name="TotalVendasDinheiro"/>.
+/// <paramref name="FechamentoForcado"/>: fechado pela dona no painel, com contado 0 (RN-CX-09).
 /// </summary>
 public sealed record CaixaResumoDto(
     Guid Id,
@@ -29,7 +32,14 @@ public sealed record CaixaResumoDto(
     decimal? Diferenca,
     bool DivergenciaSincronizacao,
     int VendasRecebidasAposFechamento,
-    decimal DinheiroRecebidoAposFechamento);
+    decimal DinheiroRecebidoAposFechamento,
+    bool FechamentoForcado = false);
+
+/// <summary>POST /api/caixas/{id}/fechar-forcado (Admin, RN-CX-09). O valor contado é sempre 0; só o motivo é informado.</summary>
+public sealed record FecharCaixaForcadoRequest(
+    [Required(ErrorMessage = "Informe o motivo do fechamento.")]
+    [StringLength(300, MinimumLength = 3, ErrorMessage = "O motivo deve ter de 3 a 300 caracteres.")]
+    string Motivo);
 
 /// <summary>GET /api/caixas/{id}: resumo + sangrias/suprimentos + vendas por forma de pagamento.</summary>
 public sealed record CaixaDetalheDto(

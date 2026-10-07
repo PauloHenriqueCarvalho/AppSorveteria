@@ -39,6 +39,9 @@ public sealed class Caixa : Entity
     /// <summary>RN-CX-10: o fechamento feito no celular não bateu com o recalculado no servidor; a dona confere.</summary>
     public bool DivergenciaSincronizacao { get; private set; }
 
+    /// <summary>RN-CX-09: fechado pela dona no painel (contado 0), não pelo celular. O motivo fica em <see cref="Observacao"/>.</summary>
+    public bool FechamentoForcado { get; private set; }
+
     public IReadOnlyCollection<MovimentoCaixa> Movimentos => _movimentos.AsReadOnly();
 
     public bool EstaAberto => Status == StatusCaixa.Aberto;
@@ -129,6 +132,18 @@ public sealed class Caixa : Entity
             ValorEsperadoApp = valorEsperadoApp;
             DivergenciaSincronizacao = true;
         }
+    }
+
+    /// <summary>
+    /// RN-CX-09: a dona fecha pelo painel quando o atendente esqueceu. Contado = 0 (ninguém contou a gaveta),
+    /// então a diferença gravada é −esperado; motivo obrigatório. Se o fechamento do celular chegar depois,
+    /// a sincronização o rejeita (RN-CX-07) e as vendas atrasadas entram marcadas (RN-CX-08).
+    /// </summary>
+    public void FecharForcado(decimal totalVendasDinheiro, Guid adminId, DateTime agoraUtc, string motivo)
+    {
+        var motivoValidado = Guard.Texto(motivo, "o motivo", 3, 300);
+        Fechar(valorContado: 0m, totalVendasDinheiro, adminId, agoraUtc, observacao: $"Fechamento forçado pelo painel: {motivoValidado}");
+        FechamentoForcado = true;
     }
 
     private MovimentoCaixa RegistrarMovimento(TipoMovimentoCaixa tipo, decimal valor, string motivo, Guid usuarioId, DateTime agoraUtc, Guid? id)

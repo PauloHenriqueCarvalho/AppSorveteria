@@ -127,6 +127,59 @@ public class CaixaTests
     }
 
     [Fact]
+    public void FecharForcado_ContadoZeroEDiferencaNegativa()
+    {
+        // RN-CX-09
+        var caixa = Cenario.CaixaAberto(fundoTroco: 100m);
+        caixa.RegistrarSuprimento(20m, "troco extra", Cenario.Atendente, Cenario.Agora.AddHours(1));
+
+        caixa.FecharForcado(totalVendasDinheiro: 55.50m, Cenario.Dona, Cenario.Agora.AddHours(12), "Atendente esqueceu de fechar");
+
+        Assert.Equal(StatusCaixa.Fechado, caixa.Status);
+        Assert.True(caixa.FechamentoForcado);
+        Assert.Equal(0m, caixa.ValorContado);
+        Assert.Equal(55.50m, caixa.TotalVendasDinheiro);
+        Assert.Equal(175.50m, caixa.ValorEsperado); // 100 + 55,50 + 20 (RN-CX-06)
+        Assert.Equal(-175.50m, caixa.Diferenca);
+        Assert.Equal(Cenario.Dona, caixa.FechadoPorUsuarioId);
+        Assert.Equal("Fechamento forçado pelo painel: Atendente esqueceu de fechar", caixa.Observacao);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("ok")]
+    public void FecharForcado_SemMotivo_Lanca(string motivo)
+    {
+        var caixa = Cenario.CaixaAberto();
+
+        Assert.Throws<DomainException>(() => caixa.FecharForcado(0m, Cenario.Dona, Cenario.Agora, motivo));
+        Assert.True(caixa.EstaAberto);
+        Assert.False(caixa.FechamentoForcado);
+    }
+
+    [Fact]
+    public void FecharForcado_CaixaJaFechado_Lanca()
+    {
+        var caixa = Cenario.CaixaAberto();
+        caixa.Fechar(100m, 0m, Cenario.Atendente, Cenario.Agora);
+
+        // RN-CX-07: fechado é imutável, inclusive para o fechamento forçado.
+        Assert.Throws<DomainException>(() => caixa.FecharForcado(0m, Cenario.Dona, Cenario.Agora, "Teste de fechamento"));
+        Assert.Equal(100m, caixa.ValorContado);
+        Assert.False(caixa.FechamentoForcado);
+    }
+
+    [Fact]
+    public void Fechar_Normal_NaoMarcaFechamentoForcado()
+    {
+        var caixa = Cenario.CaixaAberto();
+        caixa.Fechar(100m, 0m, Cenario.Atendente, Cenario.Agora);
+
+        Assert.False(caixa.FechamentoForcado);
+    }
+
+    [Fact]
     public void Movimento_DepoisDeFechado_Lanca()
     {
         var caixa = Cenario.CaixaAberto();
