@@ -3,6 +3,7 @@ using System.Windows.Input;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
+using SorveteriaMaui.Services.Api;
 
 namespace SorveteriaMaui.ViewModel;
 
@@ -11,8 +12,12 @@ public class ListarComandasViewModel : BindableObject
     private readonly ComandaAppService _comandas;
     private readonly ComandaRepository _repositorio;
     private readonly IPaymentService _paymentService;
+    private readonly SessaoUsuario _sessao;
 
     public ObservableCollection<Comanda> Comandas { get; set; } = new();
+
+    /// <summary>Quem está no turno (C1). Vazio se ninguém entrou.</summary>
+    public string NomeAtendente => _sessao.Nome;
 
     private int _totalComandasAbertas;
     public int TotalComandasAbertas
@@ -27,13 +32,16 @@ public class ListarComandasViewModel : BindableObject
     public ICommand FinalizarComandaCommand { get; }
     public ICommand VendaRapidaCommand { get; }
     public ICommand VerDetalhesCommand { get; }
+    public ICommand SairCommand { get; }
 
-    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService)
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao)
     {
         _comandas = comandas;
         _repositorio = repositorio;
         _paymentService = paymentService;
+        _sessao = sessao;
 
+        SairCommand = new Command(async () => await Sair());
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
         NovoDeliveryCommand = new Command(async () => await AbrirDelivery());
         AdicionarProdutoCommand = new Command<Comanda>(async (c) => await Navegar("SelecaoProdutoView", c));
@@ -45,6 +53,7 @@ public class ListarComandasViewModel : BindableObject
 
     public async Task CarregarComandas()
     {
+        OnPropertyChanged(nameof(NomeAtendente));
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _repositorio.ListarAbertasAsync();
@@ -56,6 +65,22 @@ public class ListarComandasViewModel : BindableObject
                 TotalComandasAbertas = Comandas.Count;
             });
         });
+    }
+
+    /// <summary>Trocar de atendente: apaga a sessão do aparelho e volta ao PIN. O próximo login exige internet.</summary>
+    private async Task Sair()
+    {
+        bool confirmar = await Shell.Current.DisplayAlertAsync(
+            "Sair",
+            $"Sair da conta de {_sessao.Nome}? Para entrar de novo é preciso digitar o PIN com internet. As comandas ficam guardadas no aparelho.",
+            "Sair",
+            "Cancelar");
+        if (!confirmar) return;
+
+        if (await Operacao.GravarAsync(_sessao.EncerrarAsync))
+        {
+            await Shell.Current.GoToAsync("//LoginView");
+        }
     }
 
     private static async Task Navegar(string rota, Comanda? comanda)

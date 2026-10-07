@@ -110,11 +110,12 @@ Consequência para o Sprint 0 já feito: **o domínio não muda** (as entidades 
 - [x] Busca e filtro por categoria na seleção de produto (B12)
 - [x] Marcar Delivery + observação
 
-### Etapa C — Caixa, login e sincronização (3–4 dias)
-- [ ] Telas de abrir caixa (fundo de troco), sangria/suprimento, fechar caixa com conferência
-- [ ] Login com PIN (valida online na 1ª vez, guarda token em `SecureStorage`)
-- [ ] `SyncService`: envia comandas fechadas/canceladas e caixas pendentes; baixa produtos
-- [ ] Indicador "X vendas aguardando envio"; fechar caixa com envio pendente é permitido, com aviso (RN-CX-05, RN-SY-05)
+### Etapa C — Caixa, login e sincronização (3–4 dias; sequência C1 → C5 do docs/08)
+- [x] **C1 — Login com PIN + cliente HTTP:** tela de PIN com teclado grande, `POST /api/auth/login`, token no `SecureStorage`, `ApiCliente` com `Authorization: Bearer` e timeout de 90 s, endereço da API configurável na própria tela (`10.0.2.2:5080` no emulador; IP do PC no tablet; Render depois). Fim do "usuário do aparelho" do `CaixaProvisorio`: a comanda leva o atendente logado. Token vencido não bloqueia a venda (docs/03, seção 7)
+- [ ] **C2 — Catálogo vindo da API:** `GET /api/produtos?desde=` ao abrir o app e ao puxar para atualizar; cache no SQLite; cadastro local de produto some (resolve B16); sem internet usa o cache
+- [ ] **C3 — Caixa de verdade:** abrir caixa (fundo de troco), sangria/suprimento com motivo, fechar com conferência (contado × esperado × diferença) usando `Caixa` do Domain; sem caixa aberto o app pede para abrir. Remove o `CaixaProvisorio`
+- [ ] **C4 — `SyncService` + indicador:** fila de pendências (comandas fechadas/canceladas, caixas), envio ao fechar, a cada 1 min e ao abrir o app, ordem caixa aberto → comandas → caixa fechado, resultado por item visível, indicador "X vendas aguardando envio", aviso ao fechar caixa com pendência (RN-CX-05, RN-SY-05)
+- [ ] **C5 — Histórico do turno:** comandas fechadas/canceladas do caixa atual, com status de envio
 - [ ] Teste no celular real com internet desligada
 
 Total: ~1,5 semana de trabalho — encaixa no Sprint 2 original.
