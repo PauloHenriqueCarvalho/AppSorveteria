@@ -132,7 +132,8 @@ public sealed class CaixaConsultaService
             caixa.Diferenca,
             caixa.DivergenciaSincronizacao,
             comandas.Count(c => c.RecebidaAposFechamentoCaixa),
-            Moeda.Arredondar(fechadas.Where(c => c.RecebidaAposFechamentoCaixa).Sum(c => c.TotalEmDinheiro)));
+            Moeda.Arredondar(fechadas.Where(c => c.RecebidaAposFechamentoCaixa).Sum(c => c.TotalEmDinheiro)),
+            caixa.FechamentoForcado);
     }
 
     private async Task<IReadOnlyDictionary<Guid, string>> NomesAsync(CancellationToken cancellationToken) =>

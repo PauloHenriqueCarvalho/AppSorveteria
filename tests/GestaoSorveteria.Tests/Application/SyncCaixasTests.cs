@@ -164,7 +164,7 @@ public class SyncCaixasTests
     {
         var id = Guid.NewGuid();
         await Enviar(Caixa(id));
-        _caixas.Caixas[0].Fechar(0m, 0m, _dona, Abertura.AddHours(12), "atendente esqueceu"); // RN-CX-09 pelo painel
+        _caixas.Caixas[0].FecharForcado(0m, _dona, Abertura.AddHours(12), "atendente esqueceu"); // RN-CX-09 pelo painel
 
         var resposta = await Enviar(Caixa(id, fechamento: Fechar(contado: 250m, vendasDinheiroApp: 150m, esperadoApp: 250m)));
 
