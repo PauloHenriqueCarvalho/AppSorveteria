@@ -77,6 +77,7 @@ AppSorveteria/
 ├── Dockerfile                        imagem da API (Render)
 ├── render.yaml                       Blueprint do Render: serviço da API e lista de variáveis (sem segredos)
 ├── scripts/backup.ps1                pg_dump semanal do banco do Neon para o PC (docs/07)
+├── scripts/publicar-apk.ps1          APK assinado do app (keystore fora do Git) (docs/07)
 ├── .github/workflows/ci.yml          build + testes da API a cada push
 ├── docs/
 ├── src/
