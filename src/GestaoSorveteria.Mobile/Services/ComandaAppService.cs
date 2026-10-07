@@ -1,6 +1,7 @@
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Data;
+using SorveteriaMaui.Services.Api;
 using Comanda = GestaoSorveteria.Domain.Comandas.Comanda;
 using Produto = GestaoSorveteria.Domain.Produtos.Produto;
 
@@ -10,7 +11,7 @@ namespace SorveteriaMaui.Services;
 /// Casos de uso da comanda no aparelho: carrega do SQLite → aplica a regra do Domain → grava tudo numa transação.
 /// Total, troco e validações vêm do Domain (mesmo código da API). Erros de regra saem como <see cref="DomainException"/>.
 /// </summary>
-public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaProvisorio caixa)
+public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaProvisorio caixa, SessaoUsuario sessao)
 {
     // Uma operação por vez: dois toques rápidos não podem ler a mesma versão da comanda
     // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
@@ -113,10 +114,13 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
 
     private async Task<Comanda> NovaComandaAsync(TipoComanda tipo = TipoComanda.Balcao, string? observacao = null)
     {
-        var caixaAtual = caixa.Atual();
+        // A comanda leva quem vendeu (atendente logado, C1). Sem login o app nem chega nesta tela.
+        var usuarioId = sessao.UsuarioId
+            ?? throw new DomainException("Nenhum atendente conectado. Entre com o PIN para vender.");
+        var caixaAtual = caixa.Atual(usuarioId);
         var numero = await comandas.ProximoNumeroAsync(caixaAtual.Id);
         var agora = DateTime.UtcNow;
-        return Comanda.Abrir(caixaAtual, caixa.UsuarioId, numero, tipo, agora, agora, observacao);
+        return Comanda.Abrir(caixaAtual, usuarioId, numero, tipo, agora, agora, observacao);
     }
 
     private Task<Comanda> AlterarAsync(Guid comandaId, Func<Comanda, Task> alteracao) =>

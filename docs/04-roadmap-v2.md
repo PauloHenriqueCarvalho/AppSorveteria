@@ -54,7 +54,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] **Etapa A — base sólida:** referências a Domain/Contracts, `decimal`, UTC, enums, camada de dados nova, erros visíveis, numeração por caixa — testada no tablet em 30/09/2026, modo avião incluído (docs/06, seção 2.1)
 - [x] **Etapa B — vendas:** pagamento com troco correto e dividido (#23), venda rápida (#15), cancelar comanda (#24), busca (#28), delivery (#29), toast em vez de alerta (#26)
 - [ ] **Etapa C — caixa, login e sincronização** (sequência C1–C5 em docs/08, Sessão B):
-  - [ ] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração)
+  - [x] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração) — PR aberto para teste no tablet
   - [ ] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16)
   - [ ] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio`
   - [ ] C4 — `SyncService` + indicador "X vendas aguardando envio"
@@ -63,7 +63,7 @@ Plano detalhado em docs/06, seção 4.
 
 **Pronto quando:** venda completa no celular real sem internet, sincronizada ao religar, com o caixa batendo.
 
-### Sprint 3 — Painel da dona (site estático) (semana 3)
+### Sprint 3 — Painel da dona (site estático) ✅ (concluído em 07/10/2026)
 
 - [x] Decidir a tecnologia: **React + Vite + TypeScript** em `src/GestaoSorveteria.Painel` (ADR 018, docs/01)
 - [x] Projeto do painel no repositório (Vite + React + TS, React Router, TanStack Query, ESLint, CI `Painel`); configuração do Cloudflare Pages documentada (docs/07)
@@ -73,12 +73,12 @@ Plano detalhado em docs/06, seção 4.
 - [x] Vendas por data com itens e pagamentos; estorno (status `Estornada` — RN-CM-09)
 - [x] Produtos: cadastrar, editar, ativar/desativar, ordem dos botões (tela do painel)
 - [x] Caixas: histórico de fechamentos com diferenças (`GET /api/caixas*` + tela do painel)
-- [ ] Usuários: criar atendente, redefinir PIN (RN-US-01…08)
-  - [ ] API: `GET/POST /api/usuarios`, `POST /api/usuarios/{id}/redefinir-senha`, `POST /api/usuarios/{id}/ativar|desativar` (Admin)
-  - [x] Painel: tela "Usuários" — lista, novo usuário (atendente com PIN ou Admin com senha), redefinir PIN/senha, ativar/desativar
+- [x] Usuários: criar atendente, redefinir PIN (RN-US-01…08)
+  - [x] API: `GET/POST /api/usuarios`, `POST /api/usuarios/{id}/redefinir-senha`, `POST /api/usuarios/{id}/ativar|desativar` (Admin; RN-US-10: não desativa a si mesmo) (#47)
+  - [x] Painel: tela "Usuários" — lista, novo usuário (atendente com PIN ou Admin com senha), redefinir PIN/senha, ativar/desativar (#50)
 - [x] Tela "Conectando ao servidor…" enquanto a API acorda (novas tentativas automáticas)
 
-**Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu. (Só falta a tela de usuários; o resto está entregue.)
+**Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu. ✅ (falta só publicar no Cloudflare — Sprint 4)
 
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)
 

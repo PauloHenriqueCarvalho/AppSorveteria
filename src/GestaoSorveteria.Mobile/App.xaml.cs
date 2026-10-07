@@ -1,19 +1,20 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SorveteriaMaui.View;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SorveteriaMaui
 {
     public partial class App : Application
     {
-        public App()
+        private readonly IServiceProvider _servicos;
+
+        public App(IServiceProvider servicos)
         {
             InitializeComponent();
-            Routing.RegisterRoute("ListarComandasView", typeof(ListarComandasView));
+            _servicos = servicos;
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            return new Window(_servicos.GetRequiredService<AppShell>());
         }
     }
 }

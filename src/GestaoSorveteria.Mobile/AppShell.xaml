@@ -5,11 +5,16 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:SorveteriaMaui"
     xmlns:views="clr-namespace:SorveteriaMaui.View"
-    Title="SorveteriaMaui">
+    Title="SorveteriaMaui"
+    FlyoutBehavior="Disabled">
 
-    <TabBar>
+    <!-- Abas do turno (tela inicial quando já há atendente no aparelho) -->
+    <TabBar x:Name="Principal">
         <ShellContent Title="Comandas" Route="ListarComandasView" ContentTemplate="{DataTemplate views:ListarComandasView}" />
         <ShellContent Title="Produtos" Route="ListarProdutosView" ContentTemplate="{DataTemplate views:ListarProdutosView}" />
     </TabBar>
+
+    <!-- Login com PIN (C1): fora das abas, sem barra; o AppShell escolhe qual mostrar ao abrir -->
+    <ShellContent x:Name="Login" Title="Entrar" Route="LoginView" ContentTemplate="{DataTemplate views:LoginView}" />
 
 </Shell>
