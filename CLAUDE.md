@@ -35,6 +35,7 @@ Problemas que o sistema resolve: pedidos em papel, estoque "no olhômetro", não
 | `06-analise-mvp-maui.md` | **Antes de mexer no app.** Bugs B1–B16 e plano das Etapas A/B/C |
 | `07-hospedagem.md` | Deploy, limites dos planos gratuitos, variáveis de ambiente |
 | `08-plano-do-dia-2026-10-07.md` | Plano para fechar a Fase 1: o que falta em cada frente e as 3 sessões em paralelo (A = API/painel, B = app Etapa C, C = deploy) |
+| `09-guia-de-uso.md` | Guia de 1 página para a dona e o atendente, sem jargão. Mudou uma tela ou um fluxo do app/painel → atualize aqui |
 | `contexto-mvp/` | Documentos originais do MVP (histórico, não é fonte de verdade) |
 
 Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, Concluido, Dúvidas para a dona). Etiquetas: vermelha = bug crítico, laranja = bug importante, azul = app, roxa = API/deploy, verde = painel, amarela = proposta.
