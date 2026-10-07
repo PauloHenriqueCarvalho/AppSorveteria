@@ -185,6 +185,24 @@ select {
   color: var(--cor-texto);
 }
 
+.alerta-sucesso {
+  background: #e6f4ea;
+  color: var(--cor-sucesso);
+}
+
+/* Grupo de opções (ex.: perfil do usuário) com o mesmo visual de um campo. */
+fieldset.campo {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+fieldset.campo legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+}
+
 .suave {
   color: var(--cor-texto-suave);
 }
