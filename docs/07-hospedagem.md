@@ -93,7 +93,7 @@ O endereço da API depende da configuração do build do app (`ConfiguracaoApi`,
 | **Debug** (emulador, tablet de teste via Visual Studio) | padrão `http://10.0.2.2:5080` (`10.0.2.2` é o PC visto do emulador); no tablet, trocar por `http://<IP do PC>:5080` (ex.: `http://192.168.0.10:5080`) | sim ("Servidor: …" no rodapé; fica guardado no aparelho) | sim (`usesCleartextTraffic="true"` só nesta configuração, via `AndroidManifestPlaceholders`) |
 | **Release** (APK da loja) | fixo, vem do build: `-p:ApiUrlPadrao=https://<servico>.onrender.com`, gravado como metadado do assembly | **não** (o campo não existe) | **não** (manifesto com `usesCleartextTraffic="false"`; só https) |
 
-- Gerar o APK sem `-p:ApiUrlPadrao` **não** aponta para um endereço chutado: o app mostra "Este app foi instalado sem o endereço do servidor" e não tenta logar. Quando a API estiver publicada no Render, registrar a URL aqui e no script de geração do APK (Sessão C, docs/08).
+- `scripts/publicar-apk.ps1 -ApiUrl https://<servico>.onrender.com …` passa a URL ao build (parâmetro obrigatório, só https). Um APK gerado sem ela **não** aponta para um endereço chutado: o app mostra "Este app foi instalado sem o endereço do servidor" e não tenta logar. Quando a API estiver publicada no Render, registrar a URL aqui.
 - Para a API local aceitar o tablet (Debug): `dotnet run --project src/GestaoSorveteria.Server --urls http://0.0.0.0:5080` e liberar a porta 5080 no firewall do Windows; tablet na mesma rede Wi-Fi do PC.
 - O login exige internet (RN-US-06); depois disso a venda segue offline com o token guardado no aparelho (docs/03, seção 7).
 
