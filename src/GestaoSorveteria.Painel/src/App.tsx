@@ -10,6 +10,9 @@ import ListaCaixas from './paginas/caixas/ListaCaixas.tsx'
 import NaoEncontrada from './paginas/NaoEncontrada.tsx'
 import EditarProduto from './paginas/produtos/EditarProduto.tsx'
 import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
+import DetalheUsuario from './paginas/usuarios/DetalheUsuario.tsx'
+import ListaUsuarios from './paginas/usuarios/ListaUsuarios.tsx'
+import NovoUsuario from './paginas/usuarios/NovoUsuario.tsx'
 import DetalheVenda from './paginas/vendas/DetalheVenda.tsx'
 import ListaVendas from './paginas/vendas/ListaVendas.tsx'
 import SessaoProvider from './sessao/SessaoProvider.tsx'
@@ -42,6 +45,9 @@ const router = createBrowserRouter([
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },
           { path: 'produtos/:id', element: <EditarProduto /> },
+          { path: 'usuarios', element: <ListaUsuarios /> },
+          { path: 'usuarios/novo', element: <NovoUsuario /> },
+          { path: 'usuarios/:id', element: <DetalheUsuario /> },
           { path: '*', element: <NaoEncontrada /> },
         ],
       },

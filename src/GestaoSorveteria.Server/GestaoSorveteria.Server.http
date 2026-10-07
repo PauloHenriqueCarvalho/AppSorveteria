@@ -97,3 +97,48 @@ Content-Type: application/json
 
 ### Versão da API e versão mínima do app (público)
 GET {{host}}/api/versao
+
+### Usuários (Admin) — todos, inclusive desativados
+GET {{host}}/api/usuarios
+Authorization: Bearer {{token}}
+
+### Criar atendente com PIN (RN-US-03) → 201
+POST {{host}}/api/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Ana",
+  "login": "ana",
+  "senha": "4321",
+  "perfil": "Atendente"
+}
+
+### PIN fora da política → 400 ProblemDetails
+POST {{host}}/api/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Ana",
+  "login": "ana2",
+  "senha": "12a",
+  "perfil": "Atendente"
+}
+
+### Redefinir o PIN (Admin, RN-US-08) — troque o id
+POST {{host}}/api/usuarios/00000000-0000-0000-0000-000000000000/redefinir-senha
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "novaSenha": "9876"
+}
+
+### Desativar / ativar (Admin; a si mesmo → 400, RN-US-10) — troque o id
+POST {{host}}/api/usuarios/00000000-0000-0000-0000-000000000000/desativar
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/usuarios/00000000-0000-0000-0000-000000000000/ativar
+Authorization: Bearer {{token}}

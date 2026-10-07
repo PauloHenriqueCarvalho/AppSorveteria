@@ -32,17 +32,22 @@ Problemas que o sistema resolve: pedidos em papel, estoque "no olhômetro", não
 | `03-arquitetura-e-modelo-de-dados.md` | Camadas, tabelas, endpoints, protocolo de sincronização |
 | `04-roadmap-v2.md` | O que está em cada sprint e o critério de "pronto" |
 | `05-correcoes-da-proposta.md` | Só para a parte comercial |
-| `06-analise-mvp-maui.md` | **Antes de mexer no app.** Bugs B1–B15 e plano das Etapas A/B/C |
+| `06-analise-mvp-maui.md` | **Antes de mexer no app.** Bugs B1–B16 e plano das Etapas A/B/C |
 | `07-hospedagem.md` | Deploy, limites dos planos gratuitos, variáveis de ambiente |
+| `08-plano-do-dia-2026-10-07.md` | Plano para fechar a Fase 1: o que falta em cada frente e as 3 sessões em paralelo (A = API/painel, B = app Etapa C, C = deploy) |
+| `09-guia-de-uso.md` | Guia de 1 página para a dona e o atendente, sem jargão. Mudou uma tela ou um fluxo do app/painel → atualize aqui |
 | `contexto-mvp/` | Documentos originais do MVP (histórico, não é fonte de verdade) |
 
 Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, Concluido, Dúvidas para a dona). Etiquetas: vermelha = bug crítico, laranja = bug importante, azul = app, roxa = API/deploy, verde = painel, amarela = proposta.
 
 ## Estado atual (atualize esta seção ao terminar um sprint)
 
-- **Sprint 0 (fundação da API): concluído (29/09/2026).** Solução inteira compila sem avisos, 100 testes passam, migração `InitialCreate` aplicada no PostgreSQL local (porta 5433) e login/`/api/auth/me` testados.
-- **App MAUI: MVP funcionando, com bugs de dinheiro** (docs/06 — B1 venda rápida quebrada, B2 pagamento grava valor entregue, B3 aceita dinheiro insuficiente, B4/B5 totais desatualizados, B6 `double`, B7 erros silenciosos).
-- **Próximo:** Etapa A do app (base sólida) e Sprint 1 da API (sincronização).
+- **Sprint 0 (fundação da API): concluído (29/09/2026).** Migração `InitialCreate` aplicada no PostgreSQL local (porta 5433), login/`/api/auth/me` testados.
+- **Sprint 1 (API de sincronização): concluído (06/10/2026).** `POST /api/sync/caixas` e `/api/sync/comandas` idempotentes com remontagem pelo Domain, produtos (app e painel), estorno (RN-CM-09), `/api/versao`, consultas de caixas/vendas/resumo do dia para o painel, `Sync.http`. 269 testes passam, CI verde.
+- **App MAUI: Etapas A e B concluídas** (docs/06). B1–B14 corrigidos e conferidos no tablet (30/09/2026); pagamento dividido, cancelar, busca, delivery e toast entregues. **Falta a Etapa C inteira** (login com PIN, caixa de verdade, `SyncService`, histórico do turno) — hoje o app usa um `CaixaProvisorio` e não fala com a API. B16 (cadastro local de produto sem Domain) some quando o catálogo vier da API (C2).
+- **Painel (Sprint 3): quase concluído.** Login, dashboard do dia, vendas com estorno, produtos, caixas, "Conectando ao servidor…". Falta só a tela de usuários.
+- **Deploy (Sprint 4): nada publicado ainda.** `Dockerfile`, `/health` e docs/07 prontos.
+- **Próximo:** docs/08 — Sessão A (usuários na API e no painel, fechamento forçado RN-CX-09), Sessão B (Etapa C do app, C1→C5), Sessão C (deploy).
 
 ## Comandos
 

@@ -29,6 +29,19 @@ export type Perfil = 'Admin' | 'Atendente'
 /** Só a administração da loja entra no painel. */
 export const PERFIL_ADMIN: Perfil = 'Admin'
 
+/** Contracts/Usuarios/CriarUsuarioRequest — POST /api/usuarios. Senha = PIN (atendente) ou senha (Admin), RN-US-03. */
+export interface CriarUsuarioRequest {
+  nome: string
+  login: string
+  senha: string
+  perfil: Perfil
+}
+
+/** Contracts/Usuarios/RedefinirSenhaRequest — POST /api/usuarios/{id}/redefinir-senha. */
+export interface RedefinirSenhaRequest {
+  novaSenha: string
+}
+
 /** Contracts/Produtos/ProdutoDto */
 export interface ProdutoDto {
   id: string

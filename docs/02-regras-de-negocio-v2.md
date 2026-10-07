@@ -14,9 +14,10 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-US-04 | Senhas/PINs nunca são gravados em texto; só o hash (PBKDF2-SHA256, 210 000 iterações, salt por usuário) | F1 | Infrastructure |
 | RN-US-05 | Login aceita no máximo **10 tentativas por minuto por IP**; acima disso responde 429 | F1 | Server (rate limit) |
 | RN-US-06 | Token JWT expira em **12 horas** (um turno). Expirou → novo login com PIN | F1 | Server |
-| RN-US-07 | Usuário desativado não faz login, mas o histórico dele permanece. Usuário nunca é apagado | F1 | Domain + Application |
-| RN-US-08 | Só Admin cria, edita, desativa usuários e redefine PIN/senha | F1 | Application |
+| RN-US-07 | Usuário desativado não faz login **e o token que ele já tinha deixa de valer na hora** (a API confere `Ativo` a cada requisição, não só no login). O histórico dele permanece. Usuário nunca é apagado | F1 | Domain + Application + Server (`OnTokenValidated`) |
+| RN-US-08 | Só Admin cria, edita, desativa usuários e redefine PIN/senha | F1 | Server (política Admin) + Application (`UsuarioService`) |
 | RN-US-09 | O sistema nasce com um Admin criado a partir da configuração (`Seed:AdminLogin` / `Seed:AdminSenha`); só é criado se não houver usuários | F1 | Infrastructure (seed) |
+| RN-US-10 | **(07/10/2026)** O Admin logado não pode desativar o próprio usuário (a loja nunca fica sem ninguém que entre no painel). Para desativar um Admin, outro Admin faz isso | F1 | Application (`UsuarioService`) |
 
 ## 2. Produtos
 

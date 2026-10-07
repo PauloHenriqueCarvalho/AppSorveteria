@@ -48,6 +48,19 @@
 
 O `Dockerfile` da raiz já está pronto: o Render faz o build a partir dele e informa a porta pela variável `PORT`, que o `Program.cs` já lê. Health check: `/health`.
 
+### Criar o serviço pelo Blueprint (`render.yaml`)
+
+O arquivo `render.yaml` na raiz descreve o serviço inteiro (Docker, plano Free, região, health check, branch `main`, lista de variáveis). Não é preciso preencher nada à mão no formulário do Render:
+
+1. Render Dashboard → **New → Blueprint** → conectar o GitHub e escolher o repositório `AppSorveteria`.
+2. O Render mostra o serviço `sorveteria-api` e pede o valor das variáveis marcadas `sync: false`: `ConnectionStrings__Default` (string do Neon), `Seed__AdminSenha` e `Cors__PainelOrigem` (pode ficar vazia até o painel existir). `Jwt__Key` é gerada pelo próprio Render (`generateValue`).
+3. **Apply**. O primeiro build leva uns 5 min. A URL fica `https://sorveteria-api.onrender.com` (ou com sufixo, se o nome já estiver em uso).
+4. Testar: `GET https://<url>/health` deve responder `Healthy`.
+
+Região: `virginia` (AWS us-east-1), a mesma do projeto no Neon, para a API e o banco ficarem perto um do outro. O Render não tem região no Brasil; a latência Brasil ↔ Virgínia (~120 ms) é imperceptível para o app, que sincroniza em segundo plano.
+
+Depois de criado, o serviço continua ligado ao `render.yaml`: mudança no arquivo (nova variável, outro health check) vale no próximo commit da `main`. **Valor de segredo nunca vai para o arquivo**: só no painel do Render (Environment).
+
 ## Configuração do painel no Cloudflare Pages
 
 Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — ADR 018). Criar em **Workers & Pages → Create → Pages → Connect to Git**, repositório `AppSorveteria`:
@@ -71,9 +84,83 @@ Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — 
 - Depois do primeiro deploy, colocar a URL `https://<projeto>.pages.dev` em `Cors__PainelOrigem` na API (Render).
 - Local: `npm run dev` usa `http://localhost:5080` quando `VITE_API_URL` não está definida; para outra API, criar `src/GestaoSorveteria.Painel/.env.local` com `VITE_API_URL=...` (ignorado pelo Git).
 
+## App do atendente: endereço da API
+
+O app guarda o endereço da API no aparelho (`Preferences`) e ele pode ser trocado na tela de login, em "Servidor: …":
+
+| Onde o app roda | Endereço |
+|---|---|
+| Emulador Android no PC do Paulo | `http://10.0.2.2:5080` (padrão do build Debug; `10.0.2.2` é o PC visto do emulador) |
+| Tablet na mesma rede Wi-Fi do PC | `http://<IP do PC>:5080` (ex.: `http://192.168.0.10:5080`; a API precisa escutar em `0.0.0.0`, ver abaixo) |
+| Produção | URL do Render (`https://…onrender.com`); é o padrão do build Release em `ConfiguracaoApi.UrlPadrao` — atualizar quando o deploy existir |
+
+Para a API local aceitar o tablet: `dotnet run --project src/GestaoSorveteria.Server --urls http://0.0.0.0:5080` e liberar a porta 5080 no firewall do Windows. O manifesto Android permite `http` (`usesCleartextTraffic`) justamente para esses testes; em produção a URL é `https`.
+
 ## Backup no piloto
 
-O Neon grátis guarda histórico curto de restauração. Mesmo assim: **`pg_dump` semanal** feito do PC do Paulo (ou GitHub Actions agendado) e guardado fora da nuvem. Vendas também ficam no SQLite do celular até serem confirmadas pela API.
+O Neon grátis guarda histórico curto de restauração. Mesmo assim: **`pg_dump` semanal** feito do PC do Paulo e guardado fora da nuvem. Vendas também ficam no SQLite do celular até serem confirmadas pela API.
+
+### Fazer o backup: `scripts/backup.ps1`
+
+Gera `sorveteria-AAAA-MM-DD-HHMM.dump` (formato *custom* do `pg_dump`, com `--no-owner --no-privileges` para restaurar em qualquer servidor), confere que o arquivo abre (`pg_restore --list`) e apaga os mais antigos além de `-Manter` (padrão 12 ≈ 3 meses). Pasta padrão: `%USERPROFILE%\Backups\sorveteria`. Testado em 07/10/2026 contra o PostgreSQL local, com restauração conferida tabela a tabela.
+
+Pré-requisito: `pg_dump`/`pg_restore` **na mesma versão ou mais nova** que o servidor. O Neon usa PostgreSQL 17; no PC do Paulo está o 18 (`C:\Program Files\PostgreSQL\18\bin`, o script acha sozinho). Para instalar só as ferramentas: instalador do PostgreSQL → marcar apenas *Command Line Tools*.
+
+A string de conexão **não fica no script nem no Git**. Três formas de informar, na ordem em que o script procura:
+
+1. `-Url '...'` (fica no histórico do terminal: evitar);
+2. variável de ambiente `SORVETERIA_DB_URL` **do usuário do Windows** (recomendado para o agendamento):
+   ```powershell
+   [Environment]::SetEnvironmentVariable('SORVETERIA_DB_URL', '<string do Neon>', 'User')   # uma vez; abrir um terminal novo depois
+   ```
+3. sem nada: o script pergunta na tela, sem mostrar o que é digitado.
+
+Aceita a URL do Neon (`postgresql://usuario:senha@ep-xxx.us-east-1.aws.neon.tech/sorveteria?sslmode=require`) ou o formato Npgsql usado no Render. No Neon, copiar a string do endpoint **direto** (sem `-pooler` no host): o `pg_dump` não funciona bem pelo pooler.
+
+```powershell
+.\scripts\backup.ps1                                  # pasta padrão, mantém 12
+.\scripts\backup.ps1 -Pasta D:\Backups\sorveteria     # outra pasta (ex.: pendrive)
+```
+
+**Agendar toda segunda às 8h** (Agendador de Tarefas do Windows; o PC precisa estar ligado — se não estiver, a tarefa roda na próxima vez que ligar):
+
+```powershell
+schtasks /Create /TN "Backup Sorveteria" /SC WEEKLY /D MON /ST 08:00 /F /TR "powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<usuario>\source\repos\AppSorveteria\scripts\backup.ps1"
+schtasks /Run /TN "Backup Sorveteria"                 # testar agora
+```
+
+Depois de cada backup, copiar a pasta para fora do PC (pendrive, OneDrive/Drive pessoal). Guardar fora da nuvem do Neon é o objetivo.
+
+### Restaurar
+
+Nunca restaurar por cima do banco em uso sem antes fazer um backup dele. Os comandos abaixo usam as ferramentas do PostgreSQL (`$env:PGPASSWORD` evita a senha na linha de comando).
+
+**Testar a restauração no PC** (fazer uma vez por mês, leva 1 min; PostgreSQL local do `docker compose up -d`):
+
+```powershell
+$env:PGPASSWORD = 'postgres'
+psql -h localhost -p 5433 -U postgres -d postgres -c "CREATE DATABASE sorveteria_restaurado;"
+pg_restore -h localhost -p 5433 -U postgres -d sorveteria_restaurado --no-owner --no-privileges "$HOME\Backups\sorveteria\sorveteria-2026-10-07-0800.dump"
+psql -h localhost -p 5433 -U postgres -d sorveteria_restaurado -c "select count(*) from comandas;"
+psql -h localhost -p 5433 -U postgres -d postgres -c "DROP DATABASE sorveteria_restaurado;"
+Remove-Item Env:\PGPASSWORD
+```
+
+Se o servidor for mais antigo que o `pg_dump` (ex.: PostgreSQL 16 local com ferramentas 18), aparece `ERROR: unrecognized configuration parameter "transaction_timeout"` e `errors ignored on restore: 1`. É inofensivo: os dados são restaurados do mesmo jeito. No Neon (17) não aparece.
+
+**Voltar o banco do Neon a um backup** (desastre: dados apagados, migração errada):
+
+1. Painel do Neon → Branches → criar uma branch nova a partir da `main` (fica um banco de segurança com o estado atual, sem custo).
+2. Com a string do endpoint direto da `main`:
+   ```powershell
+   $env:PGPASSWORD = '<senha do Neon>'
+   pg_restore -h ep-xxx.us-east-1.aws.neon.tech -U <usuario> -d sorveteria --clean --if-exists --no-owner --no-privileges "<arquivo>.dump"
+   Remove-Item Env:\PGPASSWORD
+   ```
+   `--clean --if-exists` apaga e recria as tabelas antes de carregar; tudo o que foi gravado depois do backup se perde no servidor, mas as vendas ainda no celular sobem de novo na próxima sincronização (idempotente pelo `Id`).
+3. Suspender e religar a API no Render (Manual Deploy → *Restart*) para limpar conexões antigas. Conferir pelo painel se o dia aparece.
+
+Alternativa sem `pg_restore`: o Neon grátis permite *Restore* da branch para um ponto nas últimas 24 h (Branches → Restore). Serve para erro percebido no mesmo dia; para mais do que isso, o backup semanal é o único caminho.
 
 ## Quando sair do gratuito (fim do piloto)
 

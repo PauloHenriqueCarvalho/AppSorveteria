@@ -7,6 +7,7 @@ const MENU = [
   { para: '/vendas', texto: 'Vendas', fim: false },
   { para: '/caixas', texto: 'Caixas', fim: false },
   { para: '/produtos', texto: 'Produtos', fim: false },
+  { para: '/usuarios', texto: 'Usuários', fim: false },
 ]
 
 export default function Layout() {

@@ -238,6 +238,10 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
 | POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
 | POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
+| GET | `/api/usuarios`, `/api/usuarios/{id}` | Admin | todos os usuários, inclusive desativados (`UsuarioDto`) |
+| POST | `/api/usuarios` | Admin | cria atendente (PIN) ou Admin (senha) — `CriarUsuarioRequest` (`perfil` = `Atendente`/`Admin`); login repetido → 400 (RN-US-02); senha fora da política → 400 (RN-US-03); 201 |
+| POST | `/api/usuarios/{id}/redefinir-senha` | Admin | `RedefinirSenhaRequest { novaSenha }`; sem pedir a antiga (RN-US-08); vale a política do perfil do usuário |
+| POST | `/api/usuarios/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-US-07); desativar a si mesmo → 400 (RN-US-10) |
 | POST | `/api/sync/caixas` | qualquer | lote de caixas (abertos/fechados) com movimentos; idempotente pelo `id` |
 | POST | `/api/sync/comandas` | qualquer | lote de comandas **fechadas ou canceladas** com itens e pagamentos; idempotente pelo `id`; a API reconstrói o agregado com as regras do Domain e devolve, por comanda, `aceita`/`já recebida`/`rejeitada` + motivo |
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |
@@ -260,6 +264,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | GET | `/api/caixas?de=&ate=` | Caixas (histórico) — **pronto** (sem datas: 30 dias; máx. 93; hoje faz 1 consulta por caixa — agregar no repositório se pesar) | `IReadOnlyList<CaixaResumoDto>` |
 | GET | `/api/caixas/atual` | Dashboard (caixa aberto) — **pronto** | `CaixaResumoDto` ou 204 sem caixa aberto |
 | GET | `/api/caixas/{id}` | Caixas (detalhe) — **pronto** | `CaixaDetalheDto` |
+| GET/POST | `/api/usuarios`, `/api/usuarios/{id}/redefinir-senha`, `/ativar`, `/desativar` | Usuários — **pronto** (RN-US-01…08, RN-US-10) | `UsuarioDto` / `IReadOnlyList<UsuarioDto>` |
 
 DTOs (namespace `Contracts.Relatorios`, `Contracts.Comandas`, `Contracts.Caixas`; enums como texto, dinheiro `decimal` 2 casas, datas UTC):
 

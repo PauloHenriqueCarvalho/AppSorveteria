@@ -26,6 +26,7 @@ Sistema de gestão para sorveteria, tudo num repositório só:
 | [docs/05-correcoes-da-proposta.md](docs/05-correcoes-da-proposta.md) | Ajustes na proposta comercial |
 | [docs/06-analise-mvp-maui.md](docs/06-analise-mvp-maui.md) | Análise do MVP, bugs B1–B15 e plano de refatoração do app |
 | [docs/07-hospedagem.md](docs/07-hospedagem.md) | Hospedagem gratuita (Render + Neon + Cloudflare Pages) e limites |
+| [docs/09-guia-de-uso.md](docs/09-guia-de-uso.md) | Guia de 1 página para a dona e o atendente (abrir caixa, vender, fechar caixa, painel) |
 | [docs/contexto-mvp/](docs/contexto-mvp/) | Documentos originais do MVP (histórico) |
 
 ## Começar em qualquer computador
@@ -75,6 +76,9 @@ AppSorveteria/
 ├── Directory.Build.props             configurações comuns a todos os projetos
 ├── docker-compose.yml                PostgreSQL local
 ├── Dockerfile                        imagem da API (Render)
+├── render.yaml                       Blueprint do Render: serviço da API e lista de variáveis (sem segredos)
+├── scripts/backup.ps1                pg_dump semanal do banco do Neon para o PC (docs/07)
+├── scripts/publicar-apk.ps1          APK assinado do app (keystore fora do Git) (docs/07)
 ├── .github/workflows/ci.yml          build + testes da API a cada push
 ├── docs/
 ├── src/
