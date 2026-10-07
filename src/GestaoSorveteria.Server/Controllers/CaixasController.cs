@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestaoSorveteria.Server.Controllers;
 
-/// <summary>Caixas para o painel da dona (só leitura). O app envia os caixas por POST /api/sync/caixas.</summary>
+/// <summary>Caixas para o painel da dona: leitura e fechamento forçado (RN-CX-09). O app envia os caixas por POST /api/sync/caixas.</summary>
 [ApiController]
 [Route("api/caixas")]
 [Produces("application/json")]
@@ -14,10 +14,33 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class CaixasController : ControllerBase
 {
     private readonly CaixaConsultaService _caixas;
+    private readonly CaixaService _acoes;
 
-    public CaixasController(CaixaConsultaService caixas)
+    public CaixasController(CaixaConsultaService caixas, CaixaService acoes)
     {
         _caixas = caixas;
+        _acoes = acoes;
+    }
+
+    /// <summary>
+    /// RN-CX-09: fecha pelo painel um caixa que o atendente esqueceu aberto. O valor contado fica 0 e a diferença
+    /// é gravada; o motivo é obrigatório. Se o fechamento do celular chegar depois, a sincronização o rejeita.
+    /// </summary>
+    [HttpPost("{id:guid}/fechar-forcado")]
+    [ProducesResponseType(typeof(CaixaDetalheDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CaixaDetalheDto>> FecharForcado(Guid id, FecharCaixaForcadoRequest request, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirst(JwtTokenService.ClaimId)?.Value, out var adminId))
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await _acoes.FecharForcadoAsync(id, request, adminId, cancellationToken));
     }
 
     /// <summary>

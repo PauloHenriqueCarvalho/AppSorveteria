@@ -26,6 +26,7 @@ internal sealed class CaixaConfiguration : IEntityTypeConfiguration<Caixa>
         builder.Property(c => c.TotalVendasDinheiroApp).HasPrecision(12, 2);
         builder.Property(c => c.ValorEsperadoApp).HasPrecision(12, 2);
         builder.Property(c => c.DivergenciaSincronizacao).IsRequired();
+        builder.Property(c => c.FechamentoForcado).IsRequired(); // RN-CX-09
 
         // RN-CX-07: dois fechamentos ao mesmo tempo (reenvio sobreposto, fechamento forçado + sincronização) não podem
         // sobrescrever um ao outro. xmin é a coluna de sistema do PostgreSQL que muda a cada UPDATE: o segundo UPDATE

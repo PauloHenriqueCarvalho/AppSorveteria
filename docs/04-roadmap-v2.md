@@ -89,7 +89,7 @@ Detalhes em docs/07.
 - [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração — script `scripts/backup.ps1` e passo a passo de restauração prontos (docs/07, 07/10); falta agendar contra o Neon
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app — script `scripts/publicar-apk.ps1` e passo a passo (keystore fora do Git, link fixo, instalação) prontos (docs/07, 07/10); falta gerar o APK oficial e publicar o link
 - [ ] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; em andamento na Sessão A do docs/08)
-  - [ ] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada
+  - [x] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada; caixa marcado `fechamento_forcado` (migração `CaixaFechamentoForcado`)
   - [ ] Painel: botão no detalhe do caixa aberto
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
