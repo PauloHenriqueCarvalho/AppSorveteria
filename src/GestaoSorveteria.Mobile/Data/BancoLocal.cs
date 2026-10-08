@@ -24,6 +24,7 @@ public sealed class BancoLocal
             {
                 var conexao = new SQLiteAsyncConnection(_caminho);
                 await conexao.CreateTablesAsync<Comanda, ItemComanda, Pagamento, Produto>();
+                await conexao.CreateTablesAsync<Caixa, MovimentoCaixa>(); // C3
                 _conexao = conexao;
             }
 

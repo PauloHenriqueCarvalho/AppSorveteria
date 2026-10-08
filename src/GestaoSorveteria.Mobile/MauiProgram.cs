@@ -26,12 +26,15 @@ namespace SorveteriaMaui
             builder.Services.AddSingleton<ConfiguracaoApi>();
             builder.Services.AddSingleton<SessaoUsuario>();
             builder.Services.AddSingleton<ApiCliente>();
+            builder.Services.AddSingleton<CatalogoService>(); // catálogo da API em cache no SQLite (C2)
+            builder.Services.AddSingleton<SyncService>();     // fila de caixas/comandas → POST /api/sync/* (C4)
 
             // Banco local, repositórios e casos de uso (carrega → Domain → grava numa transação)
             builder.Services.AddSingleton<BancoLocal>();
             builder.Services.AddSingleton<ComandaRepository>();
             builder.Services.AddSingleton<ProdutoRepository>();
-            builder.Services.AddSingleton<CaixaProvisorio>();
+            builder.Services.AddSingleton<CaixaRepository>();
+            builder.Services.AddSingleton<CaixaAppService>(); // C3: abrir, sangria/suprimento, fechar com conferência
             builder.Services.AddSingleton<ComandaAppService>();
             // Diálogos de pagamento (não gravam nada)
             builder.Services.AddSingleton<IPaymentService, PaymentService>();
@@ -47,8 +50,10 @@ namespace SorveteriaMaui
             // Produtos
             builder.Services.AddTransient<ListarProdutosView>();
             builder.Services.AddTransient<ListarProdutosViewModel>();
-            builder.Services.AddTransient<CadastroProdutoView>();
-            builder.Services.AddTransient<CadastroProdutoViewModel>();
+
+            // Caixa (C3)
+            builder.Services.AddTransient<CaixaView>();
+            builder.Services.AddTransient<CaixaViewModel>();
 
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();
