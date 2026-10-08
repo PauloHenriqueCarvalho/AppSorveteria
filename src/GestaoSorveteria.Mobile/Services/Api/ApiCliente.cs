@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
 using GestaoSorveteria.Contracts.Auth;
 using GestaoSorveteria.Contracts.Produtos;
+using GestaoSorveteria.Contracts.Sync;
 
 namespace SorveteriaMaui.Services.Api;
 
@@ -41,6 +42,20 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
 
         using var resposta = await EnviarAsync<object>(HttpMethod.Get, rota, null, null, autenticado: true, cancellationToken);
         return await LerAsync(resposta, ApiJsonContext.Default.CatalogoProdutosResponse, cancellationToken);
+    }
+
+    /// <summary>POST /api/sync/caixas (RN-SY-02/03). Um resultado por caixa, na ordem do lote.</summary>
+    public async Task<SyncResponse> EnviarCaixasAsync(SyncCaixasRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/caixas", request, ApiJsonContext.Default.SyncCaixasRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
+    }
+
+    /// <summary>POST /api/sync/comandas (RN-SY-02/03/06). Um resultado por comanda, na ordem do lote.</summary>
+    public async Task<SyncResponse> EnviarComandasAsync(SyncComandasRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/comandas", request, ApiJsonContext.Default.SyncComandasRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
     }
 
     /// <summary>Envia a requisição; 2xx volta para o chamador ler, qualquer outra vira <see cref="ApiException"/>.</summary>
