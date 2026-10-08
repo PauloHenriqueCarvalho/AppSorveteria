@@ -62,6 +62,26 @@ public class Comanda
     [Indexed, Column("pendente_envio")]
     public bool PendenteEnvio { get; set; }
 
+    /// <summary>C4: quantas vezes o envio falhou por rede/servidor (não zera o pendente).</summary>
+    [Column("tentativas_envio")]
+    public int TentativasEnvio { get; set; }
+
+    [Column("ultimo_erro_envio")]
+    public string? UltimoErroEnvio { get; set; }
+
+    /// <summary>C4: motivo devolvido pela API quando <c>rejeitada</c>; fica visível, nunca some em silêncio (RN-SY-03).</summary>
+    [Column("rejeitada_motivo")]
+    public string? RejeitadaMotivo { get; set; }
+
+    [Column("enviada_em")]
+    public DateTime? EnviadaEm { get => _enviadaEm; set => _enviadaEm = ComoUtc(value); }
+    private DateTime? _enviadaEm;
+
+    /// <summary>Para o histórico do turno (C5).</summary>
+    [Ignore]
+    public string SituacaoEnvio => RejeitadaMotivo is not null ? $"Rejeitada: {RejeitadaMotivo}"
+        : PendenteEnvio ? "Aguardando envio" : Status == GestaoSorveteria.Domain.Comandas.StatusComanda.Aberta ? string.Empty : "Enviada";
+
     /// <summary>Para a tela: RN-CM-11, delivery na F1 é só marcação + observação.</summary>
     [Ignore]
     public bool EhDelivery => Tipo == TipoComanda.Delivery;

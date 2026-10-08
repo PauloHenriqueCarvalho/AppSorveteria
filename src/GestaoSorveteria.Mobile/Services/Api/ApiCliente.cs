@@ -51,6 +51,13 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
         return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
     }
 
+    /// <summary>POST /api/sync/comandas (RN-SY-02/03/06). Um resultado por comanda, na ordem do lote.</summary>
+    public async Task<SyncResponse> EnviarComandasAsync(SyncComandasRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/comandas", request, ApiJsonContext.Default.SyncComandasRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
+    }
+
     /// <summary>Envia a requisição; 2xx volta para o chamador ler, qualquer outra vira <see cref="ApiException"/>.</summary>
     internal async Task<HttpResponseMessage> EnviarAsync<TCorpo>(
         HttpMethod metodo, string rota, TCorpo? corpo, JsonTypeInfo<TCorpo>? tipoCorpo, bool autenticado, CancellationToken cancellationToken)

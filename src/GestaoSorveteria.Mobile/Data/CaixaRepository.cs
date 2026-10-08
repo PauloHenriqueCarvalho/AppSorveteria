@@ -34,6 +34,46 @@ public sealed class CaixaRepository(BancoLocal banco)
             .FirstOrDefaultAsync();
     }
 
+    // ---------------------------------------------------------------- fila de envio (C4)
+
+    /// <summary>Caixas com algo a enviar (abertura/movimento/fechamento) ou com comandas pendentes (<paramref name="comComandasPendentes"/>).</summary>
+    public async Task<List<Caixa>> ListarComPendenciaAsync(IReadOnlyList<Guid> comComandasPendentes)
+    {
+        var db = await banco.ConexaoAsync();
+        var pendentes = await db.Table<Caixa>().Where(c => c.PendenteEnvio == true).ToListAsync();
+        foreach (var id in comComandasPendentes.Where(id => pendentes.All(c => c.Id != id)))
+        {
+            var caixa = await db.FindAsync<Caixa>(id);
+            if (caixa is not null)
+            {
+                pendentes.Add(caixa);
+            }
+        }
+
+        return pendentes;
+    }
+
+    public async Task<int> ContarPendentesEnvioAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Caixa>().Where(c => c.PendenteEnvio == true).CountAsync();
+    }
+
+    public async Task MarcarEnviadoAsync(Guid id)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync(
+            "UPDATE caixas SET pendente_envio = 0, enviado_em = ?, rejeitado_motivo = NULL, ultimo_erro_envio = NULL WHERE id = ?",
+            DateTime.UtcNow, id);
+    }
+
+    /// <summary>Rejeitado pela API (ex.: fechado à força pelo painel, RN-CX-09): sai da fila, motivo visível. Nada é apagado.</summary>
+    public async Task MarcarRejeitadoAsync(Guid id, string motivo)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync("UPDATE caixas SET pendente_envio = 0, rejeitado_motivo = ? WHERE id = ?", motivo, id);
+    }
+
     public async Task<List<MovimentoCaixa>> ListarMovimentosAsync(Guid caixaId)
     {
         var db = await banco.ConexaoAsync();

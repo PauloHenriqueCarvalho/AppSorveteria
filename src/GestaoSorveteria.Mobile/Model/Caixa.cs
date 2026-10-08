@@ -52,6 +52,21 @@ public class Caixa
     [Indexed, Column("pendente_envio")]
     public bool PendenteEnvio { get; set; }
 
+    /// <summary>C4: quantas vezes o envio falhou por rede/servidor (não zera o pendente).</summary>
+    [Column("tentativas_envio")]
+    public int TentativasEnvio { get; set; }
+
+    [Column("ultimo_erro_envio")]
+    public string? UltimoErroEnvio { get; set; }
+
+    /// <summary>C4: motivo devolvido pela API quando <c>rejeitada</c>; fica visível, nunca some em silêncio (RN-SY-03).</summary>
+    [Column("rejeitado_motivo")]
+    public string? RejeitadoMotivo { get; set; }
+
+    [Column("enviado_em")]
+    public DateTime? EnviadoEm { get => _enviadoEm; set => _enviadoEm = ComoUtc(value); }
+    private DateTime? _enviadoEm;
+
     [Ignore]
     public decimal FundoTroco { get => ParaReais(FundoTrocoCentavos); set => FundoTrocoCentavos = ParaCentavos(value); }
 

@@ -23,7 +23,7 @@ public sealed record ResumoCaixa(
 /// Casos de uso do caixa no aparelho (C3): abrir com fundo de troco, sangria/suprimento, fechar com conferência.
 /// Carrega do SQLite → chama o <see cref="Caixa"/> do Domain (mesmo código da API) → grava numa transação.
 /// </summary>
-public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository comandas, SessaoUsuario sessao, ApiCliente api)
+public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository comandas, SessaoUsuario sessao, ApiCliente api, SyncService sync)
 {
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
 
@@ -144,6 +144,7 @@ public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository co
                 ?? throw new DomainException("Não há caixa aberto. Abra o caixa na aba Caixa (RN-CX-03).");
             await alteracao(caixa);
             await caixas.GravarAsync(caixa);
+            sync.Disparar(); // movimento ou fechamento: sobe em seguida (sem internet, fica na fila — RN-SY-04)
             return caixa;
         });
 

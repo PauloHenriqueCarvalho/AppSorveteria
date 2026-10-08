@@ -14,16 +14,18 @@ public class CaixaViewModel : BindableObject
 {
     private readonly CaixaAppService _caixa;
     private readonly CaixaRepository _caixas;
+    private readonly SorveteriaMaui.Services.Api.SyncService _sync;
 
     private bool _temCaixaAberto;
     private string _fundoTrocoTexto = string.Empty;
     private ResumoCaixa? _resumo;
     private string _ultimoFechamento = string.Empty;
 
-    public CaixaViewModel(CaixaAppService caixa, CaixaRepository caixas)
+    public CaixaViewModel(CaixaAppService caixa, CaixaRepository caixas, SorveteriaMaui.Services.Api.SyncService sync)
     {
         _caixa = caixa;
         _caixas = caixas;
+        _sync = sync;
         AbrirCaixaCommand = new Command(async () => await AbrirCaixa());
         SangriaCommand = new Command(async () => await Movimentar(sangria: true));
         SuprimentoCommand = new Command(async () => await Movimentar(sangria: false));
@@ -169,6 +171,15 @@ public class CaixaViewModel : BindableObject
             "Fechar o caixa? Depois de fechado ele não muda.",
             "Fechar caixa", "Voltar");
         if (!confirmar) return;
+
+        // RN-CX-05 / RN-SY-05: envio pendente não impede fechar, mas avisa que essas vendas sobem depois.
+        var pendentes = (await _sync.EstadoAsync()).ComandasPendentes;
+        if (pendentes > 0 && !await Shell.Current.DisplayAlertAsync("Vendas aguardando envio",
+                $"{pendentes} venda(s) deste turno ainda não subiram para o painel. Pode fechar o caixa: elas são enviadas depois e entram na conferência da dona. Fechar mesmo assim?",
+                "Fechar mesmo assim", "Voltar"))
+        {
+            return;
+        }
 
         string? observacao = null;
         if (diferenca != 0)
