@@ -67,9 +67,21 @@ public class ListarComandasViewModel : BindableObject
         });
     }
 
-    /// <summary>Trocar de atendente: apaga a sessão do aparelho e volta ao PIN. O próximo login exige internet.</summary>
+    /// <summary>
+    /// Trocar de atendente: apaga a sessão do aparelho e volta ao PIN. O próximo login exige internet, então sem
+    /// conexão o app recusa — um toque errado não pode deixar o balcão sem vender (Decisão 1).
+    /// </summary>
     private async Task Sair()
     {
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Sem internet",
+                $"Sem internet não dá para trocar de atendente agora. As vendas continuam na conta de {_sessao.Nome}.",
+                "OK");
+            return;
+        }
+
         bool confirmar = await Shell.Current.DisplayAlertAsync(
             "Sair",
             $"Sair da conta de {_sessao.Nome}? Para entrar de novo é preciso digitar o PIN com internet. As comandas ficam guardadas no aparelho.",

@@ -11,6 +11,8 @@ namespace SorveteriaMaui
             Routing.RegisterRoute("SelecaoProdutoView", typeof(SelecaoProdutoView));
             Routing.RegisterRoute("DetalhesComandaView", typeof(DetalhesComandaView));
             Routing.RegisterRoute("CadastroProdutoView", typeof(View.CadastroProdutoView));
+            // Token vencido/recusado (RN-US-06): a mesma tela de PIN, empilhada sobre a tela atual, em modo "renovar"
+            Routing.RegisterRoute(LoginView.RotaRenovar, typeof(LoginView));
 
             // Sem atendente no aparelho → tela de PIN. Token vencido não bloqueia: a venda segue offline (docs/03, seção 7).
             if (!sessao.TemUsuario)

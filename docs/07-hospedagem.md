@@ -86,15 +86,16 @@ Projeto do painel: `src/GestaoSorveteria.Painel` (React + Vite + TypeScript — 
 
 ## App do atendente: endereço da API
 
-O app guarda o endereço da API no aparelho (`Preferences`) e ele pode ser trocado na tela de login, em "Servidor: …":
+O endereço da API depende da configuração do build do app (`ConfiguracaoApi`, decisão do Paulo em 07/10/2026):
 
-| Onde o app roda | Endereço |
-|---|---|
-| Emulador Android no PC do Paulo | `http://10.0.2.2:5080` (padrão do build Debug; `10.0.2.2` é o PC visto do emulador) |
-| Tablet na mesma rede Wi-Fi do PC | `http://<IP do PC>:5080` (ex.: `http://192.168.0.10:5080`; a API precisa escutar em `0.0.0.0`, ver abaixo) |
-| Produção | URL do Render (`https://…onrender.com`); é o padrão do build Release em `ConfiguracaoApi.UrlPadrao` — atualizar quando o deploy existir |
+| Build | Endereço | Editável na tela de login? | http permitido? |
+|---|---|---|---|
+| **Debug** (emulador, tablet de teste via Visual Studio) | padrão `http://10.0.2.2:5080` (`10.0.2.2` é o PC visto do emulador); no tablet, trocar por `http://<IP do PC>:5080` (ex.: `http://192.168.0.10:5080`) | sim ("Servidor: …" no rodapé; fica guardado no aparelho) | sim (`usesCleartextTraffic="true"` só nesta configuração, via `AndroidManifestPlaceholders`) |
+| **Release** (APK da loja) | fixo, vem do build: `-p:ApiUrlPadrao=https://<servico>.onrender.com`, gravado como metadado do assembly | **não** (o campo não existe) | **não** (manifesto com `usesCleartextTraffic="false"`; só https) |
 
-Para a API local aceitar o tablet: `dotnet run --project src/GestaoSorveteria.Server --urls http://0.0.0.0:5080` e liberar a porta 5080 no firewall do Windows. O manifesto Android permite `http` (`usesCleartextTraffic`) justamente para esses testes; em produção a URL é `https`.
+- `scripts/publicar-apk.ps1 -ApiUrl https://<servico>.onrender.com …` passa a URL ao build (parâmetro obrigatório, só https). Um APK gerado sem ela **não** aponta para um endereço chutado: o app mostra "Este app foi instalado sem o endereço do servidor" e não tenta logar. Quando a API estiver publicada no Render, registrar a URL aqui.
+- Para a API local aceitar o tablet (Debug): `dotnet run --project src/GestaoSorveteria.Server --urls http://0.0.0.0:5080` e liberar a porta 5080 no firewall do Windows; tablet na mesma rede Wi-Fi do PC.
+- O login exige internet (RN-US-06); depois disso a venda segue offline com o token guardado no aparelho (docs/03, seção 7).
 
 ## Backup no piloto
 

@@ -16,6 +16,9 @@
     Guarde uma cópia dele e da senha em lugar seguro: sem o mesmo keystore não dá para atualizar o app
     instalado — só desinstalando (e perdendo o que ainda não foi sincronizado).
 
+.PARAMETER ApiUrl
+    URL da API publicada (https, sem barra no fim), ex.: https://sorveteria-api.onrender.com. Fica gravada no APK
+    (-p:ApiUrlPadrao): no Release o app não tem campo de servidor e só fala https (docs/07, "App do atendente").
 .PARAMETER Versao
     Versão mostrada ao usuário e comparada com GET /api/versao (ApplicationDisplayVersion), ex.: 1.1.
     Padrão: a do .csproj.
@@ -34,11 +37,12 @@
     Caminho do keytool.exe, se o script não achar sozinho (JAVA_HOME, PATH, JDK do Android Studio, JDK da Microsoft).
 
 .EXAMPLE
-    .\scripts\publicar-apk.ps1 -CriarKeystore                 # primeira vez
-    .\scripts\publicar-apk.ps1 -Versao 1.1 -Build 2            # versões seguintes
+    .\scripts\publicar-apk.ps1 -ApiUrl https://sorveteria-api.onrender.com -CriarKeystore        # primeira vez
+    .\scripts\publicar-apk.ps1 -ApiUrl https://sorveteria-api.onrender.com -Versao 1.1 -Build 2   # versões seguintes
 #>
 [CmdletBinding()]
 param(
+    [Parameter(Mandatory = $true)][ValidatePattern('^https://[^\s/]+$')][string]$ApiUrl,
     [ValidatePattern('^\d+\.\d+$')][string]$Versao = '',
     [ValidateRange(1, 2100000000)][int]$Build = 0,
     [string]$Keystore = (Join-Path $HOME '.sorveteria\sorveteria.keystore'),
@@ -105,9 +109,9 @@ try {
     # ---------- 5. Publicar (Release, Android, assinado) ----------
     $publicacao = Join-Path $raiz 'src\GestaoSorveteria.Mobile\bin\publish-android'
     if (Test-Path $publicacao) { Remove-Item $publicacao -Recurse -Force }
-    Write-Host "Publicando versão $Versao (build $Build) assinada com '$Alias'..."
+    Write-Host "Publicando versão $Versao (build $Build) assinada com '$Alias', API em $ApiUrl..."
     & dotnet publish $csproj -f net10.0-android -c Release -p:TargetFrameworks=net10.0-android `
-        -p:ApplicationDisplayVersion=$Versao -p:ApplicationVersion=$Build `
+        -p:ApplicationDisplayVersion=$Versao -p:ApplicationVersion=$Build -p:ApiUrlPadrao=$ApiUrl `
         -p:AndroidPackageFormats=apk -p:AndroidKeyStore=true `
         -p:AndroidSigningKeyStore="$Keystore" -p:AndroidSigningKeyAlias=$Alias `
         -p:AndroidSigningKeyPass=env:SORVETERIA_KEYSTORE_SENHA -p:AndroidSigningStorePass=env:SORVETERIA_KEYSTORE_SENHA `
