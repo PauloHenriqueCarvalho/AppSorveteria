@@ -69,7 +69,7 @@ public sealed class CaixaRepository(BancoLocal banco)
     /// Grava o caixa e os movimentos novos numa transação. Movimento nunca é apagado nem alterado (RN-TD-03);
     /// caixa fechado não muda (RN-CX-07). Marca <c>pendente_envio</c> para o C4.
     /// </summary>
-    public async Task GravarAsync(Dominio.Caixa caixa)
+    public async Task GravarAsync(Dominio.Caixa caixa, bool pendenteEnvio = true)
     {
         var db = await banco.ConexaoAsync();
         await db.RunInTransactionAsync(tx =>
@@ -78,6 +78,13 @@ public sealed class CaixaRepository(BancoLocal banco)
             if (existente is not null && !existente.EstaAberto)
             {
                 throw new GestaoSorveteria.Domain.Common.DomainException("Este caixa já está fechado (RN-CX-07).");
+            }
+
+            // RN-CX-05 dentro da transação: uma comanda aberta no meio do fechamento não pode ficar num caixa fechado.
+            if (!caixa.EstaAberto
+                && tx.Table<Model.Comanda>().Where(c => c.CaixaId == caixa.Id && c.Status == GestaoSorveteria.Domain.Comandas.StatusComanda.Aberta).Count() > 0)
+            {
+                throw new GestaoSorveteria.Domain.Common.DomainException("Ainda há comanda aberta neste caixa. Feche ou cancele antes de fechar o caixa (RN-CX-05).");
             }
 
             if (existente is null && caixa.EstaAberto
@@ -100,7 +107,7 @@ public sealed class CaixaRepository(BancoLocal banco)
                 ValorContado = caixa.ValorContado,
                 Diferenca = caixa.Diferenca,
                 Observacao = caixa.Observacao,
-                PendenteEnvio = true,
+                PendenteEnvio = pendenteEnvio,
             };
 
             if (existente is null)

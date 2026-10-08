@@ -70,7 +70,7 @@ public class ListarComandasViewModel : BindableObject
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _repositorio.ListarAbertasAsync();
-            var caixa = await _caixa.ObterAbertoAsync();
+            var caixa = await _caixa.ObterAbertoLinhaAsync();
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
@@ -87,8 +87,8 @@ public class ListarComandasViewModel : BindableObject
     /// <summary>RN-CX-03 / C3: sem caixa aberto não há venda; leva o atendente para a aba Caixa.</summary>
     private async Task<bool> GarantirCaixaAberto()
     {
-        GestaoSorveteria.Domain.Caixas.Caixa? caixa = null;
-        if (!await Operacao.CarregarAsync(async () => caixa = await _caixa.ObterAbertoAsync())) return false;
+        Caixa? caixa = null;
+        if (!await Operacao.CarregarAsync(async () => caixa = await _caixa.ObterAbertoLinhaAsync())) return false;
         if (caixa is not null) return true;
 
         bool abrir = await Shell.Current.DisplayAlertAsync(

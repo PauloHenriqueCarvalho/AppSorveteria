@@ -1,3 +1,4 @@
+using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Common;
 using SorveteriaMaui.Data;
@@ -22,31 +23,58 @@ public sealed record ResumoCaixa(
 /// Casos de uso do caixa no aparelho (C3): abrir com fundo de troco, sangria/suprimento, fechar com conferência.
 /// Carrega do SQLite → chama o <see cref="Caixa"/> do Domain (mesmo código da API) → grava numa transação.
 /// </summary>
-public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository comandas, SessaoUsuario sessao)
+public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository comandas, SessaoUsuario sessao, ApiCliente api)
 {
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
 
     public Task<Caixa?> ObterAbertoAsync() => caixas.ObterAbertoAsync();
 
+    /// <summary>Só a linha (sem remontar movimentos): para a tela saber se há caixa e desde quando.</summary>
+    public Task<Model.Caixa?> ObterAbertoLinhaAsync() => caixas.ObterAbertoLinhaAsync();
+
     /// <summary>
-    /// RN-CX-02 / RN-SY-04: abrir exige internet (garante um só caixa aberto quando o C4 enviar a abertura);
-    /// depois disso a venda funciona offline.
+    /// RN-CX-02 / RN-SY-04 / RN-CX-01: a abertura é enviada ao servidor (<c>POST /api/sync/caixas</c>) antes de
+    /// ser gravada no aparelho — é o servidor que garante um só caixa aberto; se já houver outro, recusa com o motivo.
+    /// Sem conexão não abre; depois de aberto, a venda funciona offline.
     /// </summary>
     public Task<Caixa> AbrirAsync(decimal fundoTroco) =>
         UmaPorVezAsync(async () =>
         {
-            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
-            {
-                throw new DomainException("Para abrir o caixa é preciso internet (garante um caixa só). Depois de aberto, a venda funciona sem internet.");
-            }
-
             if (await caixas.ObterAbertoLinhaAsync() is not null)
             {
                 throw new DomainException("Já existe um caixa aberto. Feche-o antes de abrir outro (RN-CX-01).");
             }
 
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                throw new DomainException("Para abrir o caixa é preciso internet: o servidor garante que há um caixa só. Depois de aberto, a venda funciona sem internet.");
+            }
+
             var caixa = Caixa.Abrir(UsuarioId(), fundoTroco, DateTime.UtcNow);
-            await caixas.GravarAsync(caixa);
+            var dto = new CaixaSyncDto(caixa.Id, caixa.AbertoPorUsuarioId, caixa.AbertoEm, caixa.FundoTroco, Movimentos: [], Fechamento: null);
+
+            SyncResponse resposta;
+            try
+            {
+                resposta = await api.EnviarCaixasAsync(new SyncCaixasRequest([dto]));
+            }
+            catch (SessaoExpiradaException)
+            {
+                throw new DomainException("Sua sessão venceu. Saia e entre de novo com o PIN para abrir o caixa.");
+            }
+            catch (ApiIndisponivelException ex)
+            {
+                throw new DomainException($"Não deu para confirmar a abertura com o servidor. {ex.Message}");
+            }
+
+            var resultado = resposta.Resultados.FirstOrDefault(r => r.Id == caixa.Id);
+            if (resultado is null || resultado.Status == StatusSync.Rejeitada)
+            {
+                // Ex.: outro caixa aberto no servidor (outro aparelho, ou dados do app limpos) — a dona fecha pelo painel (RN-CX-09)
+                throw new DomainException(resultado?.Motivo ?? "O servidor não confirmou a abertura do caixa. Tente de novo.");
+            }
+
+            await caixas.GravarAsync(caixa, pendenteEnvio: false); // já está no servidor
             return caixa;
         });
 
@@ -100,7 +128,7 @@ public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository co
         });
 
     private Guid UsuarioId() =>
-        sessao.UsuarioId ?? throw new InvalidOperationException("Nenhum atendente conectado. Entre com o PIN para operar o caixa.");
+        sessao.UsuarioId ?? throw new DomainException("Nenhum atendente conectado. Entre com o PIN para operar o caixa.");
 
     private Task<Caixa> AlterarAbertoAsync(Action<Caixa> alteracao) =>
         AlterarAbertoAsync(caixa =>

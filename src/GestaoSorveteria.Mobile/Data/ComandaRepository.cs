@@ -106,6 +106,12 @@ public sealed class ComandaRepository(BancoLocal banco)
             {
                 throw new DomainException("Esta comanda já foi fechada ou cancelada.");
             }
+
+            // RN-CX-03 dentro da transação: o caixa pode ter sido fechado entre a conferência do serviço e a gravação.
+            if (existente is null && tx.Find<Caixa>(comanda.CaixaId)?.EstaAberto != true)
+            {
+                throw new DomainException("O caixa foi fechado. Abra o caixa na aba Caixa antes de vender (RN-CX-03).");
+            }
             var linha = new Comanda
             {
                 Id = comanda.Id,

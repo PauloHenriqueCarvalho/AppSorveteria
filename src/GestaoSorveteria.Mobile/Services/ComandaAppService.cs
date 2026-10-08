@@ -81,10 +81,16 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
 
     /// <summary>RN-CM-07 / RN-PG-02/03: pagamentos (um ou vários) somam exatamente o total; troco calculado pelo Domain.</summary>
     public Task<Comanda> FecharAsync(Guid comandaId, IReadOnlyList<DadosPagamento> pagamentos) =>
-        AlterarAsync(comandaId, comanda =>
+        AlterarAsync(comandaId, async comanda =>
         {
+            // RN-CX-05/06: o dinheiro desta venda tem que cair no esperado do caixa aberto, nunca num já fechado.
+            var aberto = await caixas.ObterAbertoLinhaAsync();
+            if (aberto is null || aberto.Id != comanda.CaixaId)
+            {
+                throw new DomainException("Esta comanda pertence a um caixa já fechado. Cancele-a e lance de novo no caixa atual.");
+            }
+
             comanda.Fechar(pagamentos, DateTime.UtcNow);
-            return Task.CompletedTask;
         });
 
     /// <summary>
@@ -116,7 +122,7 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
     {
         // A comanda leva quem vendeu (atendente logado, C1). Sem login o app nem chega nesta tela.
         var usuarioId = sessao.UsuarioId
-            ?? throw new InvalidOperationException("Nenhum atendente conectado. Entre com o PIN para vender.");
+            ?? throw new DomainException("Nenhum atendente conectado. Entre com o PIN para vender.");
 
         // RN-CX-03 / C3: não há venda sem caixa aberto (a tela já avisa antes; aqui é a garantia).
         var caixaAtual = await caixas.ObterAbertoAsync()

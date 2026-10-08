@@ -55,10 +55,8 @@ public class CaixaViewModel : BindableObject
     public ResumoCaixa? Resumo
     {
         get => _resumo;
-        set { _resumo = value; OnPropertyChanged(); OnPropertyChanged(nameof(TemMovimentos)); }
+        set { _resumo = value; OnPropertyChanged(); }
     }
-
-    public bool TemMovimentos => Movimentos.Count > 0;
 
     /// <summary>Conferência do último caixa fechado, para a dona/atendente conferir depois.</summary>
     public string UltimoFechamento
