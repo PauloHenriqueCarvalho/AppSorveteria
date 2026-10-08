@@ -68,6 +68,25 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos, 
         }
     }
 
+    /// <summary>C4: no ciclo de 1 min, atualiza o catálogo no máximo a cada <paramref name="idade"/> (preço mudado no painel chega ao balcão).</summary>
+    public async Task AtualizarSeAntigoAsync(TimeSpan idade)
+    {
+        var ultima = UltimaAtualizacaoUtc;
+        if (ultima is not null && DateTime.UtcNow - ultima < idade)
+        {
+            return;
+        }
+
+        try
+        {
+            await AtualizarAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Sorveteria] Catálogo não atualizado no ciclo: {ex.Message}");
+        }
+    }
+
     /// <summary>Volta a permitir a atualização automática (chamado quando o app volta do segundo plano).</summary>
     public void PermitirNovaAtualizacaoAoAbrir() => _tentouAoAbrir = false;
 

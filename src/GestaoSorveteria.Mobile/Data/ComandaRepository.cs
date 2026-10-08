@@ -58,6 +58,78 @@ public sealed class ComandaRepository(BancoLocal banco)
             abertas);
     }
 
+    // ---------------------------------------------------------------- fila de envio (C4)
+
+    public async Task<List<Pagamento>> ListarPagamentosAsync(Guid comandaId)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Pagamento>().Where(p => p.ComandaId == comandaId).ToListAsync();
+    }
+
+    /// <summary>Comandas fechadas/canceladas do caixa ainda não confirmadas pela API, mais antigas primeiro (até <paramref name="maximo"/>).</summary>
+    public async Task<List<Comanda>> ListarPendentesEnvioAsync(Guid caixaId, int maximo)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.PendenteEnvio == true)
+            .OrderBy(c => c.Numero)
+            .Take(maximo)
+            .ToListAsync();
+    }
+
+    public async Task<List<Guid>> ListarCaixasComPendenteEnvioAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        var linhas = await db.Table<Comanda>().Where(c => c.PendenteEnvio == true).ToListAsync();
+        return linhas.Select(c => c.CaixaId).Distinct().ToList();
+    }
+
+    public async Task<int> ContarPendentesEnvioAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>().Where(c => c.PendenteEnvio == true).CountAsync();
+    }
+
+    public async Task<int> ContarRejeitadasAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>().Where(c => c.RejeitadaMotivo != null).CountAsync();
+    }
+
+    /// <summary>C5: comandas fechadas/canceladas do caixa, mais recentes primeiro, com a situação do envio.</summary>
+    public async Task<List<Comanda>> ListarEncerradasDoCaixaAsync(Guid caixaId)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.Status != Dominio.StatusComanda.Aberta)
+            .OrderByDescending(c => c.Numero)
+            .ToListAsync();
+    }
+
+    /// <summary>aceita / ja_recebida: sai da fila. Nada mais muda na comanda (RN-CM-07).</summary>
+    public async Task MarcarEnviadaAsync(Guid id)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync(
+            "UPDATE comandas SET pendente_envio = 0, enviada_em = ?, rejeitada_motivo = NULL, ultimo_erro_envio = NULL WHERE id = ?",
+            DateTime.UtcNow, id);
+    }
+
+    /// <summary>rejeitada: sai da fila, mas o motivo fica visível para o atendente (RN-SY-03). A venda continua gravada.</summary>
+    public async Task MarcarRejeitadaAsync(Guid id, string motivo)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync("UPDATE comandas SET pendente_envio = 0, rejeitada_motivo = ? WHERE id = ?", motivo, id);
+    }
+
+    /// <summary>Falha de rede/servidor: continua pendente, só anota.</summary>
+    public async Task RegistrarFalhaEnvioAsync(Guid id, string erro)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync(
+            "UPDATE comandas SET tentativas_envio = tentativas_envio + 1, ultimo_erro_envio = ? WHERE id = ?", erro, id);
+    }
+
     /// <summary>RN-CM-02 / B8: sequencial dentro do caixa, contando também as fechadas.</summary>
     public async Task<int> ProximoNumeroAsync(Guid caixaId)
     {

@@ -11,7 +11,7 @@ namespace SorveteriaMaui.Services;
 /// Casos de uso da comanda no aparelho: carrega do SQLite → aplica a regra do Domain → grava tudo numa transação.
 /// Total, troco e validações vêm do Domain (mesmo código da API). Erros de regra saem como <see cref="DomainException"/>.
 /// </summary>
-public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaRepository caixas, SessaoUsuario sessao)
+public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaRepository caixas, SessaoUsuario sessao, SyncService sync)
 {
     // Uma operação por vez: dois toques rápidos não podem ler a mesma versão da comanda
     // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
@@ -81,7 +81,7 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
 
     /// <summary>RN-CM-07 / RN-PG-02/03: pagamentos (um ou vários) somam exatamente o total; troco calculado pelo Domain.</summary>
     public Task<Comanda> FecharAsync(Guid comandaId, IReadOnlyList<DadosPagamento> pagamentos) =>
-        AlterarAsync(comandaId, async comanda =>
+        DepoisEnviar(AlterarAsync(comandaId, async comanda =>
         {
             // RN-CX-05/06: o dinheiro desta venda tem que cair no esperado do caixa aberto, nunca num já fechado.
             var aberto = await caixas.ObterAbertoLinhaAsync();
@@ -91,32 +91,40 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             }
 
             comanda.Fechar(pagamentos, DateTime.UtcNow);
-        });
+        }));
 
     /// <summary>
     /// RN-CM-08 / B10: cancela comanda aberta (motivo opcional). Nada é apagado: itens ficam gravados e a
     /// comanda cancelada entra na fila de envio.
     /// </summary>
     public Task<Comanda> CancelarAsync(Guid comandaId, string? motivo) =>
-        AlterarAsync(comandaId, comanda =>
+        DepoisEnviar(AlterarAsync(comandaId, comanda =>
         {
             comanda.Cancelar(string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim(), DateTime.UtcNow);
             return Task.CompletedTask;
-        });
+        }));
 
     /// <summary>
     /// RN-CM-10 / B1: abre a comanda, lança "Venda avulsa" e fecha com o pagamento numa única gravação.
     /// Se o pagamento for recusado, nada é gravado (não sobra comanda aberta).
     /// </summary>
     public Task<Comanda> VendaRapidaAsync(decimal valor, IReadOnlyList<DadosPagamento> pagamentos) =>
-        UmaPorVezAsync(async () =>
+        DepoisEnviar(UmaPorVezAsync(async () =>
         {
             var comanda = await NovaComandaAsync();
             comanda.AdicionarItemLivre(Comanda.DescricaoVendaAvulsa, valor);
             comanda.Fechar(pagamentos, DateTime.UtcNow);
             await comandas.GravarAsync(comanda);
             return comanda;
-        });
+        }));
+
+    /// <summary>RN-SY-03: comanda pronta (fechada/cancelada) sobe logo em seguida, em segundo plano. A venda já está gravada.</summary>
+    private async Task<Comanda> DepoisEnviar(Task<Comanda> operacao)
+    {
+        var comanda = await operacao;
+        sync.Disparar();
+        return comanda;
+    }
 
     private async Task<Comanda> NovaComandaAsync(TipoComanda tipo = TipoComanda.Balcao, string? observacao = null)
     {

@@ -15,8 +15,54 @@ public class ListarComandasViewModel : BindableObject
     private readonly SessaoUsuario _sessao;
     private readonly CatalogoService _catalogo;
     private readonly CaixaAppService _caixa;
+    private readonly SyncService _sync;
+    private readonly CatalogoService _catalogoCiclo;
 
     public ObservableCollection<Comanda> Comandas { get; set; } = new();
+
+    private string _indicadorEnvio = string.Empty;
+    /// <summary>RN-SY-05: "X vendas aguardando envio", sempre visível. Toque = enviar agora (ou entrar com o PIN).</summary>
+    public string IndicadorEnvio
+    {
+        get => _indicadorEnvio;
+        set { _indicadorEnvio = value; OnPropertyChanged(); }
+    }
+
+    private string _mensagemEnvio = string.Empty;
+    public string MensagemEnvio
+    {
+        get => _mensagemEnvio;
+        set { _mensagemEnvio = value; OnPropertyChanged(); OnPropertyChanged(nameof(TemMensagemEnvio)); }
+    }
+
+    public bool TemMensagemEnvio => !string.IsNullOrWhiteSpace(MensagemEnvio);
+
+    public ICommand EnviarAgoraCommand { get; private set; } = null!;
+
+    private async Task AtualizarIndicador()
+    {
+        var estado = await _sync.EstadoAsync();
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            IndicadorEnvio = estado.Sincronizando ? "⏳ Enviando vendas…"
+                : estado.PrecisaPin ? "🔒 Sessão vencida — toque para entrar e enviar"
+                : estado.Pendentes == 0 ? (estado.Rejeitadas > 0 ? $"⚠ {estado.Rejeitadas} venda(s) rejeitada(s) — veja o histórico" : "✅ Tudo enviado")
+                : estado.ComandasPendentes == 1 && estado.CaixasPendentes == 0 ? "📤 1 venda aguardando envio"
+                : $"📤 {estado.ComandasPendentes} venda(s) e {estado.CaixasPendentes} caixa(s) aguardando envio";
+            MensagemEnvio = estado.Pendentes > 0 || estado.PrecisaPin ? estado.UltimaMensagem : string.Empty;
+        });
+    }
+
+    private async Task EnviarAgora()
+    {
+        if ((await _sync.EstadoAsync()).PrecisaPin)
+        {
+            await View.LoginView.PedirPinDeNovoAsync(); // RN-US-06: a fila espera o PIN
+            return;
+        }
+
+        await _sync.SincronizarAsync(silencioso: false);
+    }
 
     private string _estadoCaixa = string.Empty;
     /// <summary>C3: "Caixa aberto desde HH:mm" ou aviso de caixa fechado.</summary>
@@ -44,14 +90,21 @@ public class ListarComandasViewModel : BindableObject
     public ICommand VerDetalhesCommand { get; }
     public ICommand SairCommand { get; }
 
-    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa)
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa, SyncService sync)
     {
         _comandas = comandas;
         _repositorio = repositorio;
         _paymentService = paymentService;
         _sessao = sessao;
         _catalogo = catalogo;
+        _catalogoCiclo = catalogo;
         _caixa = caixa;
+        _sync = sync;
+
+        EnviarAgoraCommand = new Command(async () => await EnviarAgora());
+        _sync.Mudou += async (_, _) => await AtualizarIndicador();
+        _sync.CatalogoNoCiclo ??= () => _catalogoCiclo.AtualizarSeAntigoAsync(TimeSpan.FromMinutes(5));
+        _sync.IniciarCiclo(); // C4: a cada 1 min (idempotente)
 
         SairCommand = new Command(async () => await Sair());
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
@@ -67,6 +120,8 @@ public class ListarComandasViewModel : BindableObject
     {
         OnPropertyChanged(nameof(NomeAtendente));
         _ = _catalogo.AtualizarAoAbrirAsync(); // C2: uma vez por execução, em segundo plano; nunca segura a tela
+        _sync.Disparar();                      // C4: ao abrir o app / voltar à tela
+        _ = AtualizarIndicador();
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _repositorio.ListarAbertasAsync();

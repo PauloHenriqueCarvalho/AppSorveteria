@@ -23,5 +23,6 @@ public sealed record ProblemaApi(string? Title, string? Detail, int? Status, Dic
 [JsonSerializable(typeof(CatalogoProdutosResponse))]
 [JsonSerializable(typeof(ProdutoDto))]
 [JsonSerializable(typeof(SyncCaixasRequest))]
+[JsonSerializable(typeof(SyncComandasRequest))]
 [JsonSerializable(typeof(SyncResponse))]
 internal sealed partial class ApiJsonContext : JsonSerializerContext;
