@@ -55,9 +55,9 @@ Plano detalhado em docs/06, seção 4.
 - [x] **Etapa B — vendas:** pagamento com troco correto e dividido (#23), venda rápida (#15), cancelar comanda (#24), busca (#28), delivery (#29), toast em vez de alerta (#26)
 - [ ] **Etapa C — caixa, login e sincronização** (sequência C1–C5 em docs/08, Sessão B):
   - [x] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração) — PR aberto para teste no tablet
-  - [ ] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16)
-  - [ ] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio`
-  - [ ] C4 — `SyncService` + indicador "X vendas aguardando envio"
+  - [x] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16) — PR aberto para teste no tablet
+  - [x] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio` — PR aberto para teste no tablet
+  - [x] C4 — `SyncService` + indicador "X vendas aguardando envio" (o ciclo de 1 min também atualiza o catálogo) — PR aberto para teste no tablet
   - [ ] C5 — Histórico do turno com status de envio
 - [ ] Teste no emulador (API em `10.0.2.2`) e no celular real com a internet desligada
 

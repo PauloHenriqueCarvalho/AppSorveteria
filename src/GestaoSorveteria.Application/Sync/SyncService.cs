@@ -250,8 +250,11 @@ public sealed class SyncService
         {
             // RN-CX-01: o índice único no banco segura a corrida; aqui é a mensagem amigável.
             var aberto = await _caixas.ObterAbertoAsync(cancellationToken);
+            // Hora de Brasília: a mensagem aparece no tablet do balcão. O caixa preso sai pelo fechamento forçado do painel (RN-CX-09).
             Guard(aberto is not null,
-                $"Já existe outro caixa aberto no servidor (aberto em {aberto?.AbertoEm:dd/MM/yyyy HH:mm} UTC). Feche-o antes (RN-CX-01).");
+                $"Já existe outro caixa aberto no servidor, aberto em " +
+                $"{(aberto is null ? default : TimeZoneInfo.ConvertTimeFromUtc(aberto.AbertoEm, DiaComercial.Fuso)):dd/MM/yyyy 'às' HH:mm}. " +
+                "Feche esse caixa antes de abrir outro: se ele não está neste aparelho, a dona fecha pelo painel em Caixas (RN-CX-01, RN-CX-09).");
         }
 
         await ExigirMovimentosInexistentesAsync(movimentos, cancellationToken);

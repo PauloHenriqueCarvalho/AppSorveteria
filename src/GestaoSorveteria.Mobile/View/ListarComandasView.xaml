@@ -11,7 +11,7 @@
         <ToolbarItem Text="Sair" Command="{Binding SairCommand}" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto, Auto, *">
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
 
         <Frame Grid.Row="0" Margin="10" BackgroundColor="#6200EE" CornerRadius="10" HasShadow="True" BorderColor="Transparent">
             <Grid ColumnDefinitions="*, Auto">
@@ -19,13 +19,27 @@
                     <Label Text="Comandas Ativas:" TextColor="White" VerticalOptions="Center"/>
                     <Label Text="{Binding TotalComandasAbertas}" TextColor="White" FontAttributes="Bold" FontSize="20"/>
                 </HorizontalStackLayout>
-                <Label Grid.Column="1" Text="{Binding NomeAtendente, StringFormat='👤 {0}'}"
-                       TextColor="White" FontSize="14" VerticalOptions="Center"/>
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                    <Label Text="{Binding NomeAtendente, StringFormat='👤 {0}'}" TextColor="White" FontSize="14" HorizontalTextAlignment="End"/>
+                    <!-- C3 -->
+                    <Label Text="{Binding EstadoCaixa}" TextColor="White" FontSize="12" HorizontalTextAlignment="End"/>
+                </VerticalStackLayout>
             </Grid>
         </Frame>
 
+        <!-- C4 / RN-SY-05: indicador sempre visível; toque envia agora (ou pede o PIN) -->
+        <Border Grid.Row="1" Margin="10,0" Padding="12,8" StrokeThickness="0" BackgroundColor="#FFF8E1" StrokeShape="RoundRectangle 8">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding EnviarAgoraCommand}" />
+            </Border.GestureRecognizers>
+            <VerticalStackLayout Spacing="2">
+                <Label Text="{Binding IndicadorEnvio}" FontSize="14" FontAttributes="Bold" TextColor="#5D4037" />
+                <Label Text="{Binding MensagemEnvio}" FontSize="12" TextColor="#795548" IsVisible="{Binding TemMensagemEnvio}" />
+            </VerticalStackLayout>
+        </Border>
+
         <!-- Topo fixo com Nova Comanda e Venda Rápida -->
-        <Grid Grid.Row="1" ColumnDefinitions="*, *, *" Padding="10" ColumnSpacing="10">
+        <Grid Grid.Row="2" ColumnDefinitions="*, *, *" Padding="10" ColumnSpacing="10">
             <Button Grid.Column="0"
                     Text="➕  Nova Comanda"
                     FontSize="16"
@@ -58,7 +72,7 @@
                     Command="{Binding VendaRapidaCommand}" />
         </Grid>
 
-        <CollectionView Grid.Row="2" 
+        <CollectionView Grid.Row="3" 
                         ItemsSource="{Binding Comandas}"
                         Margin="10">
             <CollectionView.ItemTemplate>

@@ -66,6 +66,7 @@ Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produt
 | O painel demora para abrir | Espere 1 minuto. Se passar de 2, confira a internet do celular |
 | Venda com valor errado já finalizada | Dona: painel → Vendas → Estornar (com motivo). Atendente: lança a venda certa de novo |
 | Atendente esqueceu de fechar o caixa | Dona: painel → Caixas → **Fechar pelo painel** (com motivo). O valor contado fica 0 e a diferença aparece para conferir no dia seguinte |
+| O tablet não deixa abrir o caixa: "já existe outro caixa aberto" | O sistema ainda vê um caixa antigo aberto. Se o tablet disser que o fechamento anterior não chegou, espere 1 minuto com internet e tente de novo. Se continuar, a dona fecha o caixa antigo pelo painel → Caixas → **Fechar pelo painel** (com motivo) e o tablet abre o novo |
 | Esqueci o PIN | Dona: painel → Usuários → Redefinir PIN |
 | O app pede para atualizar | Toque no link, baixe e instale por cima. As vendas guardadas continuam lá |
 | Caixa não bateu | Painel → Caixas mostra a diferença. Confira retiradas sem registro e trocos. Não dá para "consertar" o caixa fechado: registre um reforço ou retirada com motivo no caixa seguinte |

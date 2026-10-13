@@ -4,6 +4,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
 using GestaoSorveteria.Contracts.Auth;
+using GestaoSorveteria.Contracts.Produtos;
+using GestaoSorveteria.Contracts.Sync;
 
 namespace SorveteriaMaui.Services.Api;
 
@@ -26,6 +28,34 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
             autenticado: false, cancellationToken);
 
         return await LerAsync(resposta, ApiJsonContext.Default.LoginResponse, cancellationToken);
+    }
+
+    /// <summary>
+    /// GET /api/produtos?desde= — catálogo (RN-PR-03: inativos vêm junto). Sem <paramref name="desde"/> vem tudo;
+    /// com ele, só o que mudou a partir dali (o app guarda o <c>GeradoEmUtc</c> da resposta anterior).
+    /// </summary>
+    public async Task<CatalogoProdutosResponse> ObterCatalogoAsync(DateTime? desde, CancellationToken cancellationToken = default)
+    {
+        var rota = desde is { } data
+            ? $"/api/produtos?desde={Uri.EscapeDataString(DateTime.SpecifyKind(data, DateTimeKind.Utc).ToString("O"))}"
+            : "/api/produtos";
+
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, rota, null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.CatalogoProdutosResponse, cancellationToken);
+    }
+
+    /// <summary>POST /api/sync/caixas (RN-SY-02/03). Um resultado por caixa, na ordem do lote.</summary>
+    public async Task<SyncResponse> EnviarCaixasAsync(SyncCaixasRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/caixas", request, ApiJsonContext.Default.SyncCaixasRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
+    }
+
+    /// <summary>POST /api/sync/comandas (RN-SY-02/03/06). Um resultado por comanda, na ordem do lote.</summary>
+    public async Task<SyncResponse> EnviarComandasAsync(SyncComandasRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/comandas", request, ApiJsonContext.Default.SyncComandasRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
     }
 
     /// <summary>Envia a requisição; 2xx volta para o chamador ler, qualquer outra vira <see cref="ApiException"/>.</summary>

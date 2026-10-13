@@ -2,9 +2,10 @@ using SorveteriaMaui.Model;
 
 namespace SorveteriaMaui.Data;
 
-/// <summary>Cache local do catálogo de produtos.</summary>
+/// <summary>Cache local do catálogo de produtos (vem da API, C2). Nunca é editado pelo atendente.</summary>
 public sealed class ProdutoRepository(BancoLocal banco)
 {
+    /// <summary>RN-PR-03/05: só ativos, na ordem dos botões.</summary>
     public async Task<List<Produto>> ListarAtivosAsync()
     {
         var db = await banco.ConexaoAsync();
@@ -21,37 +22,42 @@ public sealed class ProdutoRepository(BancoLocal banco)
         return await db.FindAsync<Produto>(id);
     }
 
-    public async Task SalvarAsync(Produto produto)
+    public async Task<int> ContarAsync()
     {
         var db = await banco.ConexaoAsync();
-        await db.InsertOrReplaceAsync(produto);
+        return await db.Table<Produto>().CountAsync();
     }
 
-    /// <summary>Produtos iniciais do MVP até o app baixar o catálogo da API (Etapa C).</summary>
-    public async Task PopularSeVazioAsync()
+    /// <summary>
+    /// Primeira carga: troca o cache inteiro pelo catálogo da API, numa transação. Some o que era local
+    /// (produtos do seed do MVP e os cadastrados no aparelho, B16); as comandas não mudam, porque o item
+    /// guarda descrição e preço praticados (RN-PR-04).
+    /// </summary>
+    public async Task SubstituirTudoAsync(IReadOnlyList<Produto> produtos)
     {
         var db = await banco.ConexaoAsync();
-        if (await db.Table<Produto>().CountAsync() > 0)
+        await db.RunInTransactionAsync(conexao =>
+        {
+            conexao.DeleteAll<Produto>();
+            conexao.InsertAll(produtos, runInTransaction: false);
+        });
+    }
+
+    /// <summary>Cargas seguintes: grava só o que mudou (inclusive os desativados, que a tela esconde).</summary>
+    public async Task GravarAsync(IReadOnlyList<Produto> produtos)
+    {
+        if (produtos.Count == 0)
         {
             return;
         }
 
-        var agora = DateTime.UtcNow;
-        var ordem = 0;
-        Produto Novo(string nome, decimal preco, string categoria) =>
-            new() { Nome = nome, Preco = preco, Categoria = categoria, Ordem = ordem++, CriadoEm = agora };
-
-        await db.InsertAllAsync(new[]
+        var db = await banco.ConexaoAsync();
+        await db.RunInTransactionAsync(conexao =>
         {
-            Novo("Sorvete de Fruta", 2.00m, "Sorvete"),
-            Novo("Sorvete de Leite", 2.50m, "Sorvete"),
-            Novo("Sorvete Especial", 8.00m, "Sorvete"),
-            Novo("Sorvete Skimo", 5.00m, "Sorvete"),
-            Novo("Sorvete Moreninha", 7.00m, "Sorvete"),
-            Novo("Promoção de Picoles", 37.00m, "Sorvete"),
-            Novo("Promoção de Potes 1L", 48.00m, "Sorvete"),
-            Novo("Açaí Montado 400ml", 23.00m, "Açaí"),
-            Novo("Água Mineral", 3.50m, "Bebida"),
+            foreach (var produto in produtos)
+            {
+                conexao.InsertOrReplace(produto);
+            }
         });
     }
 }

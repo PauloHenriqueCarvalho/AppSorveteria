@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
+             xmlns:model="clr-namespace:SorveteriaMaui.Model"
+             x:Class="SorveteriaMaui.View.CaixaView"
+             x:DataType="vm:CaixaViewModel"
+             Title="Caixa"
+             BackgroundColor="#F5F5F5">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="12">
+
+            <!-- Caixa recusado pelo servidor: nunca some em silêncio (RN-SY-03); caixa preso sai pelo painel (RN-CX-09) -->
+            <Frame IsVisible="{Binding TemAvisoServidor}" Padding="12" CornerRadius="12" HasShadow="False" BorderColor="#E65100" BackgroundColor="#FFF3E0">
+                <Label Text="{Binding AvisoServidor}" FontSize="14" TextColor="#BF360C" />
+            </Frame>
+
+            <!-- Sem caixa: abrir com fundo de troco (RN-CX-02; exige internet, RN-SY-04) -->
+            <Frame IsVisible="{Binding SemCaixaAberto}" Padding="16" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Caixa fechado" FontSize="22" FontAttributes="Bold" TextColor="#B71C1C" />
+                    <Label Text="Abra o caixa para começar a vender. Informe quanto dinheiro de troco está na gaveta (pode ser 0). Precisa de internet só para abrir." FontSize="14" TextColor="#555" />
+                    <Label Text="Fundo de troco (R$)" FontSize="14" TextColor="#555" />
+                    <Entry Text="{Binding FundoTrocoTexto}" Placeholder="0,00" Keyboard="Telephone" FontSize="24" HorizontalTextAlignment="Center" />
+                    <Button Text="Abrir caixa" FontSize="20" FontAttributes="Bold" HeightRequest="64" BackgroundColor="#4CAF50" TextColor="White" CornerRadius="12"
+                            Command="{Binding AbrirCaixaCommand}" />
+                    <Label Text="{Binding UltimoFechamento}" IsVisible="{Binding TemUltimoFechamento}" FontSize="13" TextColor="#555" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Caixa aberto: números do turno (RN-CX-06, calculados pelo Domain) -->
+            <Frame IsVisible="{Binding TemCaixaAberto}" Padding="16" CornerRadius="12" HasShadow="True" BorderColor="Transparent" BackgroundColor="#6200EE">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Caixa aberto" TextColor="White" FontSize="14" />
+                    <Label Text="{Binding Resumo.Esperado, StringFormat='R$ {0:F2}'}" TextColor="White" FontSize="36" FontAttributes="Bold" />
+                    <Label Text="esperado na gaveta agora" TextColor="White" FontSize="13" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Frame IsVisible="{Binding TemCaixaAberto}" Padding="16" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
+                <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                    <Label Grid.Row="0" Text="Fundo de troco" />
+                    <Label Grid.Row="0" Grid.Column="1" Text="{Binding Resumo.FundoTroco, StringFormat='R$ {0:F2}'}" FontAttributes="Bold" />
+                    <Label Grid.Row="1" Text="+ Vendas em dinheiro" />
+                    <Label Grid.Row="1" Grid.Column="1" Text="{Binding Resumo.VendasDinheiro, StringFormat='R$ {0:F2}'}" FontAttributes="Bold" TextColor="#2E7D32" />
+                    <Label Grid.Row="2" Text="+ Suprimentos" />
+                    <Label Grid.Row="2" Grid.Column="1" Text="{Binding Resumo.Suprimentos, StringFormat='R$ {0:F2}'}" FontAttributes="Bold" TextColor="#1976D2" />
+                    <Label Grid.Row="3" Text="− Sangrias" />
+                    <Label Grid.Row="3" Grid.Column="1" Text="{Binding Resumo.Sangrias, StringFormat='R$ {0:F2}'}" FontAttributes="Bold" TextColor="#B71C1C" />
+                    <BoxView Grid.Row="4" Grid.ColumnSpan="2" HeightRequest="1" Color="#EEE" />
+                    <Label Grid.Row="5" Text="Total vendido (todas as formas)" TextColor="#555" />
+                    <Label Grid.Row="5" Grid.Column="1" Text="{Binding Resumo.TotalVendido, StringFormat='R$ {0:F2}'}" TextColor="#555" />
+                    <Label Grid.Row="6" Text="Comandas fechadas / abertas" TextColor="#555" />
+                    <HorizontalStackLayout Grid.Row="6" Grid.Column="1" Spacing="4">
+                        <Label Text="{Binding Resumo.ComandasFechadas}" TextColor="#555" />
+                        <Label Text="/" TextColor="#555" />
+                        <Label Text="{Binding Resumo.ComandasAbertas}" TextColor="#555" />
+                    </HorizontalStackLayout>
+                </Grid>
+            </Frame>
+
+            <!-- RN-CX-04 -->
+            <Grid IsVisible="{Binding TemCaixaAberto}" ColumnDefinitions="*, *" ColumnSpacing="10">
+                <Button Grid.Column="0" Text="− Sangria" FontSize="16" FontAttributes="Bold" HeightRequest="56" BackgroundColor="#FFEBEE" TextColor="#B71C1C" CornerRadius="10"
+                        Command="{Binding SangriaCommand}" />
+                <Button Grid.Column="1" Text="+ Suprimento" FontSize="16" FontAttributes="Bold" HeightRequest="56" BackgroundColor="#E3F2FD" TextColor="#1976D2" CornerRadius="10"
+                        Command="{Binding SuprimentoCommand}" />
+            </Grid>
+
+            <Label IsVisible="{Binding TemCaixaAberto}" Text="Movimentos do turno" FontSize="14" TextColor="#555" Margin="4,8,0,0" />
+            <CollectionView IsVisible="{Binding TemCaixaAberto}" ItemsSource="{Binding Movimentos}" SelectionMode="None" HeightRequest="200">
+                <CollectionView.EmptyView>
+                    <Label Text="Nenhuma sangria ou suprimento ainda." FontSize="13" TextColor="#888" Margin="8" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="model:MovimentoCaixa">
+                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="8,6" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="{Binding EmLocal, StringFormat='{0:HH:mm}'}" TextColor="#888" FontSize="13" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1">
+                                <Label Text="{Binding TipoTexto}" FontAttributes="Bold" FontSize="14" />
+                                <Label Text="{Binding Motivo}" FontSize="12" TextColor="#555" LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="{Binding Valor, StringFormat='R$ {0:F2}'}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- RN-CX-05/06 -->
+            <Button IsVisible="{Binding TemCaixaAberto}" Text="Fechar caixa (conferir gaveta)" FontSize="18" FontAttributes="Bold" HeightRequest="64"
+                    BackgroundColor="#B71C1C" TextColor="White" CornerRadius="12" Margin="0,8,0,16"
+                    Command="{Binding FecharCaixaCommand}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
