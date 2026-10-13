@@ -295,7 +295,7 @@ public class SyncComandasTests
     public async Task ReceberComandas_VendaDepoisDeFechamentoForcado_AceitaEMarca()
     {
         await AbrirCaixa();
-        _caixas.Caixas[0].Fechar(0m, 0m, _atendente, Abertura.AddMinutes(30), "fechamento forçado"); // RN-CX-09
+        _caixas.Caixas[0].FecharForcado(0m, _atendente, Abertura.AddMinutes(30), "fechamento forçado pelo painel"); // RN-CX-09
 
         var resposta = await Enviar(Avulsa(10m, "Dinheiro"));
 

@@ -54,6 +54,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProdutoService>();
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<CaixaConsultaService>();
+builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<ComandaConsultaService>();
 builder.Services.AddScoped<ComandaService>();
 builder.Services.AddScoped<RelatorioService>();

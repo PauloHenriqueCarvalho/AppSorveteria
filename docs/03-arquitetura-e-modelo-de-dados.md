@@ -156,6 +156,7 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | total_vendas_dinheiro_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
 | valor_esperado_app | numeric(12,2) null | RN-CX-10: valor do celular, só quando diverge |
 | divergencia_sincronizacao | boolean | RN-CX-10 |
+| fechamento_forcado | boolean | RN-CX-09: fechado pela dona no painel (contado 0); motivo em `observacao` |
 | xmin (sistema) | xid | token de concorrência: dois fechamentos simultâneos → 409, nunca sobrescrita (RN-CX-07) |
 | observacao | varchar(500) null | |
 
@@ -247,6 +248,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |
 | GET | `/api/relatorios/dia?data=` | Admin | resumo do dia para o painel |
 | GET | `/api/caixas?de=&ate=` | Admin | histórico de fechamentos |
+| POST | `/api/caixas/{id}/fechar-forcado` | Admin | RN-CX-09: `{ "motivo": "..." }`; contado = 0, vendas em dinheiro = as já recebidas, diferença gravada; caixa já fechado → 400; corrida com a sincronização → 409 (xmin) |
 | GET | `/api/versao` | público | `versaoApi`, `versaoMinimaApp`, `versaoAtualApp`, `linkApk` (configuração `App:*`); abaixo da mínima o app exige atualizar, abaixo da atual só avisa |
 
 Erros seguem **RFC 9457 ProblemDetails**: 400 regra de negócio (`DomainException`), 401/403 acesso, 404 não encontrado, 409 conflito (violação de unicidade), 429 rate limit. No sync em lote, rejeição de uma comanda **não** derruba o lote: vem no resultado daquela comanda.
@@ -265,6 +267,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | GET | `/api/caixas/atual` | Dashboard (caixa aberto) — **pronto** | `CaixaResumoDto` ou 204 sem caixa aberto |
 | GET | `/api/caixas/{id}` | Caixas (detalhe) — **pronto** | `CaixaDetalheDto` |
 | GET/POST | `/api/usuarios`, `/api/usuarios/{id}/redefinir-senha`, `/ativar`, `/desativar` | Usuários — **pronto** (RN-US-01…08, RN-US-10) | `UsuarioDto` / `IReadOnlyList<UsuarioDto>` |
+| POST | `/api/caixas/{id}/fechar-forcado` | Caixas (detalhe do caixa aberto — RN-CX-09) — **pronto** (corpo `FecharCaixaForcadoRequest { motivo }`) | `CaixaDetalheDto` (resumo com `fechamentoForcado = true`) |
 
 DTOs (namespace `Contracts.Relatorios`, `Contracts.Comandas`, `Contracts.Caixas`; enums como texto, dinheiro `decimal` 2 casas, datas UTC):
 
@@ -299,7 +302,9 @@ record CaixaResumoDto(Guid Id, string Status, DateTime AbertoEm, string AbertoPo
     DateTime? FechadoEm, string? FechadoPorNome,
     decimal TotalVendas, int QuantidadeComandas,            // todas as formas, calculado na API
     decimal? TotalVendasDinheiro, decimal? ValorEsperado, decimal? ValorContado, decimal? Diferenca,
-    bool DivergenciaSincronizacao, int VendasRecebidasAposFechamento, decimal DinheiroRecebidoAposFechamento);   // RN-CX-10 e RN-CX-08: pontos para a dona conferir
+    bool DivergenciaSincronizacao, int VendasRecebidasAposFechamento, decimal DinheiroRecebidoAposFechamento,   // RN-CX-10 e RN-CX-08: pontos para a dona conferir
+    bool FechamentoForcado);                    // RN-CX-09: fechado pela dona no painel, contado 0
+record FecharCaixaForcadoRequest([Required, StringLength(300, MinimumLength = 3)] string Motivo);
 record CaixaDetalheDto(CaixaResumoDto Resumo, IReadOnlyList<MovimentoCaixaDto> Movimentos,
     IReadOnlyList<TotalPorFormaDto> PorFormaPagamento, string? Observacao);
 record MovimentoCaixaDto(Guid Id, string Tipo, decimal Valor, string Motivo, string UsuarioNome, DateTime Em);
@@ -308,7 +313,7 @@ record MovimentoCaixaDto(Guid Id, string Tipo, decimal Valor, string Motivo, str
 Decidido em 30/09/2026 (Paulo):
 1. **Estorno × cancelamento:** status próprio `Estornada` + colunas `estornada_em`, `estornada_por_usuario_id`, `motivo_estorno` (migração). `Cancelada` fica só para a comanda aberta cancelada (RN-CM-08).
 2. **Estorno depois do caixa fechado:** só no relatório — o caixa não muda (RN-CX-07). Dinheiro devolvido ao cliente = sangria no caixa aberto, pelo app.
-3. **Fechamento forçado pelo painel** (RN-CX-09): Sprint 4.
+3. **Fechamento forçado pelo painel** (RN-CX-09): Sprint 4 — **pronto** em 07/10/2026 (`POST /api/caixas/{id}/fechar-forcado`).
 4. `CaixaAtual` no dashboard mostra o último estado recebido do app (depende de `POST /api/sync/caixas`).
 5. Os endpoints de leitura são implementados na frente do painel, com uma consulta própria (`Application/Painel`, implementada com projeções do EF em `Infrastructure`), sem mexer nos repositórios usados pela sincronização.
 

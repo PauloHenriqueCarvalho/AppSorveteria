@@ -53,6 +53,10 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("fechado_por_usuario_id");
 
+                    b.Property<bool>("FechamentoForcado")
+                        .HasColumnType("boolean")
+                        .HasColumnName("fechamento_forcado");
+
                     b.Property<decimal>("FundoTroco")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")

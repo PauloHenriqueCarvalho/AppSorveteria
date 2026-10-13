@@ -103,6 +103,8 @@ export interface CaixaResumoDto {
   /** RN-CX-08: vendas que chegaram depois do fechamento. */
   vendasRecebidasAposFechamento: number
   dinheiroRecebidoAposFechamento: number
+  /** RN-CX-09: fechado pela dona no painel, com contado 0 (o atendente esqueceu de fechar). */
+  fechamentoForcado: boolean
 }
 
 /** Contracts/Caixas/MovimentoCaixaDto */
