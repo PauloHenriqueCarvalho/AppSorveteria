@@ -3,17 +3,13 @@ using static SorveteriaMaui.Model.Conversoes;
 
 namespace SorveteriaMaui.Model;
 
-/// <summary>Cache local do catálogo. Espelha o <c>Produto</c> do Domain.</summary>
+/// <summary>
+/// Cache local do catálogo, baixado de <c>GET /api/produtos</c> (C2). Espelha o <c>Produto</c> do Domain.
+/// O cadastro é feito no painel; o app só lê (fim do cadastro local, B16). Categoria é texto (B13).
+/// </summary>
 [Table("produtos")]
 public class Produto
 {
-    /// <summary>
-    /// B13: categoria gravada como texto (antes era índice, com significados diferentes no seed e no cadastro).
-    /// Lista provisória até a dona confirmar as categorias (docs/02, seção 10, pergunta 2).
-    /// </summary>
-    public static readonly IReadOnlyList<string> Categorias =
-        ["Sorvete", "Picolé", "Pote", "Açaí", "Bebida", "Acompanhamento", "Self-Service"];
-
     private DateTime _criadoEm;
     private DateTime? _atualizadoEm;
 
