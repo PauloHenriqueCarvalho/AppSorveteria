@@ -6,7 +6,7 @@
 
 ```
 Fase 1 — Sistema básico ............ Sprint 0 · 1 · 2 · 3 · 4   (5 semanas)
-Fase 2 — Estoque inteligente ....... Sprint 5 · 6 · 7           (+3 semanas)
+Fase 2 — Estoque e pedidos ......... Sprint 5 · 6 · 7           (+3 semanas)
 Fase 3 — Análise e relatórios ...... Sprint 8 · 9               (+2 semanas)
 Fase 4 — Expansões ................. a combinar
 ```
@@ -97,20 +97,37 @@ Detalhes em docs/07.
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
 
-## Fase 2 — Estoque inteligente
+## Fase 2 — Estoque e pedidos ao fornecedor
 
-### Sprint 5 — Insumos e ficha técnica
-- [ ] Entidades `Insumo`, `FichaTecnica`, `MovimentoEstoque` + migração
-- [ ] Painel: cadastro de insumos (unidade, mínimo), ficha técnica por produto, entrada de reposição (atualiza custo médio)
+Redesenhada em 13/10/2026 a partir da planilha da dona (docs/10). Estoque de **produto pronto** (picolé por caixa, pote, balde), pedido sugerido e **conferência da entrega**. Insumos e ficha técnica foram para a Fase 4.
 
-### Sprint 6 — Baixa automática e alertas
-- [ ] Ao fechar comanda: baixa por ficha técnica (RN-ES-02); estorno devolve (RN-ES-03)
-- [ ] Ajuste/perda com motivo; histórico de movimentos por insumo
-- [ ] Alertas de mínimo no dashboard e lista "repor hoje"
+Antes de começar: levar as 8 perguntas de docs/10, seção 5, para a dona (cada uma tem padrão adotado; nenhuma bloqueia o Sprint 5).
 
-### Sprint 7 — Previsão de ruptura
-- [ ] Consumo médio diário (14 dias) e dias restantes (RN-ES-07); lista de compras sugerida (quanto comprar para X dias)
-- [ ] Teste com dados reais de 2 semanas; ajuste de mínimos com a dona
+### Sprint 5 — Catálogo e estoque
+- [ ] Domain: `Fornecedor`, `ItemEstoque`, `MovimentoEstoque` (saldo em unidades, exibição em embalagens com meia caixa) + testes (RN-ES-01/02/03/07, RN-PF-01) + migração
+- [ ] API: fornecedores e itens de estoque (Admin); importação do `docs/fase2/catalogo-inicial.csv` (idempotente por grupo + sabor)
+- [ ] API: contagem rápida (RN-ES-08) — a primeira contagem vira o saldo inicial (RN-ES-04); perda com motivo
+- [ ] Painel: tela Estoque agrupada como a planilha (saldo em caixas/unidades, editar alvo e custo), contagem rápida, cadastro do fornecedor
+
+**Pronto quando:** a dona conta o estoque uma vez no painel e vê o saldo de cada sabor, sem a planilha.
+
+### Sprint 6 — Pedido e recebimento
+- [ ] Domain: `PedidoFornecedor` + linhas (sugerido, pedido, recebido, snapshot de custo), status e diferenças (RN-PF-05/06/07, RN-RC-02/03) + testes
+- [ ] API: montar rascunho pelo estoque alvo (RN-PF-02 sem histórico, RN-PF-03/04), +/−, enviar (texto + link WhatsApp), cancelar
+- [ ] API: receber com "chegou tudo certo" ou por linha, item não pedido, entrada automática, texto de cobrança, novo custo (RN-RC-01…06); histórico do fornecedor (RN-RC-07)
+- [ ] Painel: "Pedido sugerido pronto — R$ X" no dashboard; tela do pedido (+/−, enviar); tela de recebimento com Faltou / Veio a mais / Não pedido e botão de cobrança
+- [ ] Montagem automática no dia do pedido (painel chama `montar` ao abrir; `BackgroundService` quando a API estiver acordada)
+
+**Pronto quando:** um pedido real sai do painel para o WhatsApp do fornecedor, a entrega é conferida em menos de 2 minutos e o que faltou aparece no pedido seguinte.
+
+### Sprint 7 — Baixa automática
+- [ ] Produto de venda ligado a grupo de estoque (RN-PR-06) no painel; `ItemEstoqueId` opcional no sync de comandas; baixa e estorno no servidor (RN-ES-05)
+- [ ] App: grade de sabores ao lançar produto ligado (1 toque); itens de estoque baixados com o catálogo
+- [ ] App: "Abri um balde" + `POST /api/sync/estoque` (RN-ES-06); contagem rápida no app (opcional)
+- [ ] Consumo diário, dias restantes, sugestão por consumo real e aviso "pedir hoje" (RN-ES-09/10, RN-PF-02 completo)
+- [ ] Teste com 2 semanas de vendas reais; ajustar alvos com a dona
+
+**Pronto quando:** a dona abre o painel no dia do pedido, confere o sugerido e envia sem contar o freezer.
 
 ## Fase 3 — Análise e relatórios
 
@@ -119,11 +136,11 @@ Detalhes em docs/07.
 - [ ] Ranking de produtos (quantidade e valor), por categoria
 
 ### Sprint 9 — Lucro e exportação
-- [ ] Custo estimado por produto (RN-PR-07), margem por produto e por período
+- [ ] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque), margem por produto, por sabor e por período
 - [ ] Exportação CSV/Excel por período; relatório de fechamentos de caixa
 
 ## Fase 4 — Expansões (a combinar)
-Fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.
+Ficha técnica de insumos (se a dona quiser controlar insumo além do produto pronto) · fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.
 
 ## Regras de trabalho (mantidas do roadmap original)
 

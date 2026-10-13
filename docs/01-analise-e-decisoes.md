@@ -25,10 +25,10 @@ O que muda com esta reestruturação:
 | # | Problema (proposta) | Solução | Onde | Fase |
 |---|---|---|---|---|
 | 1 | Pedidos anotados em papel | Comanda digital: abrir, adicionar itens com 1 toque, fechar com pagamento e troco. Item livre para self-service e venda rápida por valor | App do atendente + API | 1 |
-| 2 | Estoque "no olhômetro" | Cadastro de insumos com mínimo, baixa automática por **ficha técnica** (produto → insumos), alertas | Painel + API | 2 |
+| 2 | Estoque "no olhômetro" | Estoque dos sorvetes comprados prontos, baixa pela venda com sabor e pela abertura de balde, contagem rápida (revisto em 13/10 — ADR 019, docs/10) | App + Painel + API | 2 |
 | 3 | Não sabe o que vende mais | Ranking de produtos, vendas por dia/semana/mês, comparativo de períodos, horários de pico | Painel | 3 |
 | 4 | **Caixa manual — "a conta não bate"** | **Abertura de caixa com fundo de troco, sangria/suprimento, fechamento com valor contado × valor esperado e diferença** | App do atendente + Painel | **1 (novo)** |
-| 5 | Reposição sem planejamento | Previsão de ruptura (dias restantes = estoque atual ÷ consumo médio diário), lista de compras sugerida | Painel | 2 |
+| 5 | Reposição sem planejamento | Pedido ao fornecedor sugerido pelo consumo, enviado pelo WhatsApp, e conferência da entrega (faltou / veio a mais / sabor trocado) — ADR 019 | Painel | 2 |
 
 O problema 4 estava listado na proposta e na visão geral, mas nenhuma fase o entregava. Entrou na Fase 1 porque é pré-requisito para o relatório de faturamento por forma de pagamento (Fase 3) e é o que a dona vai conferir todo dia.
 
@@ -126,6 +126,12 @@ Depois da análise do MVP (docs/06) e da conversa sobre hospedagem, estas decis�
 | ADR | Decisão | Por quê |
 |---|---|---|
 | 018 | **Painel da dona em React + Vite + TypeScript** (`src/GestaoSorveteria.Painel`, npm), publicado no **Cloudflare Pages**. Fecha a dúvida do ADR 004 revisado | Gera um site estático leve que abre rápido no celular da dona (Blazor WebAssembly baixa o runtime .NET, vários MB, na primeira visita); ecossistema grande para telas simples. Custo: os DTOs de `Contracts` são reescritos em TypeScript à mão. Por isso o painel **nunca calcula dinheiro**: só mostra o que a API devolve (R$ pt-BR, datas em America/Sao_Paulo) |
+
+### Decisão de 13/10/2026 — Fase 2
+
+| ADR | Decisão | Por quê |
+|---|---|---|
+| 019 | **Fase 2 = estoque de produto pronto + pedido ao fornecedor + conferência da entrega** (docs/10). Substitui "insumos + ficha técnica", que vai para a Fase 4 | A planilha da dona mostra que ela compra tudo pronto (picolé por caixa, pote, balde) e que a dor é o fornecedor não mandar o que foi pedido. Baixa automática vem da venda com sabor e do "Abri um balde"; o pedido é sugerido pelo consumo e conferido na entrega |
 
 ## 8. O que **não** muda
 

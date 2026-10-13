@@ -12,7 +12,7 @@ Lista objetiva do que mudar no PDF `proposta_sorveteria_v2.pdf` antes de reapres
 | Seção 2 · Painel da Dona | "Computador em casa" | "No computador **ou no celular** (abre no navegador)" | painel web |
 | Seção 5 · Fase 1 | "3 a 4 semanas" | "5 semanas" | Sprint 0 + 4 sprints (doc 04) |
 | Seção 5 · Fase 1 · itens | (lista atual) | Acrescentar: "**Controle de caixa**: abertura com fundo de troco, sangria, fechamento com conferência" e "**Self-service e venda rápida por valor**" e "**Funciona sem internet** no balcão: as vendas ficam guardadas no celular e sobem sozinhas quando a conexão volta" | escopo real da Fase 1 |
-| Seção 5 · Fase 2 | "Baixa automática no estoque a cada venda" | "Baixa automática dos **insumos** a cada venda (ex.: 60 g de morango por milk-shake), conforme a receita de cada produto cadastrada por você" | explicar ficha técnica; deixa claro que picolé pronto não tem baixa |
+| Seção 5 · Fase 2 | "Baixa automática no estoque a cada venda" | "Estoque dos sorvetes que você compra prontos (picolés, potes, baldes), atualizado sozinho a cada venda. No dia do pedido, o sistema monta a lista do que comprar e manda pelo WhatsApp. Quando a entrega chega, você confere em um toque e vê na hora o que faltou ou veio trocado" | redesenho de 13/10 a partir da planilha dela (docs/10, ADR 019) |
 | Seção 5 · Fase 4 | "Versão web do painel para celular da dona" | remover (já entregue na Fase 1) | painel web desde o início |
 | Cronograma | "Semana 1 a 4 / 5 a 7 / 8 a 9" | "Semana 1 a 5 / 6 a 8 / 9 a 10" | prazos ajustados |
 | Seção 7 · Painel da dona | "Aplicativo Windows instalado no computador" | "Painel na internet, protegido por senha: abre no computador ou no celular, sem instalar nada e sempre atualizado" | painel web |
