@@ -96,6 +96,16 @@ public sealed class ComandaRepository(BancoLocal banco)
         return await db.Table<Comanda>().Where(c => c.RejeitadaMotivo != null).CountAsync();
     }
 
+    /// <summary>C5 / RN-SY-03: comandas rejeitadas pelo servidor, de qualquer caixa, mais recentes primeiro.</summary>
+    public async Task<List<Comanda>> ListarRejeitadasAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>()
+            .Where(c => c.RejeitadaMotivo != null)
+            .OrderByDescending(c => c.CriadaEm)
+            .ToListAsync();
+    }
+
     /// <summary>C5: comandas fechadas/canceladas do caixa, mais recentes primeiro, com a situação do envio.</summary>
     public async Task<List<Comanda>> ListarEncerradasDoCaixaAsync(Guid caixaId)
     {

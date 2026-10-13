@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
+             xmlns:model="clr-namespace:SorveteriaMaui.Model"
+             x:Class="SorveteriaMaui.View.HistoricoTurnoView"
+             x:DataType="vm:HistoricoTurnoViewModel"
+             Title="Turno"
+             BackgroundColor="#F5F5F5">
+
+    <!-- C5: vendas pagas e canceladas do caixa, com a situação do envio (RN-SY-03/05) -->
+    <Grid RowDefinitions="Auto, Auto, *" Padding="10" RowSpacing="10">
+
+        <Border Grid.Row="0" Padding="16" StrokeThickness="0" BackgroundColor="#6200EE" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{Binding Titulo}" TextColor="White" FontSize="14" />
+                <Label Text="{Binding Resumo}" TextColor="White" FontSize="20" FontAttributes="Bold" />
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- Toque envia agora (ou pede o PIN se a sessão venceu) -->
+        <Border Grid.Row="1" Padding="12,8" StrokeThickness="0" BackgroundColor="#FFF8E1" StrokeShape="RoundRectangle 8">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding EnviarAgoraCommand}" />
+            </Border.GestureRecognizers>
+            <Label Text="{Binding IndicadorEnvio}" FontSize="14" FontAttributes="Bold" TextColor="#5D4037" />
+        </Border>
+
+        <RefreshView Grid.Row="2" Command="{Binding EnviarAgoraCommand}" IsRefreshing="{Binding Atualizando}">
+            <CollectionView ItemsSource="{Binding Comandas}" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label Text="Nenhuma venda paga ou cancelada neste caixa ainda." FontSize="15" TextColor="#777"
+                           HorizontalTextAlignment="Center" Margin="0,40,0,0" IsVisible="{Binding Vazio}" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="model:Comanda">
+                        <Border Margin="0,0,0,8" Padding="12" StrokeShape="RoundRectangle 10" BackgroundColor="White" Stroke="#E0E0E0">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding EhRejeitada}" Value="True">
+                                    <Setter Property="Stroke" Value="#E65100" />
+                                    <Setter Property="BackgroundColor" Value="#FFF3E0" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                      Command="{Binding VerComandaCommand, Source={RelativeSource AncestorType={x:Type vm:HistoricoTurnoViewModel}}}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="8">
+                                <Label Grid.Row="0" Grid.Column="0" FontSize="16" FontAttributes="Bold" TextColor="#212121">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding Numero, StringFormat='Nº {0}'}" />
+                                            <Span Text="{Binding EncerradaEmLocal, StringFormat='  ·  {0:HH:mm}'}" />
+                                            <Span Text="{Binding StatusTexto, StringFormat='  ·  {0}'}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding EhCancelada}" Value="True">
+                                            <Setter Property="TextColor" Value="#9E9E9E" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding Total, StringFormat='R$ {0:N2}'}" FontSize="16" FontAttributes="Bold" TextColor="#212121">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding EhCancelada}" Value="True">
+                                            <Setter Property="TextColor" Value="#9E9E9E" />
+                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding SituacaoEnvio}" FontSize="13" TextColor="#616161" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>
