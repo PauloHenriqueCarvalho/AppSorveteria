@@ -50,6 +50,21 @@ public sealed class CaixaAppService(CaixaRepository caixas, ComandaRepository co
                 throw new DomainException("Para abrir o caixa é preciso internet: o servidor garante que há um caixa só. Depois de aberto, a venda funciona sem internet.");
             }
 
+            // O fechamento do caixa anterior pode estar na fila (feito sem internet ou com o servidor acordando).
+            // Sem ele, o servidor ainda vê o caixa anterior aberto e recusa a abertura: envia a fila primeiro.
+            await sync.SincronizarAgoraAsync();
+            if (await caixas.ObterFechadoComEnvioPendenteAsync() is { } anterior)
+            {
+                if ((await sync.EstadoAsync()).PrecisaPin)
+                {
+                    throw new DomainException("Sua sessão venceu e o fechamento do caixa anterior não foi enviado. Saia e entre de novo com o PIN, depois abra o caixa.");
+                }
+
+                throw new DomainException(
+                    $"O fechamento do caixa anterior ({anterior.FechadoEm?.ToLocalTime():dd/MM 'às' HH:mm}) ainda não chegou ao servidor. " +
+                    "Confira a internet e tente abrir de novo em 1 minuto (o servidor pode estar acordando).");
+            }
+
             var caixa = Caixa.Abrir(UsuarioId(), fundoTroco, DateTime.UtcNow);
             var dto = new CaixaSyncDto(caixa.Id, caixa.AbertoPorUsuarioId, caixa.AbertoEm, caixa.FundoTroco, Movimentos: [], Fechamento: null);
 

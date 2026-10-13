@@ -88,9 +88,18 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
     /// Envia tudo que está pendente. Devolve <c>false</c> se parou por rede/servidor/sessão (nada foi descartado).
     /// Uma execução por vez: chamada concorrente volta na hora.
     /// </summary>
-    public async Task<bool> SincronizarAsync(bool silencioso = false)
+    public Task<bool> SincronizarAsync(bool silencioso = false) => SincronizarAsync(silencioso, espera: TimeSpan.Zero);
+
+    /// <summary>
+    /// Igual a <see cref="SincronizarAsync(bool)"/>, mas espera o envio que já estiver rodando terminar em vez de
+    /// voltar na hora. Usado antes de abrir um caixa novo: o fechamento do anterior precisa chegar ao servidor
+    /// primeiro, senão o servidor ainda o vê aberto e recusa a abertura (RN-CX-01) — o "caixa travado".
+    /// </summary>
+    public Task<bool> SincronizarAgoraAsync() => SincronizarAsync(silencioso: true, espera: TimeSpan.FromMinutes(3));
+
+    private async Task<bool> SincronizarAsync(bool silencioso, TimeSpan espera)
     {
-        if (!await _umaPorVez.WaitAsync(0))
+        if (!await _umaPorVez.WaitAsync(espera))
         {
             return false;
         }

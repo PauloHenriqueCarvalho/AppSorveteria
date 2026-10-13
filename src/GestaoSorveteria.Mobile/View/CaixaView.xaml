@@ -11,6 +11,11 @@
     <ScrollView>
         <VerticalStackLayout Padding="12" Spacing="12">
 
+            <!-- Caixa recusado pelo servidor: nunca some em silêncio (RN-SY-03); caixa preso sai pelo painel (RN-CX-09) -->
+            <Frame IsVisible="{Binding TemAvisoServidor}" Padding="12" CornerRadius="12" HasShadow="False" BorderColor="#E65100" BackgroundColor="#FFF3E0">
+                <Label Text="{Binding AvisoServidor}" FontSize="14" TextColor="#BF360C" />
+            </Frame>
+
             <!-- Sem caixa: abrir com fundo de troco (RN-CX-02; exige internet, RN-SY-04) -->
             <Frame IsVisible="{Binding SemCaixaAberto}" Padding="16" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
                 <VerticalStackLayout Spacing="12">

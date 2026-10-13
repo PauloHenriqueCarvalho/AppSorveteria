@@ -20,6 +20,7 @@ public class CaixaViewModel : BindableObject
     private string _fundoTrocoTexto = string.Empty;
     private ResumoCaixa? _resumo;
     private string _ultimoFechamento = string.Empty;
+    private string _avisoServidor = string.Empty;
 
     public CaixaViewModel(CaixaAppService caixa, CaixaRepository caixas, SorveteriaMaui.Services.Api.SyncService sync)
     {
@@ -69,6 +70,18 @@ public class CaixaViewModel : BindableObject
 
     public bool TemUltimoFechamento => !string.IsNullOrEmpty(UltimoFechamento);
 
+    /// <summary>
+    /// Caixa recusado pelo servidor (RN-SY-03: nunca some em silêncio). Ex.: fechamento recusado deixa o caixa
+    /// aberto no servidor e impede abrir o próximo — a dona resolve pelo painel (RN-CX-09).
+    /// </summary>
+    public string AvisoServidor
+    {
+        get => _avisoServidor;
+        set { _avisoServidor = value; OnPropertyChanged(); OnPropertyChanged(nameof(TemAvisoServidor)); }
+    }
+
+    public bool TemAvisoServidor => !string.IsNullOrEmpty(AvisoServidor);
+
     public async Task Carregar()
     {
         await Operacao.CarregarAsync(async () =>
@@ -76,6 +89,10 @@ public class CaixaViewModel : BindableObject
             var resumo = await _caixa.ResumoAsync();
             var movimentos = resumo is null ? new List<MovimentoCaixa>() : await _caixas.ListarMovimentosAsync(resumo.CaixaId);
             var ultimo = resumo is null ? await _caixas.ObterUltimoFechadoAsync() : null;
+            var linhaAtual = resumo is null ? ultimo : await _caixas.ObterLinhaAsync(resumo.CaixaId);
+            var aviso = linhaAtual?.RejeitadoMotivo is { Length: > 0 } motivo
+                ? $"O servidor recusou este caixa: {motivo}\nSe não conseguir abrir o próximo caixa, peça para a dona fechar o caixa preso pelo painel (Caixas)."
+                : string.Empty;
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
@@ -83,6 +100,7 @@ public class CaixaViewModel : BindableObject
                 foreach (var m in movimentos.OrderByDescending(m => m.Em)) Movimentos.Add(m);
                 Resumo = resumo;
                 TemCaixaAberto = resumo is not null;
+                AvisoServidor = aviso;
                 UltimoFechamento = ultimo is null
                     ? string.Empty
                     : $"Último caixa fechado em {ultimo.FechadoEm!.Value.ToLocalTime():dd/MM HH:mm}: " +

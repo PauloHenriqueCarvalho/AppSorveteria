@@ -53,6 +53,19 @@ public sealed class CaixaRepository(BancoLocal banco)
         return pendentes;
     }
 
+    /// <summary>
+    /// Caixa já fechado no aparelho cujo fechamento ainda não chegou ao servidor. Enquanto existir, o servidor
+    /// vê esse caixa aberto e recusa abrir outro (RN-CX-01).
+    /// </summary>
+    public async Task<Caixa?> ObterFechadoComEnvioPendenteAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Caixa>()
+            .Where(c => c.Status == StatusCaixa.Fechado && c.PendenteEnvio == true)
+            .OrderBy(c => c.FechadoEm)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<int> ContarPendentesEnvioAsync()
     {
         var db = await banco.ConexaoAsync();
