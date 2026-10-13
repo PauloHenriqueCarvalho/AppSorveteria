@@ -55,6 +55,10 @@ namespace SorveteriaMaui
             builder.Services.AddTransient<CaixaView>();
             builder.Services.AddTransient<CaixaViewModel>();
 
+            // Histórico do turno (C5)
+            builder.Services.AddTransient<HistoricoTurnoView>();
+            builder.Services.AddTransient<HistoricoTurnoViewModel>();
+
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();
             builder.Services.AddTransient<SelecaoProdutoViewModel>();

@@ -58,7 +58,7 @@ Plano detalhado em docs/06, seção 4.
   - [x] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16) — PR aberto para teste no tablet
   - [x] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio` — PR aberto para teste no tablet
   - [x] C4 — `SyncService` + indicador "X vendas aguardando envio" (o ciclo de 1 min também atualiza o catálogo) — PR aberto para teste no tablet
-  - [ ] C5 — Histórico do turno com status de envio
+  - [x] C5 — Histórico do turno com status de envio (aba **Turno**) — PR aberto para teste no tablet
 - [ ] Teste no emulador (API em `10.0.2.2`) e no celular real com a internet desligada
 
 **Pronto quando:** venda completa no celular real sem internet, sincronizada ao religar, com o caixa batendo.

@@ -44,6 +44,8 @@ Sem isso, o caixa "não bate" no fim do dia.
 
 **Internet caiu?** Continue vendendo normalmente. O tablet guarda tudo e envia quando a internet voltar. No alto da tela aparece "X vendas aguardando envio" até tudo subir. Deixe o Wi‑Fi ligado ao fim do turno.
 
+**Ver as vendas do turno:** aba **Turno**. Mostra cada venda paga ou cancelada, com a hora, o valor e se já foi enviada para o painel. Toque numa venda para ver os itens e o pagamento. Venda marcada em laranja foi **recusada pelo sistema**: ela continua guardada no tablet; mostre a mensagem para a dona.
+
 ## Para a dona (no celular ou no computador)
 
 Abra o **endereço do painel** (no alto desta página) e entre com o usuário **admin** e a sua senha. A primeira abertura do dia pode levar **até 1 minuto** ("Conectando ao servidor…"): é normal, o servidor estava dormindo.

@@ -13,6 +13,7 @@
         <ShellContent Title="Comandas" Route="ListarComandasView" ContentTemplate="{DataTemplate views:ListarComandasView}" />
         <ShellContent Title="Produtos" Route="ListarProdutosView" ContentTemplate="{DataTemplate views:ListarProdutosView}" />
         <ShellContent Title="Caixa" Route="CaixaView" ContentTemplate="{DataTemplate views:CaixaView}" />
+        <ShellContent Title="Turno" Route="HistoricoTurnoView" ContentTemplate="{DataTemplate views:HistoricoTurnoView}" />
     </TabBar>
 
     <!-- Login com PIN (C1): fora das abas, sem barra; o AppShell escolhe qual mostrar ao abrir -->

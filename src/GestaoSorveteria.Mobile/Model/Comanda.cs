@@ -89,6 +89,27 @@ public class Comanda
     [Ignore]
     public bool TemObservacao => !string.IsNullOrWhiteSpace(Observacao);
 
+    /// <summary>C5: hora em que foi fechada ou cancelada, no fuso do celular (RN-TD-01).</summary>
+    [Ignore]
+    public DateTime? EncerradaEmLocal => (FechadaEm ?? CanceladaEm)?.ToLocalTime();
+
+    /// <summary>C5: texto curto do status para o histórico do turno.</summary>
+    [Ignore]
+    public string StatusTexto => Status switch
+    {
+        StatusComanda.Fechada => "Paga",
+        StatusComanda.Cancelada => "Cancelada",
+        StatusComanda.Aberta => "Aberta",
+        _ => Status.ToString(),
+    };
+
+    [Ignore]
+    public bool EhCancelada => Status == StatusComanda.Cancelada;
+
+    /// <summary>C5: rejeitada pelo servidor (RN-SY-03) — destaque na lista, toque mostra o motivo.</summary>
+    [Ignore]
+    public bool EhRejeitada => RejeitadaMotivo is not null;
+
     /// <summary>Para a tela: hora do celular (RN-TD-01).</summary>
     [Ignore]
     public DateTime CriadaEmLocal => CriadaEm.ToLocalTime();
