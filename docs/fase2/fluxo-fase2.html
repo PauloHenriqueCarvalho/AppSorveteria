@@ -1,0 +1,675 @@
+<title>Fluxo do Pedido Sorveteria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: etapas do fluxo no topo; à esquerda a tela (tablet ou painel), à direita "o que o sistema faz" e os movimentos de estoque ao vivo */
+:root{
+  --bg:#EEF3F6; --surface:#FFFFFF; --sunk:#E3EAEF; --line:#CFD9E0;
+  --fg:#13222F; --muted:#56687A;
+  --accent:#B0185C; --accent-soft:#F7E1EB; --on-accent:#FFFFFF;
+  --ok:#1E7D4F; --ok-soft:#DDF1E6; --warn:#A86200; --warn-soft:#FBEBD3; --bad:#B42318; --bad-soft:#FBE1DE;
+  --wa:#1F8F4E;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E161D; --surface:#16212B; --sunk:#1D2A35; --line:#2B3B48;
+  --fg:#E6EEF4; --muted:#93A6B6;
+  --accent:#F0609C; --accent-soft:#3A1B2A; --on-accent:#1A0710;
+  --ok:#5CCB92; --ok-soft:#163327; --warn:#F2B35A; --warn-soft:#3A2A12; --bad:#FF8A7E; --bad-soft:#3D1A17;
+  --wa:#4FD18A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0E161D; --surface:#16212B; --sunk:#1D2A35; --line:#2B3B48;
+  --fg:#E6EEF4; --muted:#93A6B6;
+  --accent:#F0609C; --accent-soft:#3A1B2A; --on-accent:#1A0710;
+  --ok:#5CCB92; --ok-soft:#163327; --warn:#F2B35A; --warn-soft:#3A2A12; --bad:#FF8A7E; --bad-soft:#3D1A17;
+  --wa:#4FD18A; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:18px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(24px,3.4vw,34px);font-weight:700}
+h2{font-size:20px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+p{margin:0}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between}
+header.top p{color:var(--muted);max-width:62ch}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:8px 14px;min-height:40px}
+button:hover{border-color:var(--muted)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+button.ghost{background:transparent}
+a.btn{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600}
+a.btn.wa{background:var(--wa);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+/* etapas */
+nav.steps{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+nav.steps button{flex:0 0 auto;display:flex;gap:8px;align-items:center;border-radius:999px;padding:6px 14px 6px 6px;background:var(--surface)}
+nav.steps .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--sunk);font-family:var(--f-mono);font-size:12px;font-weight:600}
+nav.steps button[aria-current="step"]{border-color:var(--accent);background:var(--accent-soft)}
+nav.steps button[aria-current="step"] .n{background:var(--accent);color:var(--on-accent)}
+nav.steps .who{font-size:11px;color:var(--muted);display:block;line-height:1}
+nav.steps .lbl{display:grid;text-align:left;gap:2px;font-weight:600;font-size:14px;line-height:1.1}
+/* palco */
+.stage{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+.device{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;min-width:0}
+.device .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;background:var(--sunk);font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
+.device .bar b{color:var(--fg);font-weight:600}
+.screen{padding:18px;display:grid;gap:16px;min-width:0}
+.side{display:grid;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:10px;min-width:0}
+.panel ol,.panel ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.hint{font-size:13px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+/* chips de estado */
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.acc{background:var(--accent-soft);color:var(--accent)} .chip.mut{background:var(--sunk);color:var(--muted)}
+/* balcão */
+.prodgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.prod{display:grid;gap:4px;text-align:left;padding:14px;min-height:84px;border-radius:12px}
+.prod b{font-family:var(--f-display);font-size:16px}
+.prod span{font-size:12px;color:var(--muted)}
+.prod.balde{border-style:dashed}
+.flavors{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.flavors button{min-height:52px;text-align:left;display:grid;gap:2px;padding:8px 12px}
+.flavors button small{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.sheet{border:2px solid var(--accent);border-radius:12px;padding:14px;display:grid;gap:12px;background:var(--accent-soft)}
+/* tabelas */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--sunk)}
+td.r,th.r{text-align:right}
+tr.grp td{background:var(--sunk);font-family:var(--f-display);font-weight:700;font-size:13px;padding-block:6px}
+tr:last-child td{border-bottom:0}
+.stepper{display:inline-flex;align-items:center;gap:4px}
+.stepper button{min-height:32px;width:32px;padding:0;font-weight:700}
+.stepper output{min-width:42px;text-align:center;font-family:var(--f-mono);font-weight:600}
+.qtybtn{min-width:56px;min-height:32px;padding:0 8px;font-family:var(--f-mono);font-weight:600}
+.qtybtn.on{border-color:var(--accent);background:var(--accent-soft)}
+.keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:320px}
+.keypad button{min-height:52px;font-size:20px;font-family:var(--f-mono);font-weight:600}
+.why{background:none;border:0;padding:0;min-height:0;color:var(--accent);text-decoration:underline;text-underline-offset:2px;font-size:12px}
+.calc{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 14px;background:var(--sunk);border-radius:var(--r)}
+.total .num{font-size:22px;font-weight:600}
+/* whatsapp */
+.chat{background:var(--sunk);border-radius:12px;padding:16px;display:grid}
+.bubble{justify-self:end;max-width:100%;background:var(--ok-soft);color:var(--fg);border-radius:12px 12px 2px 12px;padding:12px 14px;white-space:pre-wrap;font-size:14px;font-family:var(--f-body);overflow-wrap:anywhere;margin:0}
+.bubble.in{justify-self:start;background:var(--surface);border-radius:12px 12px 12px 2px}
+/* log */
+.log{display:grid;gap:6px;max-height:300px;overflow:auto;font-size:13px}
+.log div{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;padding-bottom:6px;border-bottom:1px dashed var(--line)}
+.log .q{font-family:var(--f-mono);font-weight:600}
+.log .q.pos{color:var(--ok)} .log .q.neg{color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--sunk);border-radius:var(--r);padding:12px 14px;display:grid;gap:2px}
+.kpi .num{font-size:22px;font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);text-align:center}
+.bar-pct{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.bar-pct i{display:block;height:100%;background:var(--ok)}
+footer{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between}
+@media (prefers-reduced-motion: no-preference){ .screen{animation:entra .18s ease-out} @keyframes entra{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}} }
+/* ---- acréscimos da revisão de 14/10 ---- */
+.big-alert{display:flex;align-items:center;justify-content:center;gap:10px;min-height:64px;font-size:18px;font-weight:700;border-radius:14px;border:2px solid var(--bad);background:var(--bad-soft);color:var(--bad)}
+.prio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.prio button{display:grid;gap:2px;text-align:left;padding:10px 12px;min-height:64px}
+.prio button small{font-size:12px;color:var(--muted);font-weight:400}
+.prio button[aria-pressed="true"].u{border:2px solid var(--bad);background:var(--bad-soft)}
+.prio button[aria-pressed="true"].a{border:2px solid var(--warn);background:var(--warn-soft)}
+.prio button[aria-pressed="true"].m{border:2px solid var(--accent);background:var(--accent-soft)}
+@media (max-width:520px){.prio{grid-template-columns:minmax(0,1fr)}}
+.picker{display:grid;gap:8px}
+.picker input{font:inherit;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:0 12px;width:100%}
+.picklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:220px;overflow:auto}
+.picklist button{text-align:left;display:grid;gap:1px;padding:8px 10px;min-height:48px}
+.picklist button small{font-size:11px;color:var(--muted)}
+.picklist button[aria-pressed="true"]{border:2px solid var(--accent);background:var(--accent-soft)}
+.notice{border-radius:10px;padding:12px 14px;display:grid;gap:8px;background:var(--warn-soft);color:var(--fg)}
+.cnt{display:inline-flex;align-items:center;gap:4px}
+.cnt button{min-height:36px;width:36px;padding:0;font-weight:700}
+.cnt output{min-width:52px;text-align:center;font-family:var(--f-mono);font-weight:600}
+.cnt output.vazio{color:var(--muted)}
+.zero{min-height:36px;padding:0 10px;font-size:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+/* celular da dona */
+.phone{background:var(--sunk);border-radius:16px;padding:12px;display:grid;gap:8px;max-height:520px;overflow:auto}
+.phone .msg{background:var(--surface);border-radius:12px 12px 12px 2px;padding:10px 12px;display:grid;gap:4px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;border-left:4px solid var(--line)}
+.phone .msg.u{border-left-color:var(--bad)} .phone .msg.r{border-left-color:var(--ok)} .phone .msg.f{border-left-color:var(--accent)}
+.phone .meta{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+/* folha A4 */
+.paper{background:#FFFFFF;color:#111111;border:1px solid #D0D0D0;border-radius:4px;padding:28px 30px;font-family:var(--f-body);box-shadow:0 2px 10px rgba(0,0,0,.08);max-width:640px;width:100%;justify-self:center;display:grid;gap:14px}
+.paper h2{font-family:var(--f-display);font-size:22px;color:#111111}
+.paper .phead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;font-size:14px;border-bottom:2px solid #111111;padding-bottom:10px}
+.paper table{font-size:15px;color:#111111}
+.paper th{background:#F1F1F1;color:#333333;border-bottom:1px solid #999999}
+.paper td{border-bottom:1px solid #CCCCCC}
+.paper tr.grp td{background:#F7F7F7;color:#111111}
+.paper td.blank{border-bottom:1px solid #999999;min-width:70px}
+.paper .pfoot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:13px;color:#444444;border-top:1px solid #999999;padding-top:10px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div style="display:grid;gap:6px">
+      <span class="eyebrow">Sorveteria · Fase 2 · protótipo clicável · revisto em 14/10</span>
+      <h1>Do balcão à fábrica, sem planilha</h1>
+      <p>Venda sem sabor no picolé, avise o que está acabando, faça a contagem da semana e monte o pedido para imprimir. À direita, o WhatsApp da dona recebe o que o tablet mandar. Sabores e preços vêm da planilha; quantidades e históricos são exemplos.</p>
+    </div>
+    <button class="ghost" id="reset" type="button">Recomeçar simulação</button>
+  </header>
+
+  <nav class="steps" id="steps" aria-label="Etapas do fluxo"></nav>
+
+  <section class="stage">
+    <div class="device" id="device">
+      <div class="bar"><span id="devName"></span><span id="devInfo"></span></div>
+      <div class="screen" id="screen"></div>
+    </div>
+    <aside class="side">
+      <div class="panel" id="explain"></div>
+      <div class="panel">
+        <div class="spread"><h3>WhatsApp da dona</h3><span class="hint" id="phoneCount"></span></div>
+        <div class="phone" id="phone"></div>
+      </div>
+    </aside>
+  </section>
+
+  <footer>
+    <span>Regras: docs/02 seção 6 (RN-ES, RN-AV, RN-PF, RN-RC) · desenho: docs/10</span>
+    <span>Fábrica de exemplo: pedido toda segunda, entrega em 2 dias, só caixa inteira</span>
+  </footer>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+"use strict";
+var brl = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
+var dec1 = new Intl.NumberFormat("pt-BR",{maximumFractionDigits:1});
+var COBERTURA_SEMANAS = 9/7; /* 7 dias até o próximo pedido + 2 de entrega */
+
+var FORN = [
+  {id:"fab", nome:"Fábrica (pais da dona)", envio:"Impresso + WhatsApp", dia:"segunda"},
+  {id:"desc", nome:"Descartáveis", envio:"WhatsApp", dia:"quinta"},
+  {id:"casq", nome:"Casquinhas e caldas", envio:"WhatsApp", dia:"quinta"}
+];
+/* grupo, modo, unidade, por embalagem, custo */
+var GRUPOS = {
+  "Picolé ao leite":{modo:"Contagem", un:"Caixa", upe:28, custo:25.20, forn:"fab", venda:true},
+  "Picolé de fruta":{modo:"Contagem", un:"Caixa", upe:28, custo:25.20, forn:"fab", venda:true},
+  "Skimo":{modo:"Contagem", un:"Caixa", upe:24, custo:60.00, forn:"fab", venda:true},
+  "Massa":{modo:"Contagem", un:"Balde", upe:1, custo:90.00, forn:"fab"},
+  "Açaí":{modo:"Contagem", un:"Balde", upe:1, custo:160.00, forn:"fab"},
+  "Pote 1L":{modo:"SaldoPelaVenda", un:"Unidade", upe:1, custo:9.00, forn:"fab", venda:true},
+  "Descartáveis":{modo:"SoAviso", un:"Pacote", upe:1, custo:null, forn:"desc"},
+  "Casquinhas e caldas":{modo:"SoAviso", un:"Pacote", upe:1, custo:null, forn:"casq"}
+};
+var ORDEM = ["Picolé de fruta","Picolé ao leite","Skimo","Massa","Açaí","Pote 1L","Descartáveis","Casquinhas e caldas"];
+/* [grupo, nome, última contagem (embalagens) ou saldo, saída média por semana, mínimo] */
+var BASE = [
+  ["Picolé de fruta","Limão",2.5,1.5],["Picolé de fruta","Uva",0.5,0.5],["Picolé de fruta","Maracujá",0.5,0.5],["Picolé de fruta","Abacaxi",2,0.5],["Picolé de fruta","Melancia",1.5,1],
+  ["Picolé ao leite","Chocolate",2,2],["Picolé ao leite","Morango",2.5,1.5],["Picolé ao leite","Coco preto",0,1],["Picolé ao leite","Milho verde",0.5,1],["Picolé ao leite","Leitinho",0.5,0.5],["Picolé ao leite","Mamão papaya",3.5,1],
+  ["Skimo","Tradicional",1,1],["Skimo","Morango",2,0.5],
+  ["Massa","Chocomenta",1,0.5],["Massa","Ninho trufado",1,0.5],["Massa","Pistache",2,1],["Massa","Brigadeiro",1,0.5],
+  ["Açaí","Tradicional",3,1.5],
+  ["Pote 1L","Morango",4,3,2],["Pote 1L","Flocos",9,4,2],["Pote 1L","Amarena",2,2,2],["Pote 1L","Chocolate",6,2,2],["Pote 1L","Milho verde",3,1,2],
+  ["Descartáveis","Copo 300 ml (50 un)"],["Descartáveis","Colher (100 un)"],["Descartáveis","Guardanapo"],
+  ["Casquinhas e caldas","Casquinha"],["Casquinhas e caldas","Cascão"],["Casquinhas e caldas","Calda de chocolate"]
+];
+
+var S;
+function novoEstado(){
+  return {
+    step:0,
+    itens: BASE.map(function(b,i){ var g=GRUPOS[b[0]]; return {id:"i"+i, g:b[0], nome:b[1], modo:g.modo, un:g.un, upe:g.upe, custo:g.custo, forn:g.forn,
+      ultima:(b[2]===undefined?null:b[2]), saida:(b[3]||0), min:(b[4]||null), faltou:false}; }),
+    comanda:[], teclado:null, escolhePote:false, ultimaVenda:null,
+    avisos:[
+      {id:"a1", itemId:"i25", texto:null, qtd:1, prio:"Alta", obs:"", quem:"Ana", hora:"10:12", aberto:true}
+    ],
+    form:{itemId:null, outro:"", busca:"", qtd:null, prio:null, obs:""}, pendenteWa:null,
+    contagem:{}, contagemFeita:false, contadoEm:"13/10",
+    fornSel:"fab", pedidos:{}, numero:{fab:45,desc:12,casq:9},
+    receb:null, extras:{}, recebido:null,
+    phone:[], vendasDia:842.50, hora:15*60+40
+  };
+}
+function item(id){ for(var i=0;i<S.itens.length;i++){ if(S.itens[i].id===id) return S.itens[i]; } return null; }
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+function toast(msg){ var t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(function(){t.hidden=true;},2400); }
+function agora(){ S.hora+=7; var h=Math.floor(S.hora/60)%24, m=S.hora%60; return (h<10?"0":"")+h+":"+(m<10?"0":"")+m; }
+function nomeItem(it){ return it.g+" "+it.nome; }
+function emb(it,q){ if(q===null||q===undefined) return "—"; var n=dec1.format(q); return it.un==="Caixa"? n+" cx" : it.un==="Balde"? n+(q===1?" balde":" baldes") : it.un==="Pacote"? n+(q===1?" pacote":" pacotes") : n+" un"; }
+function nomeEmb(it,q){ return it.un==="Caixa"?(q===1?"caixa":"caixas"):it.un==="Balde"?(q===1?"balde":"baldes"):it.un==="Pacote"?(q===1?"pacote":"pacotes"):(q===1?"pote":"potes"); }
+function atual(it){ return it.modo==="SaldoPelaVenda"? it.ultima : (S.contagemFeita && S.contagem[it.id]!==undefined && S.contagem[it.id]!==null ? S.contagem[it.id] : it.ultima); }
+function avisoAberto(itemId){ for(var i=0;i<S.avisos.length;i++){ var a=S.avisos[i]; if(a.aberto && a.itemId===itemId) return a; } return null; }
+function rotuloAviso(a){ return a.itemId? nomeItem(item(a.itemId)) : a.texto; }
+function phone(tipo, texto, meta){ S.phone.unshift({tipo:tipo, texto:texto, meta:meta}); }
+
+/* ---------- etapas ---------- */
+var ETAPAS = [
+  {who:"Tablet do balcão", lbl:"Vender", render:telaBalcao, side:ladoBalcao},
+  {who:"Tablet do balcão", lbl:"Está acabando", render:telaAviso, side:ladoAviso},
+  {who:"Tablet do balcão", lbl:"Contagem semanal", render:telaContagem, side:ladoContagem},
+  {who:"Tablet do balcão", lbl:"Fim do dia", render:telaFimDia, side:ladoFimDia},
+  {who:"Painel da dona", lbl:"Pedido", render:telaPedido, side:ladoPedido},
+  {who:"Painel da dona", lbl:"Imprimir e enviar", render:telaFolha, side:ladoFolha},
+  {who:"Painel da dona", lbl:"Conferir entrega", render:telaEntrega, side:ladoEntrega}
+];
+function ir(n){ S.step=n; if(n===4) montar(S.fornSel); render(); window.scrollTo({top:0,behavior:"smooth"}); }
+function render(){
+  $("steps").innerHTML = ETAPAS.map(function(e,i){
+    return '<button type="button" data-go="'+i+'"'+(i===S.step?' aria-current="step"':'')+'><span class="n">'+(i+1)+'</span><span class="lbl"><span class="who">'+e.who+'</span>'+e.lbl+'</span></button>';
+  }).join("");
+  var e=ETAPAS[S.step];
+  $("devName").innerHTML="<b>"+e.who+"</b>";
+  $("devInfo").textContent = S.step<=3? "Caixa aberto · Ana" : "Admin · Dona";
+  $("screen").innerHTML=e.render();
+  $("explain").innerHTML=e.side();
+  renderPhone();
+}
+function renderPhone(){
+  $("phoneCount").textContent = S.phone.length? S.phone.length+" mensagem(ns)" : "";
+  if(!S.phone.length){ $("phone").innerHTML='<p class="hint">Nada ainda. Um aviso urgente (etapa 2) chega aqui na hora; o resumo chega no fechamento do caixa (etapa 4).</p>'; return; }
+  $("phone").innerHTML = S.phone.map(function(m){ return '<div class="msg '+m.tipo+'">'+esc(m.texto)+'<span class="meta">'+esc(m.meta)+'</span></div>'; }).join("");
+}
+
+/* 1. balcão */
+function linha(chave){ for(var i=0;i<S.comanda.length;i++){ if(S.comanda[i].k===chave) return S.comanda[i]; } return null; }
+function telaBalcao(){
+  var h='<button type="button" class="big-alert" data-go="1">⚠ Está acabando? Avisar</button>';
+  h+='<div class="spread"><h2>Comanda 18</h2><span class="hint">picolé sem sabor · pote com sabor</span></div>';
+  h+='<div class="prodgrid">'
+    + ["Picolé ao leite","Picolé de fruta","Skimo"].map(function(g){ return '<button type="button" class="prod" data-act="add" data-k="'+esc(g)+'"><b>'+esc(g)+'</b><span>sem sabor · toque = +1</span></button>'; }).join("")
+    + '<button type="button" class="prod" data-act="pote"><b>Pote 1L</b><span>escolhe o sabor</span></button>'
+    + '<button type="button" class="prod" data-act="avulso"><b>Self-service</b><span>valor da balança</span></button></div>';
+  if(S.escolhePote){
+    var potes=S.itens.filter(function(it){return it.g==="Pote 1L";});
+    h+='<div class="sheet"><div class="spread"><h3>Qual sabor do pote?</h3><button type="button" class="ghost" data-act="fechar-pote">Voltar</button></div><div class="flavors">'
+      + potes.map(function(it){ return '<button type="button" data-act="vende-pote" data-id="'+it.id+'"><b>'+esc(it.nome)+'</b><small>'+it.ultima+' no freezer</small></button>'; }).join("")+'</div></div>';
+  }
+  if(S.comanda.length){
+    h+='<div class="tbl"><table><thead><tr><th>Item</th><th>Quantidade</th></tr></thead><tbody>'+S.comanda.map(function(l){
+      var ed=S.teclado&&S.teclado.k===l.k;
+      return '<tr><td>'+esc(l.rot)+'</td><td><span class="stepper"><button type="button" aria-label="menos" data-act="c-menos" data-k="'+esc(l.k)+'">−</button><button type="button" class="qtybtn'+(ed?' on':'')+'" data-act="teclado" data-k="'+esc(l.k)+'" aria-label="digitar quantidade"'+(l.pote?' disabled':'')+'>'+(ed?esc(S.teclado.txt||"0"):l.q)+'</button><button type="button" aria-label="mais" data-act="c-mais" data-k="'+esc(l.k)+'">+</button></span></td></tr>';
+    }).join("")+'</tbody></table></div>';
+    if(S.teclado){ h+='<div class="keypad" role="group" aria-label="Teclado numérico">'+["1","2","3","4","5","6","7","8","9","⌫","0","OK"].map(function(k){return '<button type="button" data-act="tecla" data-k="'+k+'"'+(k==="OK"?' class="primary"':'')+'>'+k+'</button>';}).join("")+'</div>'; }
+    else h+='<p class="hint">Toque no número para digitar: 50 picolés em 3 toques.</p>';
+    h+='<div class="row"><button type="button" class="primary" data-act="finalizar">Pagar e finalizar</button></div>';
+  } else if(S.ultimaVenda){ h+='<p class="hint">Última venda: '+esc(S.ultimaVenda)+'.</p>'; }
+  else h+='<p class="hint">Experimente: "Picolé ao leite", toque no número e digite 50. Depois venda 2 potes de Amarena e veja o aviso automático.</p>';
+  return h;
+}
+function ladoBalcao(){
+  return '<span class="eyebrow">O que acontece</span><h2>A venda não fica mais lenta</h2>'
+   +'<ul><li><b>Picolé, Skimo, massa:</b> sem sabor. A quantidade pode ser digitada.</li>'
+   +'<li><b>Pote:</b> um toque no sabor. O freezer do sistema baixa sozinho (teste).</li>'
+   +'<li>Pote que chega no mínimo vira aviso <b>Alta</b> sozinho; se zerar, <b>Urgente</b>, e o WhatsApp abre para avisar a dona.</li>'
+   +'<li>O botão <b>Está acabando</b> fica sempre à vista.</li></ul>';
+}
+function vendePote(it){
+  it.ultima-=1;
+  var l=linha(it.id); if(l) l.q++; else S.comanda.push({k:it.id, rot:"Pote 1L "+it.nome, q:1, pote:true});
+  var ex=avisoAberto(it.id);
+  if(it.ultima<=0){
+    if(ex){ ex.prio="Urgente"; ex.qtd=Math.max(0,it.ultima); ex.obs="zerou pela venda"; ex.hora=agora(); } else { ex={id:"a"+Date.now(), itemId:it.id, texto:null, qtd:0, prio:"Urgente", obs:"zerou pela venda", quem:"Sistema", hora:agora(), aberto:true}; S.avisos.push(ex); }
+    S.pendenteWa=ex; toast("Pote "+it.nome+" zerou: aviso urgente"); S.step=1; S.form=formVazio(); return true;
+  } else if(it.min && it.ultima<=it.min && !ex){
+    S.avisos.push({id:"a"+Date.now(), itemId:it.id, texto:null, qtd:it.ultima, prio:"Alta", obs:"chegou no mínimo", quem:"Sistema", hora:agora(), aberto:true});
+    toast("Pote "+it.nome+" no mínimo: vai no resumo do dia");
+  }
+  return false;
+}
+
+/* 2. está acabando */
+function formVazio(){ return {itemId:null, outro:"", busca:"", qtd:null, prio:null, obs:""}; }
+function msgUrgente(a){
+  return "🔴 URGENTE — Sorveteria\n"+rotuloAviso(a)+": "+(a.qtd===0?"ACABOU":"resta "+a.qtd)+(a.obs?"\n"+a.obs:"")+"\n"+a.quem+" · 14/10 "+a.hora;
+}
+function telaAviso(){
+  var h='';
+  if(S.pendenteWa){
+    var a=S.pendenteWa;
+    h+='<div class="sheet"><h3>Aviso urgente salvo</h3><div class="chat"><pre class="bubble">'+esc(msgUrgente(a))+'</pre></div>'
+      +'<div class="row"><button type="button" class="primary" data-act="wa-urgente">Enviar no WhatsApp da dona</button><button type="button" class="ghost" data-act="wa-depois">Depois</button></div>'
+      +'<p class="hint">No app real, abre o WhatsApp do tablet (ou do celular) com esta mensagem e o número da dona; o atendente só toca em enviar.</p></div>';
+  }
+  var f=S.form;
+  h+='<div class="spread"><h2>Está acabando</h2><span class="hint">4 toques</span></div>';
+  var lista=S.itens.filter(function(it){ var q=f.busca.trim().toLowerCase(); return !q || nomeItem(it).toLowerCase().indexOf(q)>=0; });
+  h+='<div class="picker"><label class="eyebrow" for="busca">1 · O quê</label><input id="busca" type="search" placeholder="Buscar: coco, copo, pote…" value="'+esc(f.busca)+'" autocomplete="off">'
+    +'<div class="picklist">'+lista.map(function(it){ var ab=avisoAberto(it.id); return '<button type="button" data-act="pick" data-id="'+it.id+'" aria-pressed="'+(f.itemId===it.id)+'"><small>'+esc(it.g)+'</small><b>'+esc(it.nome)+'</b>'+(ab?'<small>já avisado</small>':'')+'</button>'; }).join("")
+    +'<button type="button" data-act="pick-outro" aria-pressed="'+(f.itemId==="outro")+'"><small>Não está na lista</small><b>Outro…</b></button></div>';
+  if(f.itemId==="outro") h+='<input id="outro" type="text" placeholder="Ex.: tampa do pote 2L" value="'+esc(f.outro)+'">';
+  h+='</div>';
+  var ex = f.itemId && f.itemId!=="outro" ? avisoAberto(f.itemId) : null;
+  if(ex){
+    h+='<div class="notice"><b>Já avisado às '+esc(ex.hora)+' por '+esc(ex.quem)+'</b><span>'+esc(ex.prio)+' · '+(ex.qtd===0?'acabou':'resta '+ex.qtd)+'</span><span class="hint">"Ainda falta" atualiza o mesmo aviso (e pode subir a prioridade), sem mandar repetido.</span></div>';
+  }
+  if(f.itemId){
+    h+='<div class="row"><span class="eyebrow">2 · Quanto tem agora</span><span class="cnt"><button type="button" data-act="q-menos" aria-label="menos">−</button><output>'+(f.qtd===null?"—":f.qtd)+'</output><button type="button" data-act="q-mais" aria-label="mais">+</button></span><button type="button" class="zero" data-act="acabou">Acabou (0)</button></div>';
+    h+='<span class="eyebrow">3 · Prioridade</span><div class="prio">'
+      +'<button type="button" class="u" data-act="prio" data-p="Urgente" aria-pressed="'+(f.prio==="Urgente")+'"><b>Urgente</b><small>Acabou ou cliente pediu e não tinha · vai na hora</small></button>'
+      +'<button type="button" class="a" data-act="prio" data-p="Alta" aria-pressed="'+(f.prio==="Alta")+'"><b>Alta</b><small>Acaba hoje ou amanhã · resumo do dia</small></button>'
+      +'<button type="button" class="m" data-act="prio" data-p="Media" aria-pressed="'+(f.prio==="Media")+'"><b>Média</b><small>Está baixando · resumo do dia</small></button></div>';
+    h+='<label class="eyebrow" for="obs">4 · Observação (opcional)</label><input id="obs" type="text" style="font:inherit;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:0 12px" placeholder="Ex.: cliente pediu 3 vezes" value="'+esc(f.obs)+'">';
+    var ok = f.prio && f.qtd!==null && (f.itemId!=="outro" || f.outro.trim());
+    h+='<div class="row"><button type="button" class="primary" data-act="salvar-aviso"'+(ok?'':' disabled')+'>'+(ex?'Ainda falta: atualizar aviso':'Salvar aviso')+'</button></div>';
+  }
+  var abertos=S.avisos.filter(function(a){return a.aberto;});
+  h+='<h3>Avisos abertos ('+abertos.length+')</h3>';
+  h+= abertos.length? '<div class="tbl"><table><thead><tr><th>Item</th><th>Tem</th><th>Prioridade</th><th>Quem</th></tr></thead><tbody>'+abertos.map(function(a){
+      return '<tr><td>'+esc(rotuloAviso(a))+'</td><td class="num">'+a.qtd+'</td><td>'+chipPrio(a.prio)+'</td><td class="hint">'+esc(a.quem)+' · '+esc(a.hora)+'</td></tr>';
+    }).join("")+'</tbody></table></div>' : '<p class="hint">Nenhum aviso aberto.</p>';
+  return h;
+}
+function chipPrio(p){ return p==="Urgente"?'<span class="chip bad">Urgente</span>':p==="Alta"?'<span class="chip warn">Alta</span>':'<span class="chip acc">Média</span>'; }
+function ladoAviso(){
+  return '<span class="eyebrow">O que acontece</span><h2>O aviso que hoje é de boca</h2>'
+   +'<ul><li>Vale para sorvete <b>e</b> para copo, casquinha, calda e outros insumos.</li>'
+   +'<li>Cada prioridade tem significado fixo, mostrado no botão, para não virar tudo urgente.</li>'
+   +'<li><b>Urgente</b> abre o WhatsApp na hora. <b>Alta</b> e <b>Média</b> vão no resumo do fim do dia.</li>'
+   +'<li>Item já avisado não duplica: vira "Ainda falta".</li>'
+   +'<li>O aviso entra sozinho no próximo pedido do fornecedor daquele item e fecha quando a entrega chega.</li></ul>'
+   +'<p class="hint">Teste: avise "Coco preto", acabou, Urgente. Depois tente avisar Coco preto de novo.</p>';
+}
+
+/* 3. contagem */
+function telaContagem(){
+  var h='<div class="spread"><h2>Contagem da semana</h2>'+(S.contagemFeita?'<span class="chip ok">Concluída hoje</span>':'<span class="chip warn">Hoje é dia de contagem</span>')+'</div>';
+  h+='<p class="hint">Mesma ordem da planilha. O número da semana passada aparece só como referência: conte o freezer de verdade.</p>';
+  h+='<div class="tbl"><table><thead><tr><th>Sabor</th><th class="r">Semana passada</th><th>Agora</th><th></th></tr></thead><tbody>';
+  ORDEM.forEach(function(gn){
+    var g=GRUPOS[gn]; if(g.modo==="SoAviso") return;
+    var its=S.itens.filter(function(it){return it.g===gn;});
+    h+='<tr class="grp"><td colspan="4">'+esc(gn)+' <span class="hint">· '+(g.un==="Caixa"?"caixas (meia caixa = 0,5)":g.un==="Balde"?"baldes":"unidades · sistema confere")+'</span></td></tr>';
+    its.forEach(function(it){
+      var v=S.contagem[it.id], ref = it.modo==="SaldoPelaVenda"? '<span class="hint">sistema:</span> '+it.ultima : emb(it,it.ultima);
+      var dif='';
+      if(it.modo==="SaldoPelaVenda" && v!==undefined && v!==null && Math.abs(v-it.ultima)>1) dif='<span class="chip warn">sistema '+it.ultima+' · contado '+v+'</span>';
+      h+='<tr><td>'+esc(it.nome)+'</td><td class="r num">'+ref+'</td><td><span class="cnt"><button type="button" data-act="k-menos" data-id="'+it.id+'" aria-label="menos">−</button><output class="'+(v===undefined||v===null?'vazio':'')+'">'+(v===undefined||v===null?'—':dec1.format(v))+'</output><button type="button" data-act="k-mais" data-id="'+it.id+'" aria-label="mais">+</button></span> <button type="button" class="zero" data-act="k-zero" data-id="'+it.id+'">Não tem</button></td><td>'+dif+'</td></tr>';
+    });
+  });
+  h+='</tbody></table></div>';
+  var feitos=Object.keys(S.contagem).filter(function(k){return S.contagem[k]!==null;}).length, total=S.itens.filter(function(it){return it.modo!=="SoAviso";}).length;
+  h+='<div class="row"><span class="hint">'+feitos+' de '+total+' contados</span><button type="button" data-act="k-ref">Preencher com a semana passada (só no protótipo)</button><button type="button" class="primary" data-act="k-concluir"'+(feitos?'':' disabled')+'>Concluir contagem</button></div>';
+  return h;
+}
+function ladoContagem(){
+  return '<span class="eyebrow">O que acontece</span><h2>Uma contagem por semana basta</h2>'
+   +'<p>Feita pelo atendente ou pela dona, na véspera do pedido. Com ela o sistema sabe quanto saiu de cada sabor:</p>'
+   +'<p class="calc">saiu = contagem anterior + o que chegou − contagem de hoje</p>'
+   +'<ul><li>Item não contado fica "não contado", não vira zero.</li><li>Pode salvar no meio e terminar depois.</li><li>Nos <b>potes</b> a contagem confere o saldo do sistema; diferença maior que 1 vai no resumo da dona. Se errar muito por 2 semanas, os potes voltam só para a contagem.</li></ul>';
+}
+function concluirContagem(){
+  S.itens.forEach(function(it){
+    if(it.modo==="SoAviso") return;
+    var v=S.contagem[it.id]; if(v===undefined||v===null) return;
+    if(it.modo==="Contagem"){ var saiu=it.ultima-v; if(saiu>=0) it.saida=Math.round(((it.saida*3)+saiu)/4*10)/10; it.ultima=v; }
+    else { it.ultima=v; }
+  });
+  S.contagemFeita=true; S.contadoEm="14/10"; S.contagem={};
+}
+
+/* 4. fim do dia */
+function resumo(){
+  var abertos=S.avisos.filter(function(a){return a.aberto;});
+  function lista(p){ return abertos.filter(function(a){return a.prio===p;}).map(function(a){ return rotuloAviso(a)+" — "+(a.qtd===0?"acabou":a.qtd); }).join(" · "); }
+  var u=abertos.filter(function(a){return a.prio==="Urgente";}).length, al=abertos.filter(function(a){return a.prio==="Alta";}).length, m=abertos.filter(function(a){return a.prio==="Media";}).length;
+  var potes=S.itens.filter(function(it){ var a=avisoAberto(it.id); return it.modo==="SaldoPelaVenda" && it.min && it.ultima<=it.min && !(a && a.prio==="Urgente");}).map(function(it){return "Pote 1L "+it.nome+" ("+it.ultima+")";}).join(" · ");
+  var t="Resumo de quarta 14/10 — Sorveteria\n";
+  if(u) t+="🔴 Urgente ("+u+"): "+lista("Urgente")+"\n";
+  if(al) t+="🟠 Alta ("+al+"): "+lista("Alta")+"\n";
+  if(m) t+="🟡 Média ("+m+"): "+lista("Media")+"\n";
+  if(!abertos.length) t+="Nenhum aviso aberto.\n";
+  if(potes) t+="📦 Potes no mínimo: "+potes+"\n";
+  t+="Vendas do dia: "+brl.format(S.vendasDia)+" · Caixa fechado por Ana";
+  return t;
+}
+function telaFimDia(){
+  var h='<div class="spread"><h2>Fechar caixa</h2><span class="chip ok">Conferência do caixa ok</span></div>';
+  h+='<p class="hint">Depois da contagem do dinheiro (já existe no app), aparece o resumo do dia para mandar à dona.</p>';
+  h+='<div class="chat"><pre class="bubble">'+esc(resumo())+'</pre></div>';
+  h+='<div class="row"><button type="button" class="primary" data-act="wa-resumo">Enviar resumo no WhatsApp da dona</button></div>';
+  return h;
+}
+function ladoFimDia(){
+  return '<span class="eyebrow">O que acontece</span><h2>Resumo no fim do turno</h2>'
+   +'<p>O fechamento do caixa já é o fim do dia. Ali o app junta tudo numa mensagem só:</p>'
+   +'<ul><li>urgentes do dia (que já foram na hora);</li><li>altas e médias ainda abertas;</li><li>potes no mínimo;</li><li>total vendido.</li></ul>'
+   +'<p class="hint">Uma mensagem por dia em vez de uma por aviso: ela continua lendo.</p>';
+}
+
+/* 5. pedido */
+function sugerir(it){
+  var ab=avisoAberto(it.id);
+  if(it.modo==="SoAviso") return {emb: ab?1:0, aviso:ab, calc: ab? "aviso aberto → 1 "+nomeEmb(it,1):"sem aviso"};
+  var tem=atual(it), nec=it.saida*COBERTURA_SEMANAS*(it.un==="Caixa"?1:1);
+  var falta=nec-tem, e=falta>0? Math.ceil(falta-1e-9):0;
+  if((ab||it.faltou) && e===0) e=1;
+  var calc=dec1.format(it.saida)+"/semana × "+dec1.format(COBERTURA_SEMANAS)+" = "+dec1.format(nec)+" − tem "+dec1.format(tem)+" → "+e+" "+nomeEmb(it,e);
+  if(ab && e===1 && falta<=0) calc+=" (aviso aberto)";
+  return {emb:e, aviso:ab, calc:calc};
+}
+function montar(fid){
+  var p=S.pedidos[fid];
+  if(p && p.status!=="Rascunho" && !(p.status==="Recebido")) return;
+  if(p && p.status==="Recebido"){ S.numero[fid]++; p=null; }
+  var antigo=p? p.linhas:{};
+  var linhas={};
+  S.itens.filter(function(it){return it.forn===fid;}).forEach(function(it){
+    var s=sugerir(it), a=antigo[it.id];
+    linhas[it.id]={sug:s.emb, qtd:(a&&a.mexeu)?a.qtd:s.emb, mexeu:!!(a&&a.mexeu)};
+  });
+  S.pedidos[fid]={forn:fid, numero:S.numero[fid], status:"Rascunho", linhas:linhas};
+}
+function pedidoAtual(){ return S.pedidos[S.fornSel]; }
+function itensPedidos(p){ return S.itens.filter(function(it){ return p.linhas[it.id] && p.linhas[it.id].qtd>0; }); }
+function totalP(p){ var t=0, sem=false; itensPedidos(p).forEach(function(it){ if(it.custo===null) sem=true; else t+=p.linhas[it.id].qtd*it.custo; }); return {t:Math.round(t*100)/100, sem:sem}; }
+function fornecedor(id){ for(var i=0;i<FORN.length;i++){ if(FORN[i].id===id) return FORN[i]; } }
+function tabsForn(){
+  return '<div class="tabs" role="group" aria-label="Fornecedor">'+FORN.map(function(f){ var p=S.pedidos[f.id]; var n=S.avisos.filter(function(a){ return a.aberto && a.itemId && item(a.itemId).forn===f.id; }).length;
+    return '<button type="button" data-act="forn" data-f="'+f.id+'" aria-pressed="'+(S.fornSel===f.id)+'">'+esc(f.nome)+(n?' <span class="chip bad">'+n+'</span>':'')+(p&&p.status==="Enviado"?' <span class="chip ok">enviado</span>':'')+'</button>'; }).join("")+'</div>';
+}
+function telaPedido(){
+  var f=fornecedor(S.fornSel), p=pedidoAtual();
+  var h=tabsForn();
+  if(p.status==="Enviado") return h+'<h2>Pedido nº '+p.numero+' enviado</h2><p class="hint">Fica travado até conferir a entrega. Correção: cancelar com motivo e montar outro.</p><div class="row"><button type="button" class="primary" data-go="5">Ver a folha</button><button type="button" data-go="6">Conferir a entrega →</button></div>';
+  h+='<div class="spread"><h2>'+esc(f.nome)+' · pedido nº '+p.numero+'</h2><span class="chip acc">Montado sozinho na '+esc(f.dia)+'</span></div>';
+  h+='<p class="hint">'+(S.contagemFeita?'Usa a contagem de hoje (14/10).':'Usa a última contagem ('+esc(S.contadoEm)+'). Faça a contagem na etapa 3 para atualizar.')+' Envio: '+esc(f.envio)+'.</p>';
+  h+='<div class="tbl"><table><thead><tr><th>Item</th><th class="r">Tem</th><th class="r">Sugerido</th><th>Pedir</th></tr></thead><tbody>';
+  ORDEM.forEach(function(gn){
+    var its=S.itens.filter(function(it){return it.g===gn && it.forn===S.fornSel;}); if(!its.length) return;
+    h+='<tr class="grp"><td colspan="4">'+esc(gn)+'</td></tr>';
+    its.forEach(function(it){
+      var l=p.linhas[it.id], s=sugerir(it), ab=s.aviso;
+      var tags=(ab?'<span class="chip '+(ab.prio==="Urgente"?"bad":ab.prio==="Alta"?"warn":"acc")+'">'+esc(ab.quem)+' avisou</span> ':'')+(it.faltou?'<span class="chip bad">faltou na última</span> ':'')+(l.mexeu?'<span class="chip mut">ajustado</span>':'');
+      h+='<tr><td><div>'+esc(it.nome)+' '+tags+'</div><button type="button" class="why" data-act="why" data-id="'+it.id+'">por que '+l.sug+'?</button><div class="calc" id="why-'+it.id+'" hidden>'+esc(s.calc)+'</div></td>'
+        +'<td class="r num">'+(it.modo==="SoAviso"?'—':emb(it,atual(it)))+'</td><td class="r num">'+l.sug+'</td>'
+        +'<td><span class="stepper"><button type="button" aria-label="menos" data-act="menos" data-id="'+it.id+'">−</button><output>'+l.qtd+'</output><button type="button" aria-label="mais" data-act="mais" data-id="'+it.id+'">+</button></span> <span class="hint">'+nomeEmb(it,l.qtd)+'</span></td></tr>';
+    });
+  });
+  h+='</tbody></table></div>';
+  var t=totalP(p);
+  h+='<div class="total"><span>'+itensPedidos(p).length+' itens</span><span class="num">'+(t.t?brl.format(t.t):'—')+(t.sem?' <span class="hint">+ itens sem preço</span>':'')+'</span></div>';
+  h+='<div class="row"><button type="button" class="primary" data-act="enviar"'+(itensPedidos(p).length?'':' disabled')+'>Confirmar pedido</button><button type="button" class="ghost" data-act="remontar">Remontar sugestão</button></div>';
+  return h;
+}
+function ladoPedido(){
+  return '<span class="eyebrow">O que acontece</span><h2>Um pedido por fornecedor</h2>'
+   +'<ul><li><b>Fábrica:</b> sugestão pela saída semanal da contagem (picolé, massa, açaí) e pelo saldo (potes), arredondada para cima em caixas.</li>'
+   +'<li>Todo <b>aviso aberto</b> entra no pedido do fornecedor certo, com o nome de quem avisou.</li>'
+   +'<li><b>Descartáveis e casquinhas:</b> sem contagem; entram só o que foi avisado.</li>'
+   +'<li>A dona ajusta com + e −. Toque em "por que…" para ver a conta.</li></ul>';
+}
+
+/* 6. folha / enviar */
+function msgPedido(p){
+  var f=fornecedor(p.forn), m="Pedido nº "+p.numero+" — Sorveteria — 14/10\n";
+  ORDEM.forEach(function(gn){
+    var its=itensPedidos(p).filter(function(it){return it.g===gn;}); if(!its.length) return;
+    m+="\n*"+gn.toUpperCase()+"*\n"; its.forEach(function(it){ m+="• "+it.nome+": "+p.linhas[it.id].qtd+" "+nomeEmb(it,p.linhas[it.id].qtd)+"\n"; });
+  });
+  return m+"\nObrigada!";
+}
+function telaFolha(){
+  var p=pedidoAtual(), f=fornecedor(S.fornSel);
+  var h=tabsForn();
+  if(!p || p.status==="Rascunho") return h+'<h2>Nada confirmado para '+esc(f.nome)+'</h2><p class="hint">Confirme o pedido na etapa 5.</p><div class="row"><button type="button" class="primary" data-go="4">Ir para o pedido</button></div>';
+  var t=totalP(p);
+  if(f.envio.indexOf("Impresso")>=0){
+    h+='<div class="spread"><h2>Folha para imprimir</h2><span class="hint">no painel, o botão abre a impressão do navegador</span></div>';
+    h+='<div class="paper"><div class="phead"><div><h2>Pedido nº '+p.numero+'</h2><span>Sorveteria → '+esc(f.nome)+'</span></div><div style="text-align:right"><b>14/10/2026</b><br>Entrega prevista: 16/10</div></div>';
+    h+='<div style="overflow-x:auto"><table><thead><tr><th>Sabor</th><th class="r">Pedido</th><th>Veio</th><th>Obs.</th></tr></thead><tbody>';
+    ORDEM.forEach(function(gn){
+      var its=itensPedidos(p).filter(function(it){return it.g===gn;}); if(!its.length) return;
+      h+='<tr class="grp"><td colspan="4">'+esc(gn)+' ('+(GRUPOS[gn].un==="Caixa"?"caixas":GRUPOS[gn].un==="Balde"?"baldes":"unidades")+')</td></tr>';
+      its.forEach(function(it){ h+='<tr><td>'+esc(it.nome)+'</td><td class="r num"><b>'+dec1.format(p.linhas[it.id].qtd)+'</b></td><td class="blank"></td><td class="blank"></td></tr>'; });
+    });
+    h+='</tbody></table></div><div class="pfoot"><span>Total estimado: <b>'+brl.format(t.t)+'</b></span><span>Conferido por: ____________________</span></div></div>';
+    h+='<div class="row"><button type="button" class="primary" data-act="imprimir">Imprimir</button><button type="button" data-act="wa-pedido">Mandar também no WhatsApp</button></div>';
+  } else {
+    h+='<h2>Mensagem para '+esc(f.nome)+'</h2><div class="chat"><pre class="bubble">'+esc(msgPedido(p))+'</pre></div><div class="row"><button type="button" class="primary" data-act="wa-pedido">Enviar no WhatsApp</button></div>';
+  }
+  return h;
+}
+function ladoFolha(){
+  return '<span class="eyebrow">O que acontece</span><h2>No papel, como os pais preferem</h2>'
+   +'<ul><li>Uma folha A4, letra grande, agrupada como a planilha, só com o que foi pedido.</li>'
+   +'<li>Colunas <b>Veio</b> e <b>Obs.</b> em branco para preencher à mão na entrega: é a coluna "Enviado" da planilha, agora no papel.</li>'
+   +'<li>O total pode ser ocultado, se ela preferir não mostrar valores.</li>'
+   +'<li>Outros fornecedores recebem pelo WhatsApp.</li></ul>';
+}
+
+/* 7. entrega */
+function telaEntrega(){
+  var p=pedidoAtual(), f=fornecedor(S.fornSel), h=tabsForn();
+  if(S.recebido && S.recebido.forn===S.fornSel) return h+resultado();
+  if(!p || p.status!=="Enviado") return h+'<h2>Nenhum pedido aguardando entrega</h2><p class="hint">Confirme um pedido na etapa 5.</p><div class="row"><button type="button" class="primary" data-go="4">Ir para o pedido</button></div>';
+  if(!S.receb){ S.receb={}; itensPedidos(p).forEach(function(it){ S.receb[it.id]=p.linhas[it.id].qtd; }); S.extras={}; }
+  h+='<div class="spread"><h2>Entrega do pedido nº '+p.numero+'</h2><span class="chip mut">Copie da coluna "Veio" da folha</span></div>';
+  h+='<div class="row"><button type="button" class="primary" data-act="tudo-certo">Chegou tudo certo</button><button type="button" data-act="errou">Simular erro da entrega</button></div>';
+  h+='<div class="tbl"><table><thead><tr><th>Item</th><th class="r">Pedido</th><th>Veio</th><th></th></tr></thead><tbody>';
+  itensPedidos(p).forEach(function(it){ var q=p.linhas[it.id].qtd, r=S.receb[it.id];
+    h+='<tr><td>'+esc(nomeItem(it))+'</td><td class="r num">'+dec1.format(q)+'</td><td><span class="stepper"><button type="button" aria-label="menos" data-act="r-menos" data-id="'+it.id+'">−</button><output>'+dec1.format(r)+'</output><button type="button" aria-label="mais" data-act="r-mais" data-id="'+it.id+'">+</button></span></td><td>'+classif(q,r)+'</td></tr>'; });
+  Object.keys(S.extras).forEach(function(id){ var it=item(id); h+='<tr><td>'+esc(nomeItem(it))+'</td><td class="r num">0</td><td class="num">'+S.extras[id]+'</td><td><span class="chip warn">Não pedido</span></td></tr>'; });
+  h+='</tbody></table></div><div class="row"><button type="button" class="primary" data-act="confirmar">Confirmar recebimento</button></div>';
+  return h;
+}
+function classif(q,r){ return r===q?'<span class="chip ok">Certo</span>': r<q?'<span class="chip bad">Faltou '+dec1.format(q-r)+'</span>':'<span class="chip warn">Veio a mais '+dec1.format(r-q)+'</span>'; }
+function confirmar(){
+  var p=pedidoAtual(), linhas=[], sp=0, so=0, vp=0, vr=0;
+  itensPedidos(p).forEach(function(it){ var q=p.linhas[it.id].qtd, r=S.receb[it.id]; linhas.push({it:it,q:q,r:r}); sp+=q; so+=Math.min(q,r); if(it.custo!==null){ vp+=q*it.custo; vr+=r*it.custo; } });
+  Object.keys(S.extras).forEach(function(id){ var it=item(id); linhas.push({it:it,q:0,r:S.extras[id],extra:true}); if(it.custo!==null) vr+=S.extras[id]*it.custo; });
+  var fechados=0;
+  S.itens.forEach(function(it){ if(it.forn===p.forn) it.faltou=false; });
+  linhas.forEach(function(l){
+    if(l.r>0){ if(l.it.modo==="SaldoPelaVenda") l.it.ultima+=l.r*l.it.upe; var a=avisoAberto(l.it.id); if(a){ a.aberto=false; fechados++; } }
+    if(l.r<l.q) l.it.faltou=true;
+  });
+  p.status="Recebido";
+  S.recebido={forn:p.forn, numero:p.numero, linhas:linhas, pct: sp? Math.round(so/sp*100):100, vp:Math.round(vp*100)/100, vr:Math.round(vr*100)/100, fechados:fechados};
+  S.receb=null;
+}
+function cobranca(){
+  var R=S.recebido, fa=R.linhas.filter(function(l){return l.r<l.q;}), ex=R.linhas.filter(function(l){return l.extra;});
+  if(!fa.length && !ex.length) return "";
+  var m="Oi! Conferi a entrega do pedido nº "+R.numero+":\n";
+  if(fa.length){ m+="\nFaltou:\n"; fa.forEach(function(l){ m+="• "+nomeItem(l.it)+": "+dec1.format(l.q-l.r)+" "+nomeEmb(l.it,l.q-l.r)+"\n"; }); }
+  if(ex.length){ m+="\nVeio sem estar no pedido:\n"; ex.forEach(function(l){ m+="• "+nomeItem(l.it)+": "+l.r+"\n"; }); }
+  return m+"\nPode mandar o que faltou na próxima entrega?";
+}
+function resultado(){
+  var R=S.recebido, d=Math.round((R.vr-R.vp)*100)/100;
+  var h='<div class="spread"><h2>Entrega do pedido nº '+R.numero+' conferida</h2><span class="chip '+(R.pct===100?"ok":"warn")+'">'+R.pct+'% entregue</span></div>';
+  h+='<div class="kpis"><div class="kpi"><span class="hint">Pedido</span><span class="num">'+brl.format(R.vp)+'</span></div><div class="kpi"><span class="hint">Recebido</span><span class="num">'+brl.format(R.vr)+'</span></div><div class="kpi"><span class="hint">Avisos fechados</span><span class="num">'+R.fechados+'</span></div></div>';
+  h+='<div class="tbl"><table><thead><tr><th>Item</th><th class="r">Pedido</th><th class="r">Veio</th><th></th></tr></thead><tbody>'+R.linhas.map(function(l){ return '<tr><td>'+esc(nomeItem(l.it))+'</td><td class="r num">'+dec1.format(l.q)+'</td><td class="r num">'+dec1.format(l.r)+'</td><td>'+(l.extra?'<span class="chip warn">Não pedido</span>':classif(l.q,l.r))+'</td></tr>'; }).join("")+'</tbody></table></div>';
+  if(d) h+='<p>Diferença: <b class="num" style="color:'+(d<0?'var(--bad)':'var(--warn)')+'">'+brl.format(d)+'</b></p>';
+  var c=cobranca();
+  if(c) h+='<h3>Mensagem para a fábrica</h3><div class="chat"><pre class="bubble">'+esc(c)+'</pre></div>';
+  h+='<p class="hint">O que faltou já está marcado para o próximo pedido. Potes recebidos entraram no saldo; avisos dos itens que chegaram foram fechados.</p>';
+  h+='<div class="row"><button type="button" class="primary" data-act="novo-pedido">Montar o próximo pedido</button></div>';
+  return h;
+}
+function ladoEntrega(){
+  return '<span class="eyebrow">O que acontece</span><h2>A conferência que faltava</h2>'
+   +'<ol><li>Com a folha preenchida em mãos, um toque se veio tudo certo.</li><li>Se não, corrige só as linhas diferentes.</li><li>O sistema mostra o que faltou ou veio trocado, monta a mensagem para a fábrica e põe o que faltou no próximo pedido.</li><li>Avisos dos itens que chegaram fecham sozinhos.</li></ol>';
+}
+
+/* ---------- ações ---------- */
+document.addEventListener("input", function(ev){
+  if(ev.target.id==="busca"){ S.form.busca=ev.target.value; var pos=ev.target.selectionStart; render(); var b=$("busca"); b.focus(); try{b.setSelectionRange(pos,pos);}catch(e){} }
+  if(ev.target.id==="outro"){ S.form.outro=ev.target.value; var bt=document.querySelector('[data-act="salvar-aviso"]'); if(bt) bt.disabled=!(S.form.prio&&S.form.qtd!==null&&S.form.outro.trim()); }
+  if(ev.target.id==="obs"){ S.form.obs=ev.target.value; }
+});
+document.addEventListener("click", function(ev){
+  var b=ev.target.closest("[data-go],[data-act]"); if(!b) return;
+  if(b.hasAttribute("data-go")){ ir(+b.getAttribute("data-go")); return; }
+  var act=b.getAttribute("data-act"), id=b.getAttribute("data-id"), it=id&&item(id), k=b.getAttribute("data-k"), f=S.form;
+  switch(act){
+    case "add": var l=linha(k); if(l) l.q++; else S.comanda.push({k:k, rot:k, q:1}); break;
+    case "c-mais": var lm=linha(k); if(lm.pote){ if(vendePote(item(k))){ render(); return; } } else lm.q++; break;
+    case "c-menos": var ln=linha(k); ln.q--; if(ln.pote) item(k).ultima+=1; if(ln.q<=0){ S.comanda.splice(S.comanda.indexOf(ln),1); S.teclado=null; } break;
+    case "teclado": S.teclado={k:k, txt:""}; break;
+    case "tecla": var tk=S.teclado;
+      if(k==="⌫") tk.txt=tk.txt.slice(0,-1);
+      else if(k==="OK"){ var n=parseInt(tk.txt,10); if(n>0&&n<=999) linha(tk.k).q=n; else if(tk.txt) toast("Use de 1 a 999"); S.teclado=null; }
+      else if(tk.txt.length<3) tk.txt+=k; break;
+    case "pote": S.escolhePote=true; break;
+    case "fechar-pote": S.escolhePote=false; break;
+    case "vende-pote": S.escolhePote=false; if(vendePote(it)){ render(); return; } toast("Pote "+it.nome+" na comanda"); break;
+    case "avulso": toast("Self-service lançado"); break;
+    case "finalizar": S.ultimaVenda=S.comanda.map(function(x){return x.rot+" × "+x.q;}).join(", "); S.comanda=[]; S.teclado=null; S.vendasDia+=0; toast("Venda finalizada"); break;
+    case "pick": f.itemId=id; var ab=avisoAberto(id); f.qtd=ab?ab.qtd:null; f.prio=ab?ab.prio:null; break;
+    case "pick-outro": f.itemId="outro"; f.qtd=null; f.prio=null; break;
+    case "q-mais": f.qtd=(f.qtd===null?1:f.qtd+1); break;
+    case "q-menos": f.qtd=Math.max(0,(f.qtd===null?0:f.qtd-1)); if(f.qtd===0 && !f.prio) f.prio="Urgente"; break;
+    case "acabou": f.qtd=0; f.prio="Urgente"; break;
+    case "prio":
+      var np=b.getAttribute("data-p"), exa=f.itemId&&f.itemId!=="outro"?avisoAberto(f.itemId):null, ordem={Media:1,Alta:2,Urgente:3};
+      if(exa && ordem[np]<ordem[exa.prio]){ toast("\"Ainda falta\" só pode subir a prioridade"); return; }
+      f.prio=np; break;
+    case "salvar-aviso":
+      var exs=f.itemId!=="outro"?avisoAberto(f.itemId):null, salvo;
+      if(exs){ var subiu=exs.prio!=="Urgente" && f.prio==="Urgente"; exs.qtd=f.qtd; exs.prio=f.prio; if(f.obs) exs.obs=f.obs; exs.hora=agora(); exs.quem="Ana"; salvo=exs; toast("Aviso atualizado: ainda falta"); if(subiu) S.pendenteWa=salvo; }
+      else { salvo={id:"a"+Date.now(), itemId:f.itemId==="outro"?null:f.itemId, texto:f.itemId==="outro"?f.outro.trim():null, qtd:f.qtd, prio:f.prio, obs:f.obs, quem:"Ana", hora:agora(), aberto:true}; S.avisos.push(salvo); toast(f.prio==="Urgente"?"Aviso urgente salvo":"Aviso salvo: vai no resumo do dia"); if(f.prio==="Urgente") S.pendenteWa=salvo; }
+      S.form=formVazio(); break;
+    case "wa-urgente": phone("u", msgUrgente(S.pendenteWa), "do tablet · "+S.pendenteWa.hora); S.pendenteWa=null; toast("Mensagem aberta no WhatsApp"); break;
+    case "wa-depois": S.pendenteWa=null; toast("Fica guardado: o app lembra de enviar"); break;
+    case "k-mais": var v=S.contagem[id]; var step=it.un==="Caixa"?0.5:1; S.contagem[id]=(v===undefined||v===null?step:v+step); break;
+    case "k-menos": var v2=S.contagem[id]; var st2=it.un==="Caixa"?0.5:1; S.contagem[id]=(v2===undefined||v2===null?0:Math.max(0,v2-st2)); break;
+    case "k-zero": S.contagem[id]=0; break;
+    case "k-ref": S.itens.forEach(function(x){ if(x.modo!=="SoAviso" && (S.contagem[x.id]===undefined||S.contagem[x.id]===null)) S.contagem[x.id]=x.modo==="Contagem"? Math.max(0,x.ultima-(x.saida>=1?1:0.5)) : x.ultima; }); toast("Preenchido com valores de exemplo"); break;
+    case "k-concluir": concluirContagem(); toast("Contagem concluída: o pedido usa estes números"); break;
+    case "wa-resumo": phone("r", resumo(), "do tablet · fechamento do caixa · 22:05"); toast("Resumo aberto no WhatsApp"); break;
+    case "forn": S.fornSel=b.getAttribute("data-f"); S.receb=null; if(S.step===4) montar(S.fornSel); else if(!S.pedidos[S.fornSel]) montar(S.fornSel); break;
+    case "why": var w=$("why-"+id); w.hidden=!w.hidden; return;
+    case "mais": var pl=pedidoAtual().linhas[id]; pl.qtd+=1; pl.mexeu=true; break;
+    case "menos": var pm=pedidoAtual().linhas[id]; if(pm.qtd>0){ pm.qtd-=1; pm.mexeu=true; } break;
+    case "remontar": var pr=pedidoAtual(); Object.keys(pr.linhas).forEach(function(x){pr.linhas[x].mexeu=false;}); montar(S.fornSel); toast("Sugestão remontada"); break;
+    case "enviar": pedidoAtual().status="Enviado"; S.recebido=null; ir(5); return;
+    case "imprimir": toast("No painel, abre a impressão do navegador"); break;
+    case "wa-pedido": var pp=pedidoAtual(); phone("f", msgPedido(pp), "para "+fornecedor(pp.forn).nome+" · cópia ilustrativa"); toast("Mensagem aberta no WhatsApp"); break;
+    case "r-mais": S.receb[id]+=it.un==="Caixa"?0.5:1; break;
+    case "r-menos": S.receb[id]=Math.max(0,S.receb[id]-(it.un==="Caixa"?0.5:1)); break;
+    case "tudo-certo": var p0=pedidoAtual(); itensPedidos(p0).forEach(function(x){ S.receb[x.id]=p0.linhas[x.id].qtd; }); S.extras={}; confirmar(); toast("Entrega confirmada"); break;
+    case "errou": var p1=pedidoAtual(), ped=itensPedidos(p1); if(ped[0]) S.receb[ped[0].id]=Math.max(0,p1.linhas[ped[0].id].qtd-1); if(ped[2]) S.receb[ped[2].id]=0; var tr=S.itens.filter(function(x){return x.forn===p1.forn && x.modo!=="SoAviso" && !S.receb.hasOwnProperty(x.id);})[0]; if(tr) S.extras[tr.id]=1; toast("Erros aplicados: confira as linhas"); break;
+    case "confirmar": confirmar(); toast("Recebimento confirmado"); break;
+    case "novo-pedido": S.recebido=null; ir(4); return;
+  }
+  render();
+});
+$("reset").addEventListener("click", function(){ S=novoEstado(); montar("fab"); render(); toast("Simulação recomeçada"); });
+S=novoEstado(); montar("fab"); render();
+})();
+</script>

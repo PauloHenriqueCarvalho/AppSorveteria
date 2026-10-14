@@ -28,8 +28,8 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-PR-03 | Produto é **desativado**, nunca apagado, quando já foi vendido. Produto inativo não aparece no app: a API entrega os inativos na sincronização (`GET /api/produtos?desde=`) e o app esconde o botão | F1 | Application + App |
 | RN-PR-04 | Alterar o preço não altera vendas passadas (o item guarda o preço praticado) | F1 | Domain (`ItemComanda`) |
 | RN-PR-05 | `Ordem` define a posição do botão no app (mais vendidos primeiro) | F1 | Domain |
-| RN-PR-06 | Produto pode ter **ficha técnica** (lista de insumo + quantidade). Produto sem ficha técnica não movimenta estoque (ex.: picolé comprado pronto, na Fase 2) | F2 | Domain |
-| RN-PR-07 | Custo estimado do produto = soma (quantidade × custo do insumo) da ficha técnica; sem ficha técnica, custo informado manualmente | F3 | Application |
+| RN-PR-06 | Produto de venda pode ser ligado a um **grupo de estoque** (ex.: "Pote 1L" → grupo *Pote 1L*) com `UnidadesPorVenda` (padrão 1). Pede o sabor na venda **só** se o grupo for `SaldoPelaVenda` (potes, RN-ES-09); picolé e massa vendem sem sabor. Ficha técnica de insumos fica para a Fase 4 (docs/10) | F2 | Domain |
+| RN-PR-07 | Custo estimado de um item vendido = custo da embalagem do item de estoque ÷ unidades por embalagem × unidades por venda (ex.: picolé = R$ 25,20 ÷ 28 = R$ 0,90); produto sem vínculo de estoque aceita custo informado manualmente | F3 | Application |
 
 ## 3. Caixa (turno)
 
@@ -73,18 +73,66 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-PG-04 | Troco é calculado pelo sistema, nunca digitado | F1 | Domain |
 | RN-PG-05 | Só pagamentos em dinheiro entram no "esperado" do caixa; Pix e cartão entram no faturamento, não na gaveta | F1 | Domain (`Caixa.Fechar`) |
 
-## 6. Estoque de insumos (Fase 2)
+## 6. Estoque, avisos e pedidos ao fornecedor (Fase 2)
+
+Desenho e motivo em **docs/10** (revisto em 14/10). A loja compra sorvete **pronto** da fábrica (os pais da dona) e insumos de outros fornecedores; costuma ter **um freezer só**. A venda no balcão não pode ficar mais lenta: picolé não pede sabor.
+
+### 6.1 Catálogo e controle por grupo
 
 | ID | Regra | Fase | Onde |
 |---|---|---|---|
-| RN-ES-01 | Insumo tem nome, unidade (g, kg, ml, L, un), quantidade atual, quantidade mínima e custo médio | F2 | Domain |
-| RN-ES-02 | Ao **fechar** uma comanda, para cada item com produto que tenha ficha técnica, gera-se um movimento `BaixaVenda` por insumo (quantidade × ficha). Produto sem ficha técnica não baixa | F2 | Application |
-| RN-ES-03 | Estorno gera movimento inverso (`EstornoVenda`) | F2 | Application |
-| RN-ES-04 | **Entrada de reposição** registra quantidade, custo total e fornecedor (opcional); atualiza o custo médio do insumo | F2 | Domain |
-| RN-ES-05 | **Ajuste** e **perda** exigem motivo; toda movimentação fica no histórico (nunca se edita `QuantidadeAtual` direto) | F2 | Domain |
-| RN-ES-06 | Alerta quando `QuantidadeAtual ≤ QuantidadeMinima` ("Morango: 0,8 kg — repor!") | F2 | Application |
-| RN-ES-07 | **Previsão de ruptura**: `consumo médio diário` = média dos últimos 14 dias com venda; `dias restantes = QuantidadeAtual ÷ consumo médio`. Sem histórico → "sem previsão" | F2 | Application |
-| RN-ES-08 | Estoque negativo é permitido com aviso (a venda nunca é bloqueada por estoque; o estoque é informativo) | F2 | Domain |
+| RN-ES-01 | **Item de estoque**: grupo, sabor/nome, fornecedor, unidade de compra (`Caixa`, `Balde`, `Unidade`, `Pacote`), unidades por embalagem, custo da embalagem (≥ 0), estoque alvo (opcional), mínimo (opcional), ativo, ordem. Grupo + nome único (sem diferenciar maiúsculas). Catálogo de sorvetes importado de `docs/fase2/catalogo-inicial.csv`; insumos cadastrados pelo painel | F2 | Domain (`ItemEstoque`) |
+| RN-ES-02 | Cada **grupo** tem um **modo de controle**: `Contagem` (picolé, Skimo, Moreninha, massa, açaí — padrão), `SaldoPelaVenda` (potes — teste) ou `SoAviso` (copos, casquinhas, insumos: sem saldo, só avisos e pedido). A dona pode trocar o modo de um grupo | F2 | Domain |
+| RN-ES-03 | Quantidades guardadas na **menor unidade** (picolé, pote, balde), inteiras; exibidas em embalagens com meia caixa ("2,5 cx"). Contagem aceita passos de 0,5 caixa | F2 | Domain |
+| RN-ES-04 | Na venda, a **quantidade** de um item pode ser digitada (teclado numérico ao tocar no número), além de + e −; 1 a 999 por item | F2 | App |
+
+### 6.2 Contagem semanal
+
+| ID | Regra | Fase | Onde |
+|---|---|---|---|
+| RN-ES-05 | **Contagem semanal** dos grupos `Contagem` e `SaldoPelaVenda`, por atendente ou Admin, no tablet (offline, sobe pela sincronização) ou no painel. O app mostra "Hoje é dia de contagem" na véspera do dia de pedido da fábrica. Pode ser salva parcial e concluída depois; só a contagem **concluída** vale | F2 | App + Application |
+| RN-ES-06 | Na tela, a contagem anterior aparece só como referência; o campo começa vazio. "Não tem nenhum" grava 0. Item não contado numa contagem concluída fica "não contado" (não vira 0) | F2 | App |
+| RN-ES-07 | **Saída da semana** (grupo `Contagem`) = contagem anterior + recebido entre as duas − contagem atual. Negativo (contou mais do que devia) aparece como "conferir", não entra na média | F2 | Application |
+| RN-ES-08 | Grupo `SaldoPelaVenda` (potes): o saldo é `Entrada` (entrega) − `BaixaVenda` + `EstornoVenda` + `AjusteContagem`. Na contagem, diferença entre saldo e contado vira `AjusteContagem` com o motivo "contagem dd/mm"; diferença maior que 1 unidade entra no resumo do dia da dona | F2 | Domain + Application |
+| RN-ES-09 | **Venda de pote com sabor**: produto de venda ligado a grupo `SaldoPelaVenda` pede o sabor (1 toque). A comanda fechada, ao chegar ao servidor, gera `BaixaVenda`; cancelada não baixa; estorno gera `EstornoVenda`. A venda nunca é bloqueada por saldo (negativo é aviso) | F2 | App + Application (sync) |
+
+### 6.3 Avisos "Está acabando"
+
+| ID | Regra | Fase | Onde |
+|---|---|---|---|
+| RN-AV-01 | **Aviso** (requisição): item do catálogo ou texto livre ("Outro"), quantidade atual (≥ 0), prioridade `Urgente` / `Alta` / `Media`, observação opcional, quem e quando. Nasce no tablet (offline) ou no painel. Nada é apagado | F2 | Domain (`Aviso`) |
+| RN-AV-02 | Significado fixo da prioridade, mostrado na tela: **Urgente** = acabou ou cliente pediu e não tinha; **Alta** = acaba hoje ou amanhã; **Média** = está baixando. Quantidade 0 já sugere Urgente | F2 | App |
+| RN-AV-03 | **Sem duplicar**: se o mesmo item tem aviso aberto, o app mostra "Já avisado às HH:mm por X" e oferece **"Ainda falta"**, que atualiza quantidade/observação e só pode **subir** a prioridade. Texto livre não deduplica | F2 | Application |
+| RN-AV-04 | Pote (`SaldoPelaVenda`) que chega no **mínimo** gera aviso `Alta` automático; que **zera** gera `Urgente` automático (autor "Sistema"), com a mesma regra de não duplicar | F2 | Application |
+| RN-AV-05 | Aviso fecha: (a) sozinho quando a entrega de um pedido com aquele item é conferida com quantidade > 0; (b) pela dona, com motivo ("comprei no mercado"); (c) Média/Alta sem item de catálogo ficam abertos até a dona fechar | F2 | Domain |
+| RN-AV-06 | **Urgente** → logo após salvar, o app abre o WhatsApp com a mensagem pronta para o número da dona (configurado no painel). Sem internet, fica "a enviar" e o app lembra quando a conexão voltar | F2 | App |
+| RN-AV-07 | **Resumo do dia** → oferecido no **fechamento do caixa**: urgentes do dia, altas e médias abertas, potes no mínimo, diferenças da última contagem, total vendido do dia. Mensagem pronta para o WhatsApp da dona. Se o caixa for fechado pelo painel, o resumo fica disponível no painel | F2 | App + Application |
+| RN-AV-08 | Envio do WhatsApp é por link (`wa.me`): o sistema nunca afirma que a mensagem foi entregue, só que foi aberta para envio. A troca para envio automático (API oficial) não muda as regras acima | F2 | App |
+
+### 6.4 Fornecedores e pedido
+
+| ID | Regra | Fase | Onde |
+|---|---|---|---|
+| RN-PF-01 | **Fornecedor**: nome, WhatsApp (opcional), dias de pedido, prazo de entrega em dias, aceita meia caixa, **forma de envio** (`Impresso`, `WhatsApp` ou ambos), mostrar preços na folha (sim/não), ativo | F2 | Domain |
+| RN-PF-02 | **Pedido sugerido** por fornecedor, por item ativo: grupo `Contagem` → `média de saída semanal (até 4 semanas) × semanas até a próxima entrega − última contagem`; `SaldoPelaVenda` → mesma conta com o saldo; sem histórico → `estoque alvo − contado/saldo`; `SoAviso` → só itens com aviso aberto (quantidade = 1 embalagem, a dona ajusta). Arredonda para cima em embalagens (0,5 se aceita meia caixa). Negativo → 0 | F2 | Application |
+| RN-PF-03 | Todo **aviso aberto** do fornecedor entra no sugerido (mínimo 1 embalagem), marcado com quem avisou e a prioridade; o que **faltou** na última entrega também | F2 | Application |
+| RN-PF-04 | Rascunho montado sozinho no dia de pedido do fornecedor (ou pelo botão "Montar pedido"); no máximo um rascunho por fornecedor; remontar mantém as linhas que a dona alterou | F2 | Application |
+| RN-PF-05 | Linha do pedido: sugerido, pedido (embalagens), custo da embalagem no momento (snapshot). `Total = Σ pedido × custo`, 2 casas | F2 | Domain (`PedidoFornecedor`) |
+| RN-PF-06 | **Confirmar** exige uma linha > 0; o pedido vira `Enviado` e fica imutável (correção = cancelar com motivo e montar outro). Gera a **folha para imprimir** e/ou a **mensagem de WhatsApp**, conforme o fornecedor | F2 | Domain + Application |
+| RN-PF-07 | **Folha impressa**: A4, letra grande, cabeçalho (loja, fornecedor, nº, data), itens agrupados na ordem da planilha só com quantidade > 0, colunas **Sabor · Pedido · Veio · Obs.** ("Veio" e "Obs." em branco), total estimado (oculto se o fornecedor estiver configurado sem preços). Pode ser reimpressa a qualquer momento | F2 | Painel |
+| RN-PF-08 | Status: `Rascunho` → `Enviado` → `Recebido` (ou `Cancelado`, com motivo, de `Rascunho`/`Enviado`). Nada é apagado | F2 | Domain |
+
+### 6.5 Recebimento (conferência da entrega)
+
+| ID | Regra | Fase | Onde |
+|---|---|---|---|
+| RN-RC-01 | Recebimento parte de um pedido `Enviado`, com `recebido = pedido`. **"Chegou tudo certo"** confirma de uma vez; senão altera só as linhas diferentes (passo 0,5 caixa) e pode **adicionar item não pedido** (sabor trocado) | F2 | Application |
+| RN-RC-02 | Cada linha: **Certo**, **Faltou**, **Veio a mais** ou **Não pedido**; diferença em R$ = (recebido − pedido) × custo | F2 | Domain |
+| RN-RC-03 | Confirmar: grupos `SaldoPelaVenda` recebem `Entrada`; grupos `Contagem` registram o recebido para a conta da saída semanal (RN-ES-07); avisos dos itens recebidos fecham (RN-AV-05). `% atendido = Σ min(recebido, pedido) ÷ Σ pedido` | F2 | Domain + Application |
+| RN-RC-04 | Linhas "Faltou" voltam no próximo sugerido, salvo se a dona desmarcar "pedir de novo"; o sistema gera a mensagem para o fornecedor com o que faltou/veio trocado | F2 | Application |
+| RN-RC-05 | Preço diferente na entrega: a dona informa o novo custo, que vale para os próximos pedidos (o pedido antigo mantém o snapshot) | F2 | Domain |
+| RN-RC-06 | **Histórico do fornecedor**: pedidos do mês, valor pedido × recebido, % atendido médio, itens que mais faltam | F2 | Application |
+| RN-RC-07 | Só **Admin** monta, envia, cancela, recebe pedidos, fecha avisos e muda catálogo/modo de controle. Atendente faz venda, contagem e avisos | F2 | Application |
 
 ## 7. Relatórios (Fase 3)
 
@@ -122,7 +170,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 
 1. Aceita cartão (maquininha)? Quais bandeiras/formas devem aparecer?
 2. Lista de produtos, categorias e preços atuais.
-3. Quais insumos ela quer controlar primeiro (Fase 2) e em que unidade compra cada um.
+3. Fase 2 (estoque e pedidos ao fornecedor): perguntas em docs/10, seção 5.
 4. Self-service é por peso? Existe balança com impressão de valor?
 5. Quem abre e fecha o caixa no dia a dia? Existe fundo de troco fixo?
 6. Delivery: próprio ou por app (iFood)? Precisa registrar endereço?
