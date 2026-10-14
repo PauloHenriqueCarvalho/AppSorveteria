@@ -19,7 +19,7 @@ public sealed class EstoqueService(ApiCliente api, ItemEstoqueRepository itens, 
     private const string ChaveAtualizadoEm = "estoque_atualizado_em_ticks";
     private const string ChaveNomeLoja = "loja_nome";
     private const string ChaveWhatsAppDona = "loja_whatsapp_dona";
-    private const string ChaveDiasContagem = "estoque_dias_contagem"; // RN-ES-05: lembrete da contagem (próximo PR)
+    private const string ChaveDiasContagem = "estoque_dias_contagem"; // RN-ES-05: lembrete "Hoje é dia de contagem"
 
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
     private bool _tentouAoAbrir;
@@ -40,7 +40,10 @@ public sealed class EstoqueService(ApiCliente api, ItemEstoqueRepository itens, 
     /// <summary>RN-AV-10: só dígitos; <c>null</c> enquanto a dona não cadastrou (o WhatsApp abre para escolher o contato).</summary>
     public string? WhatsAppDona => Preferences.Default.Get(ChaveWhatsAppDona, string.Empty) is { Length: > 0 } numero ? numero : null;
 
-    /// <summary>RN-ES-05: dias ("Sunday"…) em que o app mostra "Hoje é dia de contagem". Guardado para a tela de contagem.</summary>
+    /// <summary>
+    /// RN-ES-05: dias ("Sunday"…) em que o app mostra "Hoje é dia de contagem" (véspera do pedido). Fica no aparelho: sem
+    /// internet, vale a última lista baixada.
+    /// </summary>
     public IReadOnlyList<string> DiasDeContagem =>
         Preferences.Default.Get(ChaveDiasContagem, string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 

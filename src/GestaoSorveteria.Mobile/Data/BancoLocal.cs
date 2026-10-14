@@ -28,6 +28,7 @@ public sealed class BancoLocal
                 await conexao.CreateTablesAsync<Comanda, ItemComanda, Pagamento, Produto>();
                 await conexao.CreateTablesAsync<Caixa, MovimentoCaixa>(); // C3
                 await conexao.CreateTablesAsync<ItemEstoqueLocal, AvisoLocal>(); // Fase 2: "Está acabando"
+                await conexao.CreateTablesAsync<ContagemLocal, ItemContagemLocal>(); // Fase 2: contagem semanal
                 _conexao = conexao;
             }
 

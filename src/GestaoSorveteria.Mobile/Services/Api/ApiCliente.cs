@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
 using GestaoSorveteria.Contracts.Auth;
 using GestaoSorveteria.Contracts.Avisos;
+using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Estoque;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Contracts.Sync;
@@ -88,6 +89,16 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
     {
         using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/avisos", request, ApiJsonContext.Default.SyncAvisosRequest, autenticado: true, cancellationToken);
         return await LerAsync(resposta, ApiJsonContext.Default.SyncAvisosResponse, cancellationToken);
+    }
+
+    /// <summary>
+    /// POST /api/sync/contagens (RN-ES-05). Contagens do tablet como estão (parciais ou concluídas), até 20 por vez;
+    /// um resultado por contagem: aceita / ja_recebida / rejeitada + motivo.
+    /// </summary>
+    public async Task<SyncResponse> EnviarContagensAsync(SyncContagensRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/contagens", request, ApiJsonContext.Default.SyncContagensRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
     }
 
     /// <summary>GET /api/avisos/resumo-do-dia — resumo de hoje pronto para o WhatsApp da dona (RN-AV-07).</summary>

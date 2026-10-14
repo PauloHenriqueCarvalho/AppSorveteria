@@ -2,7 +2,7 @@ using SorveteriaMaui.Model;
 
 namespace SorveteriaMaui.Data;
 
-/// <summary>Cache local do catálogo de estoque (Fase 2). Vem da API; o atendente só lê.</summary>
+/// <summary>Cache local do catálogo de estoque (Fase 2). Vem da API; o atendente só lê ("Está acabando" e contagem semanal).</summary>
 public sealed class ItemEstoqueRepository(BancoLocal banco)
 {
     /// <summary>Itens ativos de todos os grupos, na ordem da planilha (grupo, depois item).</summary>
@@ -11,6 +11,21 @@ public sealed class ItemEstoqueRepository(BancoLocal banco)
         var db = await banco.ConexaoAsync();
         return await db.Table<ItemEstoqueLocal>()
             .Where(i => i.Ativo == true)
+            .OrderBy(i => i.GrupoOrdem)
+            .ThenBy(i => i.GrupoNome)
+            .ThenBy(i => i.Ordem)
+            .ThenBy(i => i.Nome)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Todos os itens, inclusive os desativados, na ordem da planilha. A contagem semanal precisa dos desativados que já
+    /// foram contados na contagem em andamento (como o servidor faz), para não sumirem da tela no meio da contagem.
+    /// </summary>
+    public async Task<List<ItemEstoqueLocal>> ListarTodosAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<ItemEstoqueLocal>()
             .OrderBy(i => i.GrupoOrdem)
             .ThenBy(i => i.GrupoNome)
             .ThenBy(i => i.Ordem)
