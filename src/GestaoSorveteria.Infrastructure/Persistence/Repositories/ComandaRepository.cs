@@ -26,19 +26,9 @@ internal sealed class ComandaRepository : IComandaRepository
             .Include(c => c.Pagamentos)
             .Where(c => c.CaixaId == caixaId);
 
-        if (filtro.Status is { } status)
+        if (status is { } filtro)
         {
-            query = query.Where(c => c.Status == status);
-        }
-
-        if (filtro.UsuarioId is { } usuarioId)
-        {
-            query = query.Where(c => c.UsuarioId == usuarioId);
-        }
-
-        if (filtro.Forma is { } forma)
-        {
-            query = query.Where(c => c.Pagamentos.Any(p => p.Forma == forma));
+            query = query.Where(c => c.Status == filtro);
         }
 
         return await query
@@ -66,9 +56,19 @@ internal sealed class ComandaRepository : IComandaRepository
         IQueryable<Comanda> query = _db.Comandas
             .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc);
 
-        if (status is { } filtro)
+        if (filtro.Status is { } status)
         {
-            query = query.Where(c => c.Status == filtro);
+            query = query.Where(c => c.Status == status);
+        }
+
+        if (filtro.UsuarioId is { } usuarioId)
+        {
+            query = query.Where(c => c.UsuarioId == usuarioId);
+        }
+
+        if (filtro.Forma is { } forma)
+        {
+            query = query.Where(c => c.Pagamentos.Any(p => p.Forma == forma));
         }
 
         var total = await query.CountAsync(cancellationToken);
