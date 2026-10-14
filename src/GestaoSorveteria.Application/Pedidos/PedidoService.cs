@@ -155,7 +155,10 @@ public sealed class PedidoService
         return new EnviarPedidoResponse(dto, mensagem, MensagensWhatsApp.Link(fornecedor.WhatsApp, mensagem));
     }
 
-    /// <summary>Mensagens do WhatsApp para reabrir depois do envio (o pedido) e da conferência (o que veio diferente).</summary>
+    /// <summary>
+    /// Mensagens do WhatsApp para reabrir depois do envio (o pedido — como no envio, só para fornecedor que recebe por
+    /// WhatsApp) e da conferência (o que veio diferente).
+    /// </summary>
     public async Task<MensagensPedidoDto> MensagensAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var pedido = await CarregarAsync(id, cancellationToken);
@@ -168,11 +171,11 @@ public sealed class PedidoService
             ?? throw new EntidadeNaoEncontradaException("Fornecedor", pedido.FornecedorId);
         var dto = await MontarDtoAsync(pedido, cancellationToken);
         var configuracao = await ConfiguracaoAsync(cancellationToken);
-        var doPedido = MensagemDoPedido(configuracao, fornecedor, pedido, dto);
+        var doPedido = fornecedor.Envio == FormaEnvioPedido.Impresso ? null : MensagemDoPedido(configuracao, fornecedor, pedido, dto);
         var divergencias = pedido.Status == StatusPedido.Recebido ? MensagemDasDivergencias(configuracao, pedido, dto) : null;
         return new MensagensPedidoDto(
             doPedido,
-            MensagensWhatsApp.Link(fornecedor.WhatsApp, doPedido),
+            doPedido is null ? null : MensagensWhatsApp.Link(fornecedor.WhatsApp, doPedido),
             divergencias,
             divergencias is null ? null : MensagensWhatsApp.Link(fornecedor.WhatsApp, divergencias));
     }
@@ -208,6 +211,19 @@ public sealed class PedidoService
             item.AlterarCusto(novo.CustoEmbalagem);
         }
 
+        // Linha que estava com 0 no pedido e veio (sabor trocado que já estava na lista) entra com o custo de agora.
+        var diferencas = new List<LinhaRecebida>();
+        foreach (var d in request.Diferencas ?? [])
+        {
+            decimal? custoAtual = null;
+            if (pedido.Linha(d.ItemEstoqueId) is { PedidoEmbalagens: 0 } && d.RecebidoEmbalagens > 0)
+            {
+                custoAtual = (await _estoque.ObterItemAsync(d.ItemEstoqueId, cancellationToken))?.CustoEmbalagem;
+            }
+
+            diferencas.Add(new LinhaRecebida(d.ItemEstoqueId, d.RecebidoEmbalagens, d.PedirDeNovo, custoAtual));
+        }
+
         var naoPedidos = new List<LinhaNaoPedida>();
         foreach (var linha in request.NaoPedidos ?? [])
         {
@@ -217,7 +233,7 @@ public sealed class PedidoService
         }
 
         pedido.Receber(
-            (request.Diferencas ?? []).Select(d => new LinhaRecebida(d.ItemEstoqueId, d.RecebidoEmbalagens, d.PedirDeNovo)),
+            diferencas,
             naoPedidos,
             usuarioId,
             agora);

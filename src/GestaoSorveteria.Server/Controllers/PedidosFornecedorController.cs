@@ -53,7 +53,6 @@ public sealed class PedidosFornecedorController : ControllerBase
     public async Task<ActionResult<PedidoDto>> Obter(Guid id, CancellationToken cancellationToken) =>
         Ok(await _pedidos.ObterAsync(id, cancellationToken));
 
-    /// <summary>+/− no rascunho; item que não está no pedido é acrescentado.</summary>
     /// <summary>Mensagens do WhatsApp para reabrir: o pedido (enviado/recebido) e o que veio diferente na entrega.</summary>
     [HttpGet("{id:guid}/mensagens")]
     [ProducesResponseType(typeof(MensagensPedidoDto), StatusCodes.Status200OK)]
@@ -61,6 +60,7 @@ public sealed class PedidosFornecedorController : ControllerBase
     public async Task<ActionResult<MensagensPedidoDto>> Mensagens(Guid id, CancellationToken cancellationToken) =>
         Ok(await _pedidos.MensagensAsync(id, cancellationToken));
 
+    /// <summary>+/− no rascunho; item que não está no pedido é acrescentado.</summary>
     [HttpPut("{id:guid}/itens")]
     [ProducesResponseType(typeof(PedidoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
