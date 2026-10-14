@@ -410,6 +410,25 @@ public class PedidoServiceTests
     }
 
     [Fact]
+    public async Task Mensagens_ReabreOWhatsAppDoPedidoEDoQueVeioDiferente()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        var rascunho = await _service.MensagensAsync(pedido.Id, Ct);
+        Assert.Null(rascunho.Pedido);
+
+        await _service.EnviarAsync(pedido.Id, Ct);
+        var enviado = await _service.MensagensAsync(pedido.Id, Ct);
+        Assert.StartsWith("Pedido nº 1 — Verão Tropical", enviado.Pedido);
+        Assert.StartsWith("https://wa.me/5511987654321?text=", enviado.LinkPedido);
+        Assert.Null(enviado.Divergencias);
+
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest([new LinhaRecebidaRequest(_uva.Id, 1m)], null, null), _dona.Id, Ct);
+        var recebido = await _service.MensagensAsync(pedido.Id, Ct);
+        Assert.Equal("Entrega do pedido nº 1 — Verão Tropical\nFaltou: Uva 1 cx", recebido.Divergencias);
+        Assert.NotNull(recebido.LinkDivergencias);
+    }
+
+    [Fact]
     public async Task Receber_NovoCusto_VaiParaOCatalogoEOPedidoFicaComOAntigo()
     {
         var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);

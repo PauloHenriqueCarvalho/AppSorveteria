@@ -102,6 +102,12 @@ public sealed record NovoCustoRequest(Guid ItemEstoqueId, decimal CustoEmbalagem
 /// </summary>
 public sealed record ReceberPedidoResponse(PedidoDto Pedido, int AvisosFechados, string? MensagemFornecedor, string? LinkWhatsApp);
 
+/// <summary>
+/// GET /api/pedidos-fornecedor/{id}/mensagens: para reabrir o WhatsApp depois. <paramref name="Pedido"/> existe para pedido
+/// enviado ou recebido; <paramref name="Divergencias"/>, para entrega conferida que veio diferente. Links abrem o WhatsApp do fornecedor.
+/// </summary>
+public sealed record MensagensPedidoDto(string? Pedido, string? LinkPedido, string? Divergencias, string? LinkDivergencias);
+
 /// <summary>GET /api/fornecedores/{id}/historico (RN-RC-06): últimos 30 dias.</summary>
 public sealed record HistoricoFornecedorDto(
     Guid FornecedorId,

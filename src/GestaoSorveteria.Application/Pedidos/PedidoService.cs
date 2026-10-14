@@ -151,15 +151,30 @@ public sealed class PedidoService
             return new EnviarPedidoResponse(dto, null, null);
         }
 
-        var configuracao = await ConfiguracaoAsync(cancellationToken);
-        var mensagem = MensagensWhatsApp.Pedido(
-            configuracao.NomeLoja,
-            fornecedor.Nome,
-            pedido.Numero,
-            DiaComercial.DataDe(pedido.EnviadoEm!.Value),
-            dto.Linhas.Select(l => new MensagensWhatsApp.LinhaPedido(l.GrupoNome, l.ItemNome, l.PedidoEmbalagens, Enum.Parse<UnidadeCompra>(l.Unidade))).ToList(),
-            fornecedor.MostrarPrecos ? pedido.TotalPedido : null);
+        var mensagem = MensagemDoPedido(await ConfiguracaoAsync(cancellationToken), fornecedor, pedido, dto);
         return new EnviarPedidoResponse(dto, mensagem, MensagensWhatsApp.Link(fornecedor.WhatsApp, mensagem));
+    }
+
+    /// <summary>Mensagens do WhatsApp para reabrir depois do envio (o pedido) e da conferência (o que veio diferente).</summary>
+    public async Task<MensagensPedidoDto> MensagensAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var pedido = await CarregarAsync(id, cancellationToken);
+        if (pedido.Status is not (StatusPedido.Enviado or StatusPedido.Recebido))
+        {
+            return new MensagensPedidoDto(null, null, null, null);
+        }
+
+        var fornecedor = await _estoque.ObterFornecedorAsync(pedido.FornecedorId, cancellationToken)
+            ?? throw new EntidadeNaoEncontradaException("Fornecedor", pedido.FornecedorId);
+        var dto = await MontarDtoAsync(pedido, cancellationToken);
+        var configuracao = await ConfiguracaoAsync(cancellationToken);
+        var doPedido = MensagemDoPedido(configuracao, fornecedor, pedido, dto);
+        var divergencias = pedido.Status == StatusPedido.Recebido ? MensagemDasDivergencias(configuracao, pedido, dto) : null;
+        return new MensagensPedidoDto(
+            doPedido,
+            MensagensWhatsApp.Link(fornecedor.WhatsApp, doPedido),
+            divergencias,
+            divergencias is null ? null : MensagensWhatsApp.Link(fornecedor.WhatsApp, divergencias));
     }
 
     /// <summary>RN-PF-08: cancela rascunho ou enviado, com motivo e quem cancelou.</summary>
@@ -219,30 +234,14 @@ public sealed class PedidoService
 
         await _uow.SaveChangesAsync(cancellationToken);
         var dto = await MontarDtoAsync(pedido, cancellationToken);
-
-        var faltou = Linhas(dto, "Faltou", l => l.PedidoEmbalagens - l.RecebidoEmbalagens!.Value);
-        var aMais = Linhas(dto, "VeioAMais", l => l.RecebidoEmbalagens!.Value - l.PedidoEmbalagens);
-        var trocados = Linhas(dto, "NaoPedido", l => l.RecebidoEmbalagens!.Value);
-        if (faltou.Count + aMais.Count + trocados.Count == 0)
-        {
-            return new ReceberPedidoResponse(dto, avisosFechados, null, null);
-        }
-
-        var configuracao = await ConfiguracaoAsync(cancellationToken);
-        var mensagem = MensagensWhatsApp.Divergencias(configuracao.NomeLoja, pedido.Numero, faltou, aMais, trocados);
-        return new ReceberPedidoResponse(dto, avisosFechados, mensagem, MensagensWhatsApp.Link(fornecedor.WhatsApp, mensagem));
+        var mensagem = MensagemDasDivergencias(await ConfiguracaoAsync(cancellationToken), pedido, dto);
+        return new ReceberPedidoResponse(dto, avisosFechados, mensagem, mensagem is null ? null : MensagensWhatsApp.Link(fornecedor.WhatsApp, mensagem));
 
         // O que a conferência diz que veio: diferença informada, sabor não pedido ou, sem nada, o que foi pedido.
         decimal? QuantoVeio(Guid itemId) =>
             request.Diferencas?.FirstOrDefault(d => d.ItemEstoqueId == itemId)?.RecebidoEmbalagens
             ?? request.NaoPedidos?.FirstOrDefault(n => n.ItemEstoqueId == itemId)?.RecebidoEmbalagens
             ?? pedido.Linha(itemId)?.PedidoEmbalagens;
-
-        static List<MensagensWhatsApp.LinhaPedido> Linhas(PedidoDto dto, string situacao, Func<LinhaPedidoDto, decimal> quantidade) =>
-            dto.Linhas
-                .Where(l => l.Situacao == situacao)
-                .Select(l => new MensagensWhatsApp.LinhaPedido(l.GrupoNome, l.ItemNome, quantidade(l), Enum.Parse<UnidadeCompra>(l.Unidade)))
-                .ToList();
     }
 
     /// <summary>RN-RC-06: pedidos recebidos nos últimos 30 dias, valores, % atendido médio e os itens que mais faltam.</summary>
@@ -424,6 +423,32 @@ public sealed class PedidoService
             .Where(p => p.RecebidoEm > de && p.RecebidoEm <= ate)
             .SelectMany(p => p.Itens.Where(i => i.ItemEstoqueId == item.Id))
             .Sum(i => (i.RecebidoEmbalagens ?? 0) * item.UnidadesPorEmbalagem);
+
+    private static string MensagemDoPedido(ConfiguracaoLoja configuracao, Fornecedor fornecedor, PedidoFornecedor pedido, PedidoDto dto) =>
+        MensagensWhatsApp.Pedido(
+            configuracao.NomeLoja,
+            fornecedor.Nome,
+            pedido.Numero,
+            DiaComercial.DataDe(pedido.EnviadoEm!.Value),
+            dto.Linhas.Select(l => new MensagensWhatsApp.LinhaPedido(l.GrupoNome, l.ItemNome, l.PedidoEmbalagens, Enum.Parse<UnidadeCompra>(l.Unidade))).ToList(),
+            fornecedor.MostrarPrecos ? pedido.TotalPedido : null);
+
+    /// <summary>RN-RC-04: o que faltou, veio a mais ou veio trocado; nulo quando chegou tudo certo.</summary>
+    private static string? MensagemDasDivergencias(ConfiguracaoLoja configuracao, PedidoFornecedor pedido, PedidoDto dto)
+    {
+        var faltou = Linhas("Faltou", l => l.PedidoEmbalagens - l.RecebidoEmbalagens!.Value);
+        var aMais = Linhas("VeioAMais", l => l.RecebidoEmbalagens!.Value - l.PedidoEmbalagens);
+        var trocados = Linhas("NaoPedido", l => l.RecebidoEmbalagens!.Value);
+        return faltou.Count + aMais.Count + trocados.Count == 0
+            ? null
+            : MensagensWhatsApp.Divergencias(configuracao.NomeLoja, pedido.Numero, faltou, aMais, trocados);
+
+        List<MensagensWhatsApp.LinhaPedido> Linhas(string situacao, Func<LinhaPedidoDto, decimal> quantidade) =>
+            dto.Linhas
+                .Where(l => l.Situacao == situacao)
+                .Select(l => new MensagensWhatsApp.LinhaPedido(l.GrupoNome, l.ItemNome, quantidade(l), Enum.Parse<UnidadeCompra>(l.Unidade)))
+                .ToList();
+    }
 
     private static string Cortar(string texto, int maximo) => texto.Length <= maximo ? texto : string.Concat(texto.AsSpan(0, maximo - 1), "…");
 

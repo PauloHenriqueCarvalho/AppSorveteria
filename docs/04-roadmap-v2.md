@@ -130,7 +130,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 ### Sprint 6 — Pedido, impressão e entrega
 - [x] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes — 14/10
 - [x] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou, entregas depois da contagem e o que está a caminho — RN-PF-02…04), +/−, enviar (mensagem do WhatsApp), cancelar, receber (fecha avisos, custo novo, mensagem das diferenças), histórico; migração `PedidosFornecedor` — 14/10
-- [ ] Painel: pedido por fornecedor com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças) com mensagem para o fornecedor; histórico
+- [x] Painel: pedido por fornecedor (rascunho montado sozinho no dia do pedido, +/−, acrescentar item, refazer a sugestão) com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças, sabor trocado, preço novo) com mensagem para o fornecedor; histórico de 30 dias no fornecedor; `GET /api/pedidos-fornecedor/{id}/mensagens` — 14/10
 
 **Pronto quando:** a dona imprime o pedido da semana para os pais, confere a entrega pela folha preenchida em menos de 2 minutos e o que faltou volta no pedido seguinte.
 
