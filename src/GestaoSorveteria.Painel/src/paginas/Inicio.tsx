@@ -1,17 +1,34 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
+import { CHAVE_COMANDAS, listarComandas } from '../api/comandas.ts'
 import { CHAVE_RELATORIOS, obterResumoDoDia } from '../api/relatorios.ts'
-import type { ResumoDiaDto } from '../api/tipos.ts'
+import type { ComandaResumoDto, ResumoDiaDto } from '../api/tipos.ts'
 import Consulta from '../componentes/Consulta.tsx'
 import { ConferenciaCaixa, ResultadoCaixa } from '../componentes/ConferenciaCaixa.tsx'
-import { formatarDataHora, formatarDia, formatarMoeda, hojeNaLoja, nomeDaForma } from '../formatacao.ts'
+import Icone from '../componentes/Icone.tsx'
+import { Barra, CabecalhoPagina, Esqueleto, Indicador, Secao, Selo, type Tom } from '../componentes/Ui.tsx'
+import {
+  formatarDataHora,
+  formatarDia,
+  formatarDiaPorExtenso,
+  formatarHora,
+  formatarMoeda,
+  hojeNaLoja,
+  nomeDaForma,
+  nomeDoStatus,
+  primeiroNome,
+  saudacao,
+} from '../formatacao.ts'
+import { useSessao } from '../sessao/contexto.ts'
 
 // Enquanto a tela está aberta, atualiza sozinha (só com a aba visível).
 const ATUALIZAR_A_CADA_MS = 2 * 60_000
+const ULTIMAS_VENDAS = 8
 
-/** Dashboard do dia: o que foi vendido e se o caixa está batendo. */
+/** Dashboard do dia: quanto vendeu, como pagaram, se o caixa está batendo e o que pede atenção. */
 export default function Inicio() {
+  const { usuario } = useSessao()
   const [dia, setDia] = useState(() => hojeNaLoja())
   const hoje = dia === hojeNaLoja()
 
@@ -23,114 +40,274 @@ export default function Inicio() {
 
   return (
     <>
-      <div className="cabecalho-pagina">
-        <h1>{hoje ? 'Hoje' : formatarDia(dia)}</h1>
-        <input
-          type="date"
-          className="data-compacta"
-          aria-label="Escolher o dia"
-          value={dia}
-          max={hojeNaLoja()}
-          onChange={(e) => setDia(e.target.value || hojeNaLoja())}
-        />
-      </div>
-      <Consulta consulta={resumo}>{(r) => <Resumo resumo={r} hoje={hoje} />}</Consulta>
+      <CabecalhoPagina
+        titulo={hoje ? `${saudacao()}, ${primeiroNome(usuario?.nome ?? '')}` : formatarDia(dia)}
+        subtitulo={hoje ? `Resumo de hoje, ${formatarDiaPorExtenso(dia)}` : `Resumo de ${formatarDiaPorExtenso(dia)}`}
+        acoes={
+          <>
+            <label className="campo-inline">
+              <span>Dia</span>
+              <input
+                type="date"
+                value={dia}
+                max={hojeNaLoja()}
+                onChange={(e) => setDia(e.target.value || hojeNaLoja())}
+              />
+            </label>
+            <Link to="/vendas" className="botao botao-secundario">
+              Ver vendas
+            </Link>
+          </>
+        }
+      />
+      <Consulta consulta={resumo}>{(r) => <Painel resumo={r} hoje={hoje} dia={dia} />}</Consulta>
     </>
   )
 }
 
-function Resumo({ resumo, hoje }: { resumo: ResumoDiaDto; hoje: boolean }) {
-  const caixa = resumo.caixaAtual
+function Painel({ resumo, hoje, dia }: { resumo: ResumoDiaDto; hoje: boolean; dia: string }) {
+  const caixa = hoje ? resumo.caixaAtual : null
 
   return (
-    <>
-      <section className="cartao destaque">
-        <span className="suave">Total vendido</span>
-        <strong className="valor-grande">{formatarMoeda(resumo.totalVendido)}</strong>
-        <div className="indicadores">
-          <span>
-            <strong>{resumo.quantidadeComandas}</strong> venda{resumo.quantidadeComandas === 1 ? '' : 's'}
-          </span>
-          <span>
-            Ticket médio <strong>{formatarMoeda(resumo.ticketMedio)}</strong>
-          </span>
-        </div>
+    <div className="painel">
+      <section className="grade-indicadores" aria-label="Indicadores do dia">
+        <Indicador
+          rotulo="Faturamento"
+          valor={formatarMoeda(resumo.totalVendido)}
+          detalhe={resumo.totalEstornado > 0 ? `${formatarMoeda(resumo.totalEstornado)} estornados, fora do total` : 'vendas pagas do dia'}
+          tom="marca"
+        />
+        <Indicador
+          rotulo="Vendas"
+          valor={resumo.quantidadeComandas}
+          detalhe={
+            resumo.quantidadeCanceladas > 0
+              ? `${resumo.quantidadeCanceladas} cancelada${resumo.quantidadeCanceladas === 1 ? '' : 's'} no balcão`
+              : 'nenhuma cancelada'
+          }
+        />
+        <Indicador rotulo="Ticket médio" valor={formatarMoeda(resumo.ticketMedio)} detalhe="por venda paga" />
+        {caixa ? (
+          <Indicador
+            rotulo="Dinheiro na gaveta"
+            valor={caixa.valorEsperado === null ? '—' : formatarMoeda(caixa.valorEsperado)}
+            detalhe={`esperado agora · caixa aberto às ${formatarHora(caixa.abertoEm)} por ${caixa.abertoPorNome}`}
+          />
+        ) : (
+          <Indicador
+            rotulo="Caixa"
+            valor={hoje ? 'Fechado' : '—'}
+            detalhe={hoje ? 'nenhum caixa aberto agora' : 'veja os caixas do dia'}
+            tom={hoje ? 'atencao' : 'neutro'}
+          />
+        )}
       </section>
 
-      {resumo.porFormaPagamento.length > 0 && (
-        <section className="cartao">
-          <h2>Como pagaram</h2>
-          <dl className="valores">
-            {resumo.porFormaPagamento.map((f) => (
-              <div key={f.forma} className="valores-linha">
-                <dt>
-                  {nomeDaForma(f.forma)} <span className="suave">({f.quantidade})</span>
-                </dt>
-                <dd>{formatarMoeda(f.total)}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
-
-      {(resumo.quantidadeEstornos > 0 || resumo.quantidadeCanceladas > 0) && (
-        <section className="cartao">
-          <dl className="valores">
-            {resumo.quantidadeEstornos > 0 && (
-              <div className="valores-linha">
-                <dt>
-                  Estornadas <span className="suave">({resumo.quantidadeEstornos})</span>
-                </dt>
-                <dd>{formatarMoeda(resumo.totalEstornado)}</dd>
-              </div>
-            )}
-            {resumo.quantidadeCanceladas > 0 && (
-              <div className="valores-linha">
-                <dt>Canceladas no balcão</dt>
-                <dd>{resumo.quantidadeCanceladas}</dd>
-              </div>
-            )}
-          </dl>
-        </section>
-      )}
-
-      {hoje && (
-        <section className="cartao">
-          <div className="cabecalho-pagina">
-            <h2>Caixa</h2>
-            {caixa && <ResultadoCaixa caixa={caixa} />}
-          </div>
-          {caixa ? (
-            <>
-              <p className="suave">
-                Aberto em {formatarDataHora(caixa.abertoEm)} por {caixa.abertoPorNome}. Mostra o que o celular do balcão já
-                enviou.
-              </p>
-              <ConferenciaCaixa caixa={caixa} />
-              <p>
-                <Link to={`/caixas/${caixa.id}`}>Ver o caixa</Link>
-              </p>
-            </>
+      <div className="grade-painel">
+        <Secao titulo="Formas de pagamento" className="grade-largo">
+          {resumo.porFormaPagamento.length === 0 ? (
+            <p className="suave">Nenhuma venda paga {hoje ? 'ainda hoje' : 'neste dia'}.</p>
           ) : (
-            <p className="suave">
-              Nenhum caixa aberto agora. <Link to="/caixas">Ver os caixas fechados</Link>
-            </p>
+            <ul className="lista-barras">
+              {resumo.porFormaPagamento.map((f) => {
+                const fracao = resumo.totalVendido > 0 ? f.total / resumo.totalVendido : 0
+                return (
+                  <li key={f.forma}>
+                    <div className="lista-barras-linha">
+                      <span>
+                        {nomeDaForma(f.forma)}{' '}
+                        <span className="suave">
+                          · {f.quantidade} venda{f.quantidade === 1 ? '' : 's'}
+                        </span>
+                      </span>
+                      <span className="numero">
+                        <strong>{formatarMoeda(f.total)}</strong> <span className="suave">{Math.round(fracao * 100)}%</span>
+                      </span>
+                    </div>
+                    <Barra fracao={fracao} />
+                  </li>
+                )
+              })}
+            </ul>
           )}
-        </section>
-      )}
+        </Secao>
 
-      {resumo.vendasRecebidasAposFechamento > 0 && (
-        <p className="alerta alerta-aviso">
-          {resumo.vendasRecebidasAposFechamento === 1
-            ? '1 venda chegou do celular depois que o caixa foi fechado. '
-            : `${resumo.vendasRecebidasAposFechamento} vendas chegaram do celular depois que o caixa foi fechado. `}
-          <Link to="/caixas">Conferir nos caixas</Link>
+        <Atencao resumo={resumo} hoje={hoje} />
+      </div>
+
+      <div className="grade-painel">
+        <UltimasVendas dia={dia} hoje={hoje} />
+
+        {hoje && (
+          <Secao
+            titulo="Caixa"
+            acao={caixa ? <ResultadoCaixa caixa={caixa} /> : <Selo tom="atencao">Fechado</Selo>}
+          >
+            {caixa ? (
+              <>
+                <p className="suave">
+                  Aberto em {formatarDataHora(caixa.abertoEm)} por {caixa.abertoPorNome}. Mostra o que o tablet do balcão já
+                  enviou.
+                </p>
+                <ConferenciaCaixa caixa={caixa} />
+                <Link to={`/caixas/${caixa.id}`} className="link-seta">
+                  Abrir o caixa <Icone nome="seta" tamanho={16} />
+                </Link>
+              </>
+            ) : (
+              <p className="suave">
+                Nenhum caixa aberto agora. <Link to="/caixas">Ver os caixas fechados</Link>
+              </p>
+            )}
+          </Secao>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface ItemAtencao {
+  tom: Tom
+  titulo: string
+  detalhe: string
+  para: string
+}
+
+/** O que pede uma ação da dona, mais grave primeiro. Tudo vem do resumo da API. */
+function Atencao({ resumo, hoje }: { resumo: ResumoDiaDto; hoje: boolean }) {
+  const itens: ItemAtencao[] = []
+  const caixa = resumo.caixaAtual
+
+  if (resumo.vendasRecebidasAposFechamento > 0) {
+    itens.push({
+      tom: 'ruim',
+      titulo:
+        resumo.vendasRecebidasAposFechamento === 1
+          ? '1 venda chegou depois do fechamento do caixa'
+          : `${resumo.vendasRecebidasAposFechamento} vendas chegaram depois do fechamento do caixa`,
+      detalhe: 'Confira a conferência do caixa',
+      para: '/caixas',
+    })
+  }
+  if (hoje && caixa?.divergenciaSincronizacao) {
+    itens.push({
+      tom: 'atencao',
+      titulo: 'O caixa do tablet não bateu com o do servidor',
+      detalhe: 'Abra o caixa para ver os dois valores',
+      para: `/caixas/${caixa.id}`,
+    })
+  }
+  if (resumo.quantidadeEstornos > 0) {
+    itens.push({
+      tom: 'atencao',
+      titulo: `${resumo.quantidadeEstornos} venda${resumo.quantidadeEstornos === 1 ? '' : 's'} estornada${resumo.quantidadeEstornos === 1 ? '' : 's'}`,
+      detalhe: `${formatarMoeda(resumo.totalEstornado)} fora do faturamento`,
+      para: '/vendas',
+    })
+  }
+  if (hoje && !caixa) {
+    itens.push({
+      tom: 'neutro',
+      titulo: 'Nenhum caixa aberto',
+      detalhe: 'O tablet precisa abrir o caixa para vender',
+      para: '/caixas',
+    })
+  }
+
+  return (
+    <Secao titulo="Precisa da sua atenção" acao={itens.length > 0 ? <Selo tom="ruim">{itens.length}</Selo> : undefined}>
+      {itens.length === 0 ? (
+        <p className="tudo-certo">
+          <Selo tom="bom">Tudo em ordem</Selo> Nada pendente {hoje ? 'hoje' : 'neste dia'}.
         </p>
+      ) : (
+        <ul className="lista-atencao">
+          {itens.map((item) => (
+            <li key={item.titulo}>
+              <Link to={item.para} className={`atencao atencao-${item.tom}`}>
+                <span className="atencao-ponto" aria-hidden="true" />
+                <span>
+                  <strong>{item.titulo}</strong>
+                  <small>{item.detalhe}</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
+    </Secao>
+  )
+}
 
-      <p>
-        <Link to="/vendas">Ver as vendas</Link>
-      </p>
-    </>
+const TOM_DO_STATUS: Record<string, Tom> = { Fechada: 'bom', Cancelada: 'neutro', Estornada: 'ruim', Aberta: 'atencao' }
+
+function UltimasVendas({ dia, hoje }: { dia: string; hoje: boolean }) {
+  const navegar = useNavigate()
+  const vendas = useQuery({
+    queryKey: [...CHAVE_COMANDAS, 'lista', dia, undefined, 1],
+    queryFn: () => listarComandas({ dia }),
+    refetchInterval: hoje ? ATUALIZAR_A_CADA_MS : false,
+  })
+
+  return (
+    <Secao
+      titulo="Últimas vendas"
+      className="grade-largo"
+      acao={
+        <Link to="/vendas" className="link-seta">
+          Ver todas <Icone nome="seta" tamanho={16} />
+        </Link>
+      }
+    >
+      {vendas.isPending ? (
+        <Esqueleto linhas={5} />
+      ) : vendas.isError ? (
+        <p className="suave">Não foi possível carregar as vendas agora. Elas aparecem em Vendas.</p>
+      ) : vendas.data.itens.length === 0 ? (
+        <p className="suave">Nenhuma venda {hoje ? 'ainda hoje' : 'neste dia'}.</p>
+      ) : (
+        <div className="tabela-caixa">
+          <table className="tabela">
+            <thead>
+              <tr>
+                <th scope="col">Nº</th>
+                <th scope="col">Hora</th>
+                <th scope="col" className="so-largo">
+                  Atendente
+                </th>
+                <th scope="col" className="so-largo">
+                  Pagamento
+                </th>
+                <th scope="col">Situação</th>
+                <th scope="col" className="numero">
+                  Total
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {vendas.data.itens.slice(0, ULTIMAS_VENDAS).map((v: ComandaResumoDto) => (
+                <tr key={v.id} className="linha-clicavel" onClick={() => navegar(`/vendas/${v.id}`)}>
+                  <td>
+                    <Link to={`/vendas/${v.id}`} className="link-linha">
+                      {v.numero}
+                    </Link>
+                  </td>
+                  <td className="suave">{formatarHora(v.fechadaEm ?? v.criadaEm)}</td>
+                  <td className="so-largo">{v.atendenteNome}</td>
+                  <td className="so-largo">
+                    {v.formasPagamento.map(nomeDaForma).join(' + ') || '—'}
+                    {v.tipo === 'Delivery' && <span className="suave"> · delivery</span>}
+                  </td>
+                  <td>
+                    <Selo tom={TOM_DO_STATUS[v.status] ?? 'neutro'}>{nomeDoStatus(v.status)}</Selo>
+                  </td>
+                  <td className={v.status === 'Fechada' ? 'numero forte' : 'numero riscado'}>{formatarMoeda(v.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Secao>
   )
 }

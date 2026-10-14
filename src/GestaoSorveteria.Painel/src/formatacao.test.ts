@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { formatarData, formatarDataHora, formatarDia, formatarHora, hojeNaLoja, nomeDaForma } from './formatacao.ts'
+import {
+  formatarData,
+  formatarDataHora,
+  formatarDia,
+  formatarDiaPorExtenso,
+  formatarHora,
+  hojeNaLoja,
+  iniciais,
+  nomeDaForma,
+  primeiroNome,
+  saudacao,
+} from './formatacao.ts'
 
 // Intl usa espaço não separável em alguns formatos.
 const normal = (texto: string) => texto.replace(/\s/g, ' ')
@@ -32,5 +43,29 @@ describe('nomeDaForma', () => {
     ['Vale', 'Vale'],
   ])('nomeDaForma_%s', (forma, esperado) => {
     expect(nomeDaForma(forma)).toBe(esperado)
+  })
+})
+
+describe('textos do cabeçalho', () => {
+  it('escreve o dia por extenso sem depender do fuso do aparelho', () => {
+    expect(formatarDiaPorExtenso('2026-10-14')).toBe('quarta-feira, 14 de outubro')
+  })
+
+  it('tira o tratamento da saudação', () => {
+    expect(primeiroNome('Dona Laura Silva')).toBe('Laura')
+    expect(primeiroNome('Ana')).toBe('Ana')
+  })
+
+  it('monta as iniciais do avatar', () => {
+    expect(iniciais('Dona Laura')).toBe('DL')
+    expect(iniciais('ana')).toBe('A')
+  })
+})
+
+describe('saudacao', () => {
+  it('usa o relógio da loja (UTC−3)', () => {
+    expect(saudacao(new Date('2026-10-14T13:00:00Z'))).toBe('Bom dia') // 10h
+    expect(saudacao(new Date('2026-10-14T18:00:00Z'))).toBe('Boa tarde') // 15h
+    expect(saudacao(new Date('2026-10-14T23:30:00Z'))).toBe('Boa noite') // 20h30
   })
 })

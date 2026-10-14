@@ -80,6 +80,14 @@ Plano detalhado em docs/06, seção 4.
 
 **Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu. ✅ (falta só publicar no Cloudflare — Sprint 4)
 
+### Painel profissional (cara de ERP, ADR 020) — 14/10/2026
+- [x] Estrutura: menu lateral agrupado, barra superior com trilha e data, gaveta + barra de atalhos no celular, marca Verão Tropical, login com a marca
+- [x] Componentes: cabeçalho de página, indicador, seção, selo, barra, esqueleto, tabela; folha de estilo nova (as telas antigas já herdam)
+- [x] Início: 4 indicadores, formas de pagamento, "Precisa da sua atenção", últimas vendas em tabela, caixa atual
+- [ ] API do dashboard: vendas por hora, comparativo com o mesmo dia da semana anterior, mais vendidos; gráfico no Início
+- [ ] Vendas e Caixas em tabela com filtros (período, atendente, pagamento), exportar Excel e imprimir relatório
+- [ ] Produtos e Usuários no mesmo padrão
+
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)
 
 Detalhes em docs/07.
