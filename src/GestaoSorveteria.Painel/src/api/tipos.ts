@@ -209,4 +209,39 @@ export interface ResumoDiaDto {
   vendasRecebidasAposFechamento: number
   /** Caixa aberto agora (último estado recebido do celular), ou null. */
   caixaAtual: CaixaResumoDto | null
+  /** RN-RL-06: só as horas com venda (0–23, horário da loja). */
+  porHora: VendasNaHoraDto[]
+  /** RN-RL-07: mesmo dia da semana anterior. */
+  semanaPassada: ComparativoDiaDto
+  /** RN-RL-03: até 5 por faturamento; produtoId nulo = self-service / venda avulsa. */
+  maisVendidos: ProdutoVendidoDto[]
+}
+
+/** Contracts/Relatorios/VendasNaHoraDto */
+export interface VendasNaHoraDto {
+  hora: number
+  total: number
+  quantidade: number
+}
+
+/** Contracts/Relatorios/ComparativoDiaDto — variações em % já calculadas pela API (null = sem base). */
+export interface ComparativoDiaDto {
+  data: string
+  /** true quando o dia consultado é hoje: a semana passada conta só até o mesmo horário. */
+  ateMesmoHorario: boolean
+  totalVendido: number
+  quantidadeComandas: number
+  ticketMedio: number
+  variacaoTotalPercentual: number | null
+  variacaoQuantidadePercentual: number | null
+  variacaoTicketPercentual: number | null
+  porHora: VendasNaHoraDto[]
+}
+
+/** Contracts/Relatorios/ProdutoVendidoDto */
+export interface ProdutoVendidoDto {
+  produtoId: string | null
+  descricao: string
+  quantidade: number
+  total: number
 }

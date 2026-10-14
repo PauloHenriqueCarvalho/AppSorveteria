@@ -4,6 +4,7 @@ import {
   formatarDataHora,
   formatarDia,
   formatarDiaPorExtenso,
+  formatarVariacao,
   formatarHora,
   hojeNaLoja,
   iniciais,
@@ -67,5 +68,13 @@ describe('saudacao', () => {
     expect(saudacao(new Date('2026-10-14T13:00:00Z'))).toBe('Bom dia') // 10h
     expect(saudacao(new Date('2026-10-14T18:00:00Z'))).toBe('Boa tarde') // 15h
     expect(saudacao(new Date('2026-10-14T23:30:00Z'))).toBe('Boa noite') // 20h30
+  })
+})
+
+describe('formatarVariacao', () => {
+  it('mostra sinal e uma casa', () => {
+    expect(formatarVariacao(12.4)).toBe('+12,4%')
+    expect(formatarVariacao(-25)).toBe('−25,0%')
+    expect(formatarVariacao(0)).toBe('0,0%')
   })
 })

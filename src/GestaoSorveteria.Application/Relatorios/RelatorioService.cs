@@ -8,7 +8,7 @@ using GestaoSorveteria.Domain.Repositories;
 
 namespace GestaoSorveteria.Application.Relatorios;
 
-/// <summary>Relatórios do painel. Fase 1: resumo do dia (dashboard). Só leitura.</summary>
+/// <summary>Relatórios do painel. Fase 1: resumo do dia (dashboard), com vendas por hora, comparativo e mais vendidos. Só leitura.</summary>
 public sealed class RelatorioService
 {
     private readonly IComandaRepository _comandas;
@@ -49,6 +49,76 @@ public sealed class RelatorioService
             estornadas.Count,
             canceladas,
             fechadas.Count(c => c.RecebidaAposFechamentoCaixa),
-            await _caixas.ObterAtualAsync(cancellationToken));
+            await _caixas.ObterAtualAsync(cancellationToken),
+            PorHora(fechadas),
+            await SemanaPassadaAsync(data, total, fechadas.Count, ticketMedio, cancellationToken),
+            MaisVendidos(fechadas));
     }
+
+    /// <summary>Rótulo dos itens livres no ranking (RN-RL-03).</summary>
+    public const string RotuloItemLivre = "Self-service / venda avulsa";
+
+    private const int QuantidadeMaisVendidos = 5;
+
+    /// <summary>RN-RL-06: comandas pagas por hora local do fechamento; só as horas com venda.</summary>
+    private static IReadOnlyList<VendasNaHoraDto> PorHora(IEnumerable<Comanda> fechadas) =>
+        fechadas
+            .GroupBy(c => TimeZoneInfo.ConvertTimeFromUtc(c.FechadaEm!.Value, DiaComercial.Fuso).Hour)
+            .OrderBy(g => g.Key)
+            .Select(g => new VendasNaHoraDto(g.Key, Moeda.Arredondar(g.Sum(c => c.Total)), g.Count()))
+            .ToList();
+
+    /// <summary>
+    /// RN-RL-07: mesmo dia da semana anterior. Hoje → só até o mesmo horário de agora, para não comparar
+    /// a manhã de hoje com o dia inteiro da semana passada.
+    /// </summary>
+    private async Task<ComparativoDiaDto> SemanaPassadaAsync(
+        DateOnly data, decimal total, int quantidade, decimal ticketMedio, CancellationToken cancellationToken)
+    {
+        var anterior = data.AddDays(-7);
+        var (inicioUtc, fimUtc) = DiaComercial.IntervaloUtc(anterior);
+        var hoje = data == DiaComercial.DataDe(_clock.UtcNow);
+        if (hoje)
+        {
+            fimUtc = _clock.UtcNow.AddDays(-7);
+        }
+
+        var vendas = await _comandas.ListarFechadasAsync(inicioUtc, fimUtc, cancellationToken);
+        var fechadas = vendas.Where(c => c.Status == StatusComanda.Fechada).ToList();
+        var totalAntes = Moeda.Arredondar(fechadas.Sum(c => c.Total));
+        var ticketAntes = fechadas.Count == 0 ? 0m : Moeda.Arredondar(totalAntes / fechadas.Count);
+
+        return new ComparativoDiaDto(
+            anterior,
+            hoje,
+            totalAntes,
+            fechadas.Count,
+            ticketAntes,
+            Variacao(total, totalAntes),
+            Variacao(quantidade, fechadas.Count),
+            Variacao(ticketMedio, ticketAntes),
+            PorHora(fechadas));
+    }
+
+    /// <summary>(atual − anterior) ÷ anterior × 100, 1 casa; anterior zero → null (RN-RL-07).</summary>
+    private static decimal? Variacao(decimal atual, decimal anterior) =>
+        anterior == 0m ? null : Math.Round((atual - anterior) / anterior * 100m, 1, MidpointRounding.AwayFromZero);
+
+    /// <summary>RN-RL-03: até 5 por faturamento; itens livres juntos; empate → mais unidades, depois nome.</summary>
+    private static IReadOnlyList<ProdutoVendidoDto> MaisVendidos(IEnumerable<Comanda> fechadas) =>
+        fechadas
+            .SelectMany(c => c.Itens.Select(i => (Comanda: c, Item: i)))
+            .GroupBy(x => x.Item.ProdutoId)
+            .Select(g =>
+            {
+                var descricao = g.Key is null
+                    ? RotuloItemLivre
+                    : g.OrderByDescending(x => x.Comanda.FechadaEm).First().Item.Descricao;
+                return new ProdutoVendidoDto(g.Key, descricao, g.Sum(x => x.Item.Quantidade), Moeda.Arredondar(g.Sum(x => x.Item.Subtotal)));
+            })
+            .OrderByDescending(p => p.Total)
+            .ThenByDescending(p => p.Quantidade)
+            .ThenBy(p => p.Descricao, StringComparer.CurrentCulture)
+            .Take(QuantidadeMaisVendidos)
+            .ToList();
 }
