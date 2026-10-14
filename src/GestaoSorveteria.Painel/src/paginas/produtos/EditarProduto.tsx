@@ -7,12 +7,14 @@ import {
   atualizarProduto,
   CHAVE_PRODUTOS,
   criarProduto,
+  ligarProdutoAoEstoque,
   listarProdutos,
   obterProduto,
 } from '../../api/produtos.ts'
 import type { ProdutoDto, SalvarProdutoRequest } from '../../api/tipos.ts'
 import ConectandoServidor from '../../componentes/ConectandoServidor.tsx'
 import { lerPreco, precoParaCampo } from '../../entrada.ts'
+import { useCatalogoEstoque } from '../estoque/useCatalogoEstoque.ts'
 
 /** /produtos/novo (sem id) e /produtos/:id. */
 export default function EditarProduto() {
@@ -172,6 +174,8 @@ function Formulario({ produto }: { produto?: ProdutoDto }) {
         </button>
       </form>
 
+      {produto && <LigarAoEstoque key={`${produto.id}-${produto.atualizadoEmUtc}`} produto={produto} />}
+
       {produto && (
         <div className="cartao formulario">
           <p className="suave">
@@ -191,5 +195,92 @@ function Formulario({ produto }: { produto?: ProdutoDto }) {
         </div>
       )}
     </>
+  )
+}
+
+/**
+ * RN-PR-06: liga o produto a um grupo de estoque. Grupo de potes (saldo pela venda) faz o tablet pedir o sabor e o saldo
+ * descer sozinho a cada venda (RN-ES-09). Separado do cadastro: salvar nome e preço não mexe nisto.
+ */
+function LigarAoEstoque({ produto }: { produto: ProdutoDto }) {
+  const queryClient = useQueryClient()
+  const catalogo = useCatalogoEstoque()
+  const [grupoId, setGrupoId] = useState(produto.grupoEstoqueId ?? '')
+  const [unidades, setUnidades] = useState(String(produto.unidadesPorVenda ?? 1))
+  const [erro, setErro] = useState<string | null>(null)
+  const [salvo, setSalvo] = useState(false)
+
+  const ligar = useMutation({
+    mutationFn: () => ligarProdutoAoEstoque(produto.id, { grupoEstoqueId: grupoId || null, unidadesPorVenda: Number(unidades) }),
+    onSuccess: (atualizado) => {
+      queryClient.setQueryData([...CHAVE_PRODUTOS, atualizado.id], atualizado)
+      void queryClient.invalidateQueries({ queryKey: CHAVE_PRODUTOS, exact: true })
+      setSalvo(true)
+    },
+  })
+
+  const grupos = (catalogo.data?.grupos ?? []).filter((g) => g.modoControle !== 'SoAviso').sort((a, b) => a.ordem - b.ordem)
+  const escolhido = grupos.find((g) => g.id === grupoId)
+  const mudou = grupoId !== (produto.grupoEstoqueId ?? '') || (grupoId !== '' && Number(unidades) !== (produto.unidadesPorVenda ?? 1))
+
+  function enviar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    setErro(null)
+    setSalvo(false)
+    const n = Number(unidades)
+    if (grupoId !== '' && (!Number.isInteger(n) || n < 1 || n > 50)) {
+      setErro('Unidades por venda vai de 1 a 50.')
+      return
+    }
+    ligar.mutate()
+  }
+
+  if (produto.permiteValorLivre) {
+    return (
+      <div className="cartao formulario">
+        <h2>Estoque</h2>
+        <p className="suave">Produto de valor digitado (self-service) não baixa estoque.</p>
+      </div>
+    )
+  }
+
+  return (
+    <form className="cartao formulario" onSubmit={enviar}>
+      <h2>Estoque</h2>
+      <p className="suave">
+        Ligue os potes ao grupo deles: o tablet passa a pedir o sabor na venda e o saldo de cada sabor desce sozinho. Picolé e
+        massa continuam pela contagem semanal.
+      </p>
+      <div className="grade-campos">
+        <label className="campo">
+          <span>Grupo de estoque</span>
+          <select value={grupoId} onChange={(e) => setGrupoId(e.target.value)} disabled={ligar.isPending}>
+            <option value="">Não mexe no estoque</option>
+            {grupos.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.nome}
+                {g.modoControle === 'SaldoPelaVenda' ? ' — pede o sabor' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        {grupoId !== '' && (
+          <label className="campo">
+            <span>Quantos saem por venda</span>
+            <input type="number" inputMode="numeric" min={1} max={50} step={1} value={unidades} onChange={(e) => setUnidades(e.target.value)} />
+            <span className="suave dica">Ex.: "2 potes de 1L" = 2.</span>
+          </label>
+        )}
+      </div>
+      {escolhido && escolhido.modoControle !== 'SaldoPelaVenda' && (
+        <p className="suave dica">{escolhido.nome} é controlado pela contagem semanal: a venda não pede sabor nem baixa saldo.</p>
+      )}
+      {erro && <p className="alerta alerta-erro">{erro}</p>}
+      {ligar.isError && <p className="alerta alerta-erro">{mensagemDoErro(ligar.error)}</p>}
+      {salvo && !mudou && <p className="alerta alerta-sucesso">Salvo. O tablet recebe na próxima sincronização.</p>}
+      <button type="submit" className="botao botao-secundario" disabled={ligar.isPending || !mudou}>
+        {ligar.isPending ? 'Salvando…' : 'Salvar estoque'}
+      </button>
+    </form>
   )
 }

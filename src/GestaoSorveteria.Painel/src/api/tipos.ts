@@ -55,6 +55,18 @@ export interface ProdutoDto {
   /** Posição do botão no app (RN-PR-05). */
   ordem: number
   atualizadoEmUtc: string
+  /** RN-PR-06: grupo de estoque que a venda movimenta (nulo = não mexe no estoque). */
+  grupoEstoqueId?: string | null
+  /** Quantas unidades do grupo saem por unidade vendida. */
+  unidadesPorVenda?: number
+  /** Grupo de potes: o tablet pede o sabor (RN-ES-09). */
+  pedeSabor?: boolean
+}
+
+/** PUT /api/produtos/{id}/estoque (RN-PR-06) */
+export interface LigarProdutoEstoqueRequest {
+  grupoEstoqueId: string | null
+  unidadesPorVenda: number
 }
 
 /** Contracts/Produtos/CatalogoProdutosResponse */
@@ -598,4 +610,20 @@ export interface ItemQueMaisFaltaDto {
   descricao: string
   vezesQueFaltou: number
   embalagensQueFaltaram: number
+}
+
+/** GET /api/estoque/saldos (RN-ES-08): saldo de cada pote = última contagem + entregas − vendas depois dela. */
+export interface SaldoPoteDto {
+  itemEstoqueId: string
+  grupoId: string
+  grupoNome: string
+  itemNome: string
+  /** Pode ser negativo: a venda nunca é bloqueada ("conferir"). */
+  saldoUnidades: number
+  minimoUnidades: number | null
+  ultimaContagemUnidades: number | null
+  ultimaContagemEm: string | null
+  /** Vendas dos últimos 7 dias menos estornos. */
+  vendidosNaSemana: number
+  ativo: boolean
 }
