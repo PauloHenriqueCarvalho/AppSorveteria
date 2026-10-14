@@ -429,6 +429,12 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("texto_livre");
 
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.Property<DateTime?>("WhatsAppAbertoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("whatsapp_aberto_em");
@@ -694,6 +700,33 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_itens_estoque_grupo_id_nome_normalizado");
 
                     b.ToTable("itens_estoque", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Loja.ConfiguracaoLoja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<string>("NomeLoja")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("nome_loja");
+
+                    b.Property<string>("WhatsAppDona")
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("whatsapp_dona");
+
+                    b.HasKey("Id")
+                        .HasName("pk_configuracao_loja");
+
+                    b.ToTable("configuracao_loja", (string)null);
                 });
 
             modelBuilder.Entity("GestaoSorveteria.Domain.Produtos.Produto", b =>
