@@ -1,11 +1,11 @@
 # 10 — Fase 2 redesenhada: estoque de produto pronto e pedido ao fornecedor
 
-> 13/10/2026. Base: a planilha que a dona usa hoje (`pedidos.xlsx`, compartilhada em 10/10) e a reunião em que ela contou a dor principal: **o fornecedor nem sempre manda o que foi pedido, e ela só descobre depois.**
+> 13/10/2026, revisto em 14/10 com o Paulo. Base: a planilha que a dona usa hoje (`pedidos.xlsx`, compartilhada em 10/10) e a reunião em que ela contou a dor principal: **o fornecedor nem sempre manda o que foi pedido, e ela só descobre depois.**
 > Substitui o desenho antigo da Fase 2 (insumos + ficha técnica). Insumo e ficha técnica vão para a Fase 4, se ela ainda quiser. Decisão registrada no ADR 019 (docs/01).
 
 ## 1. O que a planilha mostra
 
-A dona não controla insumo (leite, morango). Ela controla **produto pronto comprado de um fornecedor**:
+A dona não controla insumo (leite, morango). Ela controla **sorvete pronto** que compra de quem fabrica, **os pais dela**, que preferem receber o pedido **impresso**:
 
 | Aba | O que tem | Unidade de compra | Custo na planilha |
 |---|---|---|---|
@@ -17,13 +17,13 @@ A dona não controla insumo (leite, morango). Ela controla **produto pronto comp
 | TOTAL | quantidade pedida por grupo × preço = total do pedido | — | — |
 | Pedido | resumo do pedido para enviar, com coluna **Enviado** | — | — |
 
-Cada aba tem as colunas **Na frente** (freezer do balcão), **Em estoque** (depósito) e **Pedido dd/mm**.
+Cada aba tem as colunas **Na frente**, **Em estoque** e **Pedido dd/mm**. Na prática a loja costuma ter **um freezer só**, sem estoque guardado atrás: o que existe é o que está no freezer.
 
 **Onde o processo quebra (com evidência na planilha):**
 
 1. **A coluna "Enviado" está vazia.** Ninguém confere o que chegou contra o que foi pedido — é exatamente a dor que ela descreveu.
 2. **O pedido é digitado duas vezes e as duas versões não batem.** Na coluna "Pedido 15/06" das abas há 9 caixas de picolé e nenhum pote; na aba "Pedido" há 25 caixas de picolé, 9 sabores de pote 1L (8 de cada) e 6 baldes de massa.
-3. **"Em estoque" quase nunca é preenchido** (só 2 linhas, em MASSAS). Ela conta a frente e "lembra" do depósito.
+3. **"Em estoque" quase nunca é preenchido** (só 2 linhas, em MASSAS): quase tudo está no próprio freezer.
 4. **A decisão de quanto pedir está na cabeça dela**: não há mínimo nem alvo por sabor.
 5. **Preço escondido em fórmula** (`=B3*0.9*28`) e só por grupo: mudou o preço, alguém precisa lembrar de editar a fórmula.
 6. **Erro de fórmula**: `AÇAÍS!D5` = `=D` (dá `#NAME?`).
@@ -31,96 +31,132 @@ Cada aba tem as colunas **Na frente** (freezer do balcão), **Em estoque** (dep�
 
 O catálogo inicial já foi extraído da planilha: **[docs/fase2/catalogo-inicial.csv](fase2/catalogo-inicial.csv)** (123 itens, com categoria, sabor, embalagem, custo e a célula de origem). Ninguém precisa redigitar nada.
 
-## 2. Objetivo: o pedido se faz sozinho
+## 2. O fluxo combinado (14/10)
 
-Hoje: contar tudo → decidir de cabeça → digitar na planilha → digitar de novo no resumo → mandar → receber sem conferir.
+Princípio: **a venda no balcão não pode ficar mais lenta.** Uma pessoa leva 50 picolés de sabores misturados e o atendente não tem como registrar sabor por sabor. Então cada grupo de produto tem o controle que cabe na rotina da loja:
 
-Com o sistema, o trabalho manual de cada etapa cai para o mínimo:
-
-| Etapa | Hoje (manual) | Com o sistema | Toques da dona |
+| Grupo | Na venda | Como o sistema sabe o que tem | Alerta |
 |---|---|---|---|
-| Saber o que tem | Contar freezer e depósito, item por item | **Saldo automático** do depósito: entra pelo recebimento, sai quando uma caixa ou balde vai para a frente (1 toque por caixa, não por picolé) | 0 |
-| Decidir o que pedir | De cabeça | **Pedido sugerido** pelo consumo real e pelo prazo de entrega | revisar |
-| Montar o pedido | Digitar duas vezes | Rascunho pronto no dia do pedido, total em R$ calculado | +/− se quiser |
-| Enviar | Copiar e colar | Botão **Enviar no WhatsApp** com a mensagem pronta | 1 |
-| Receber | Não confere | Lista do pedido já aberta: **"Chegou tudo certo"** ou ajusta só o que veio diferente | 1 (+ só as diferenças) |
-| Cobrar o fornecedor | Não cobra (não sabe) | Diferenças em R$ e mensagem de cobrança pronta; o que faltou volta sozinho no próximo pedido | 1 |
-| Conferir o estoque | — | **Contagem rápida** semanal opcional: só digita o que não bate | poucos |
+| **Picolé** (fruta, ao leite), Skimo, Moreninha | **Sem sabor**. Quantidade pode ser digitada ("× 50") | **Contagem semanal** no tablet ou no painel | Pelo botão **"Está acabando"** e pela contagem |
+| **Massa e açaí** (balde) | Bola/peso, sem sabor (como hoje) | **Contagem semanal**, junto com os picolés | Pelo botão **"Está acabando"** |
+| **Potes** 1L / 2L / 5L e potes de açaí | **Com sabor** (1 toque; vende pouco por venda). Teste: se atrapalhar, volta para a contagem | **Saldo automático**: entra na entrega, sai na venda. A contagem semanal confere | **Automático**: chegou no mínimo → resumo do dia; zerou → urgente |
+| **Copos, casquinhas, colheres, coberturas e outros insumos** | — | Não controla saldo | Pelo botão **"Está acabando"**, cada um com o seu fornecedor |
 
-### 2.1 De onde vem a baixa automática (sem atrasar o balcão)
+### 2.1 Contagem semanal (picolé, massa, açaí e conferência dos potes)
 
-**Problema (14/10):** pedir o sabor de cada picolé na venda não funciona. Uma pessoa leva 50 picolés de sabores misturados e o atendente não tem como registrar um por um com fila no balcão.
+- Feita pelo **atendente ou pela dona**, no tablet ou no painel, **no dia anterior ao dia do pedido** (que a dona escolhe). Na véspera o app mostra "Hoje é dia de contagem".
+- A tela segue a **ordem da planilha** (Picolés de fruta, ao leite, Skimo, Massas, Açaí, Potes), com **+/−** em meias caixas para picolé, baldes inteiros para massa e açaí, unidades para potes.
+- A contagem anterior aparece só como referência ("semana passada: 2,5"). O campo não vem preenchido, para a pessoa olhar o freezer de verdade.
+- **"Não tem nenhum"** em um toque. Pode salvar no meio e continuar depois.
+- Nos **potes**, a contagem é conferência: o sistema mostra o saldo esperado e, se a diferença passar de 1, avisa a dona ("Pote 1L Flocos: sistema 6, contado 3"). Se as diferenças forem grandes por duas semanas, o teste de sabor na venda falhou e os potes voltam só para a contagem.
 
-**Solução: o sabor é registrado quando a caixa sai do depósito, não quando o picolé é vendido.** É o mesmo jeito do balde de massa: ninguém mede bola, registra o balde que abriu. A planilha já conta assim ("Na frente" × "Em estoque", em caixas e meias caixas).
-
-| Grupo | Na venda (balcão) | Como sai do estoque por sabor | Quem registra e quando |
-|---|---|---|---|
-| Picolé, Skimo, Moreninha | **Sem sabor**: "Picolé ao leite × 50" (digita a quantidade) | **"Abasteci a frente"**: caixa que saiu do depósito para o freezer do balcão | Quem abastece, 1 vez por caixa (poucas por dia) |
-| Massa e açaí em balde | Bola/peso, sem sabor (como hoje) | **"Abri um balde"** | Quem troca o balde |
-| Potes 1L/2L/5L e potes de açaí | **Padrão: sem sabor**, igual ao picolé | "Abasteci a frente" por unidade **ou** sabor na venda, se a dona preferir (configurável por grupo) | Pergunta 7 |
-
-**O saldo de cada sabor é o que está fechado no depósito.** A caixa que foi para a frente conta como consumida. Para decidir o pedido é isso que importa: o que ainda tem guardado e quantas caixas de cada sabor saem por semana.
-
-**O que a venda sem sabor ainda entrega (conferência por grupo):**
-`picolés vendidos na semana` × `caixas abastecidas × 28`. Se saíram 6 caixas de picolé ao leite (168 un) e o caixa registrou 120 vendidos, há 48 picolés sem venda (quebra, consumo interno, venda sem registro ou meia caixa ainda na frente). O painel mostra essa diferença por semana, como o caixa mostra "faltou/sobrou".
-
-**No balcão, mais rápido do que hoje:**
-- Tocar no **número da quantidade** abre o teclado numérico: "50" em vez de 49 toques no +. Serve para qualquer produto e vale já na Fase 1.
-- Picolé ao leite, de fruta, Skimo e Moreninha continuam como hoje: um botão por tipo, porque o preço é por tipo.
-
-**Precisão:** a frente pode ter meia caixa aberta de um sabor, então o consumo por sabor tem erro de até 1 caixa por sabor numa semana. Para pedir em caixas isso basta. A contagem rápida semanal (RN-ES-08) inclui a frente quando a dona quiser acertar tudo.
-
-Enquanto o histórico é curto (menos de 14 dias), a sugestão usa um **estoque alvo** por sabor, que a dona define uma vez (ex.: "Picolé ao leite Chocolate: manter 3 caixas"). Depois o consumo real assume.
-
-### 2.2 Conta da sugestão (RN-PF-02)
+**Por que basta para o pedido:** com duas contagens e a entrega do meio, o sistema sabe quanto saiu de cada sabor na semana:
 
 ```
-consumo diário   = saídas (caixas/potes levados para a frente + baldes abertos) dos últimos 28 dias ÷ dias com loja aberta
-cobertura (dias) = prazo de entrega do fornecedor + dias até o próximo pedido (padrão: 7)
-necessário       = consumo diário × cobertura
-sugerido         = necessário − saldo − já pedido e ainda não recebido
-                   arredondado para cima em embalagens (meia caixa se o fornecedor aceitar)
-sem histórico    → sugerido = estoque alvo − saldo
-faltou no último recebimento → entra marcado "faltou no último pedido"
+saiu na semana = contagem anterior + recebido na entrega − contagem de hoje
 ```
 
-Exemplo: Picolé ao leite Chocolate sai 0,4 caixa por dia (3 caixas por semana); o fornecedor entrega em 2 dias e o próximo pedido é daqui a 7. Necessário = 0,4 × 9 = 3,6 caixas. Depósito com 1 caixa → sugere **3 caixas** (2,6 arredondado para cima).
+### 2.2 Botão "Está acabando" (requisição)
 
-## 3. Fluxo da dona (no painel, pelo celular)
+Botão grande na tela principal do tablet (e no painel). Em até 4 toques:
 
-1. **Dia do pedido** (ex.: segunda): o painel mostra "**Pedido sugerido pronto — R$ 1.284,00**". Também aparece um aviso "pedir hoje" se algum sabor vai acabar antes da próxima entrega.
-2. Ela abre, vê a lista agrupada como na planilha (Picolés de fruta, ao leite, Potes 1L…) e ajusta com **+/−** o que quiser.
-3. **Confirmar e enviar**: abre o WhatsApp com a mensagem pronta para o fornecedor. O pedido fica "Enviado".
-4. **Chegou a entrega**: abre o pedido → "Chegou tudo certo" ou corrige só as linhas diferentes (e "veio sem pedir" para sabor trocado).
-5. O sistema mostra **Faltou / Veio a mais / Sabor trocado** com o valor em R$, gera a mensagem de cobrança e põe o que faltou no próximo pedido. O estoque entra sozinho.
-6. **Fornecedor**: % do pedido entregue por mês e os itens que mais faltam — argumento para negociar.
+1. **O quê**: busca no catálogo (sabor de picolé, pote, balde, copo 300 ml, casquinha…) ou "Outro" com texto livre.
+2. **Quanto tem agora**: número com +/−, ou "acabou" (0).
+3. **Prioridade**, com significado fixo para não virar tudo urgente:
 
-## 4. O que muda nas outras partes
+| Prioridade | Quando usar | Chega para a dona |
+|---|---|---|
+| **Urgente** | Acabou, ou cliente pediu e não tinha | **Na hora**, pelo WhatsApp |
+| **Alta** | Acaba hoje ou amanhã | No **resumo do fim do dia** |
+| **Média** | Está baixando; entra no próximo pedido | No **resumo do fim do dia** |
 
-- **App do atendente**: a venda **não muda** (sem sabor); a quantidade passa a aceitar digitação. Botões novos fora da venda: **"Abasteci a frente"** (escolhe sabor e quantas caixas) e **"Abri um balde"**. Os registros nascem offline e sobem pela sincronização. (Opcional) contagem rápida.
-- **Produtos de venda** (`produtos`): ganham o vínculo com o grupo de estoque (ex.: produto "Picolé ao leite" → grupo *Picolé ao leite*). Não pedem sabor; servem para a conferência por grupo (vendido × abastecido) e, na Fase 3, para o custo da venda.
-- **Fase 3 fica melhor**: o custo de cada venda passa a ser conhecido (custo da embalagem ÷ unidades), então margem por produto sai sem ficha técnica (RN-PR-07 revisada). Margem por sabor só se o grupo vender com sabor.
-- **Proposta (docs/05)**: a frase "baixa automática dos insumos" vira "controle de estoque dos sorvetes comprados prontos, pedido sugerido e conferência da entrega".
+4. Observação opcional ("cliente pediu 3 vezes hoje").
 
-## 5. Dúvidas para confirmar com a dona
+**Regras:** "acabou" já vem como urgente. Se o mesmo item já tem aviso aberto, aparece "Já avisado hoje às 14:10 por Ana" com o botão **"Ainda falta"**, que atualiza a quantidade e pode subir a prioridade, sem criar aviso repetido. O aviso fecha sozinho quando a entrega daquele item é conferida, ou a dona fecha à mão ("comprei no mercado").
 
-As regras abaixo já têm um padrão para não travar o desenvolvimento; a resposta só ajusta valores.
+### 2.3 Como chega para a dona (WhatsApp)
+
+| Quando | O quê | Como sai |
+|---|---|---|
+| **Na hora** | Aviso **urgente** (botão ou pote que zerou) | Logo depois de salvar, o app abre o WhatsApp do tablet com a mensagem pronta para o número da dona. O atendente só toca em enviar |
+| **Fim do dia** | **Resumo**: urgentes do dia, altas, médias, potes no mínimo, diferenças da contagem | No **fechamento do caixa** (já é o fim do turno), o app mostra "Enviar resumo do dia para a dona" com a mensagem pronta |
+
+Funciona do WhatsApp do tablet ou do celular de quem estiver com ele, sem custo. Sem internet, o aviso fica guardado e o app lembra de enviar quando a conexão voltar. Se depois a dona quiser envio **100% automático** (sem ninguém tocar em enviar), dá para trocar pela API oficial do WhatsApp: exige conta Meta Business, um número próprio da loja e cobra por mensagem. O resto do fluxo não muda.
+
+Exemplo de urgente:
+
+```
+🔴 URGENTE — Sorveteria
+Picolé ao leite Coco preto: ACABOU
+Cliente pediu e não tinha.
+Ana · 14/10 15:42
+```
+
+Exemplo de resumo:
+
+```
+Resumo de terça 14/10 — Sorveteria
+🔴 Urgente (1): Picolé ao leite Coco preto — acabou
+🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1 pacote
+🟡 Média (1): Massa Pistache — 1 balde
+📦 Potes no mínimo: Pote 1L Amarena (2)
+Vendas do dia: R$ 1.284,50 · Caixa fechado por Ana
+```
+
+### 2.4 Fornecedores e pedido
+
+Cada item do catálogo tem um **fornecedor**, com dia de pedido escolhido pela dona e forma de envio:
+
+| Fornecedor | O que vende | Como recebe o pedido |
+|---|---|---|
+| **Fábrica (pais da dona)** | Picolé, Skimo, Moreninha, potes, massa, açaí | **Impresso** (e WhatsApp, se quiser) |
+| Descartáveis (ex.) | Copos, colheres, guardanapos | WhatsApp |
+| Casquinhas / coberturas (ex.) | Casquinha, cascão, calda | WhatsApp |
+
+No dia do pedido de cada fornecedor, o painel monta o **pedido sugerido** (só com os itens dele):
+
+```
+sorvete com contagem  → saiu por semana (média das últimas 4) × semanas até a próxima entrega − contado hoje
+pote com saldo        → mesma conta, com o saldo do sistema
+sem histórico ainda   → estoque alvo que a dona define uma vez − contado
+avisos abertos        → entram sempre, marcados ("Ana avisou: acabou")
+insumos               → só o que tiver aviso aberto (não há contagem)
+arredonda para cima em caixas (meia caixa se a fábrica aceitar)
+```
+
+A dona revisa com **+/−** e escolhe **Imprimir** e/ou **WhatsApp**.
+
+**Folha impressa para a fábrica** (A4, 1 página, letra grande): cabeçalho com loja, nº do pedido e data; itens agrupados como na planilha, só os que têm quantidade; colunas **Sabor · Pedido · Veio · Obs.**, com "Veio" e "Obs." em branco para preencher à mão na entrega. É a coluna "Enviado" da planilha, agora no papel. Total estimado em R$ no rodapé, que pode ser ocultado se ela não quiser mostrar valores.
+
+### 2.5 Conferência da entrega
+
+Na entrega, a dona (ou o atendente) abre o pedido no painel: **"Chegou tudo certo"** ou corrige só as linhas diferentes, olhando a coluna "Veio" da folha. O sistema mostra **faltou / veio a mais / sabor trocado** com o valor em R$, gera a mensagem para a fábrica, põe o que faltou no próximo pedido e soma a entrega no saldo dos potes e na conta da contagem.
+
+**Histórico por fornecedor:** % do pedido entregue e itens que mais faltam.
+
+## 3. Dúvidas que ainda faltam (com padrão adotado)
 
 | # | Pergunta | Padrão adotado |
 |---|---|---|
-| 1 | É um fornecedor só? Qual o WhatsApp? Em que dia pede e em quantos dias chega? | Um fornecedor; pedido semanal; entrega em 2 dias |
-| 2 | O fornecedor aceita **meia caixa** de picolé? | Não: pedido em caixas inteiras (a contagem continua em meias) |
-| 3 | Skimo vem em caixa de 24? Moreninha é por unidade? Pote de açaí 1,5L custa R$ 18 como o de 1L? | Como está na planilha; corrigir no catálogo |
+| 1 | Qual o dia do pedido de cada fornecedor e em quantos dias chega? | Fábrica: pedido semanal, entrega em 2 dias; contagem na véspera |
+| 2 | A fábrica aceita **meia caixa** de picolé? | Não: pedido em caixas inteiras |
+| 3 | Skimo vem em caixa de 24? Moreninha é por unidade? Pote de açaí 1,5L custa R$ 18? | Como está na planilha; corrigir no catálogo |
 | 4 | O que são os "Outros" dos potes de 2L e 5L? | Cadastrar os sabores reais |
-| 5 | O que o fornecedor mais erra: quantidade, sabor trocado, item que não vem? | Tratar os três |
-| 6 | Quem recebe a entrega: ela ou o atendente? | Ela, pelo painel; atendente fica para depois |
-| 7 | O freezer do balcão é abastecido com **caixas inteiras** de picolé tiradas do depósito? E os potes, ficam no mesmo freezer ou têm reposição separada? | Sim, por caixa; potes também por "abasteci a frente" (unidade). Se ela preferir, pote passa a pedir sabor na venda |
-| 8 | Quem abastece a frente e registra no tablet: o atendente ou ela? | O atendente, no tablet, na hora em que tira a caixa do depósito |
+| 5 | Lista de copos, casquinhas e insumos e quem fornece | Começa vazia; a dona cadastra no painel |
+| 6 | A folha impressa mostra preços? | Mostra o total; dá para ocultar |
+| 7 | Mínimo de cada pote para alertar | 2 unidades para todos; a dona ajusta |
 
-## 6. Ordem de entrega
+## 4. O que muda nas outras partes
 
-1. **Sprint 5 — Catálogo e estoque**: importar o catálogo da planilha, fornecedor, saldo com movimentos, contagem inicial pelo painel. *Já substitui as abas de contagem.*
-2. **Sprint 6 — Pedido e recebimento**: pedido sugerido pelo estoque alvo, mensagem de WhatsApp, recebimento com diferenças e cobrança, histórico do fornecedor. *Já resolve a dor principal, mesmo antes da baixa automática.*
-3. **Sprint 7 — Baixa automática**: "Abasteci a frente" e "Abri um balde" no tablet, conferência vendido × abastecido por grupo, sugestão por consumo real, aviso "pedir hoje", contagem rápida. A quantidade digitada na venda pode ir antes, ainda na Fase 1.
+- **App do atendente**: quantidade digitada na venda; grade de sabores só nos potes; botão **"Está acabando"**; tela de **contagem semanal**; mensagem urgente e resumo do dia no **fechamento do caixa**. Tudo funciona sem internet e sobe depois.
+- **Painel**: avisos abertos, contagem, pedido por fornecedor (imprimir e WhatsApp), conferência da entrega, catálogo com fornecedor, mínimo e alvo; configuração do WhatsApp da dona.
+- **Fase 3**: o custo por grupo já permite margem por produto (RN-PR-07); margem por sabor só nos potes.
+- **Proposta (docs/05)**: "estoque dos sorvetes comprados prontos com contagem semanal, aviso do que está acabando pelo WhatsApp, pedido pronto para imprimir e conferência da entrega".
 
-Regras: docs/02 seção 6. Tabelas e endpoints: docs/03 seção 5. Tarefas: docs/04, Sprints 5–7.
+## 5. Ordem de entrega
+
+1. **Sprint 5 — Catálogo, contagem e avisos**: catálogo da planilha com fornecedores, contagem semanal (tablet e painel), botão "Está acabando", mensagem urgente e resumo do dia, quantidade digitada na venda. *Sozinho já substitui a planilha de contagem e organiza os avisos.*
+2. **Sprint 6 — Pedido, impressão e entrega**: pedido sugerido por fornecedor, folha impressa, WhatsApp, conferência da entrega, histórico.
+3. **Sprint 7 — Potes automáticos**: sabor na venda de potes, saldo automático, alerta de mínimo, conferência na contagem; ajustes depois de 2 semanas reais.
+
+O catálogo inicial continua em `docs/fase2/catalogo-inicial.csv`; insumos e outros fornecedores entram pelo painel.

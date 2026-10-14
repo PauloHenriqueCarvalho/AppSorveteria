@@ -132,6 +132,7 @@ Depois da análise do MVP (docs/06) e da conversa sobre hospedagem, estas decis�
 | ADR | Decisão | Por quê |
 |---|---|---|
 | 019 | **Fase 2 = estoque de produto pronto + pedido ao fornecedor + conferência da entrega** (docs/10). Substitui "insumos + ficha técnica", que vai para a Fase 4 | A planilha da dona mostra que ela compra tudo pronto (picolé por caixa, pote, balde) e que a dor é o fornecedor não mandar o que foi pedido. Baixa automática vem da venda com sabor e do "Abri um balde"; o pedido é sugerido pelo consumo e conferido na entrega |
+| 019a | **Revisão de 14/10**: com um freezer só e venda de até 50 picolés por comanda, picolé/massa/açaí são controlados por **contagem semanal**; potes testam **sabor na venda**; o atendente usa **"Está acabando"** (Urgente/Alta/Média); urgente vai **na hora** e o resto num **resumo do dia** pelo WhatsApp (link do aparelho, sem custo); **fornecedores separados** (fábrica = pais da dona, que recebem o pedido **impresso**) | Mantém a venda rápida, usa a rotina de contagem que ela já tem, e traz para o sistema o aviso que hoje é feito de boca |
 
 ## 8. O que **não** muda
 

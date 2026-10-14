@@ -93,42 +93,35 @@ Detalhes em docs/07.
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
-- [ ] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-12
+- [ ] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, pode adiantar da Fase 2
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
 
-## Fase 2 — Estoque e pedidos ao fornecedor
+## Fase 2 — Estoque, avisos e pedidos ao fornecedor
 
-Redesenhada em 13/10/2026 a partir da planilha da dona (docs/10). Estoque de **produto pronto** (picolé por caixa, pote, balde), pedido sugerido e **conferência da entrega**. Insumos e ficha técnica foram para a Fase 4.
+Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa por **contagem semanal**, potes com **sabor na venda** (teste), botão **"Está acabando"** com prioridade, **urgente na hora e resumo do dia** pelo WhatsApp da dona, **fornecedores separados** e **pedido impresso** para a fábrica.
 
-Antes de começar: levar as 8 perguntas de docs/10, seção 5, para a dona (cada uma tem padrão adotado; nenhuma bloqueia o Sprint 5).
+### Sprint 5 — Catálogo, contagem e avisos
+- [ ] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso` + testes (RN-ES-01…07, RN-AV-01…05) + migração
+- [ ] API: catálogo (importar CSV), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
+- [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
+- [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
+- [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, catálogo com fornecedor/alvo/mínimo, cadastro de insumos e fornecedores, WhatsApp da dona
 
-### Sprint 5 — Catálogo e estoque
-- [ ] Domain: `Fornecedor`, `ItemEstoque`, `MovimentoEstoque` (saldo em unidades, exibição em embalagens com meia caixa) + testes (RN-ES-01/02/03/07, RN-PF-01) + migração
-- [ ] API: fornecedores e itens de estoque (Admin); importação do `docs/fase2/catalogo-inicial.csv` (idempotente por grupo + sabor)
-- [ ] API: contagem rápida (RN-ES-08) — a primeira contagem vira o saldo inicial (RN-ES-04); perda com motivo
-- [ ] Painel: tela Estoque agrupada como a planilha (saldo em caixas/unidades, editar alvo e custo), contagem rápida, cadastro do fornecedor
+**Pronto quando:** o atendente avisa "acabou Coco preto" e a dona recebe no WhatsApp na hora; no fim do dia chega o resumo; a contagem semanal substitui a planilha.
 
-**Pronto quando:** a dona conta o estoque uma vez no painel e vê o saldo de cada sabor, sem a planilha.
+### Sprint 6 — Pedido, impressão e entrega
+- [ ] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes
+- [ ] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou — RN-PF-02…04), +/−, enviar, cancelar, folha, receber, histórico
+- [ ] Painel: pedido por fornecedor com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças) com mensagem para o fornecedor; histórico
 
-### Sprint 6 — Pedido e recebimento
-- [ ] Domain: `PedidoFornecedor` + linhas (sugerido, pedido, recebido, snapshot de custo), status e diferenças (RN-PF-05/06/07, RN-RC-02/03) + testes
-- [ ] API: montar rascunho pelo estoque alvo (RN-PF-02 sem histórico, RN-PF-03/04), +/−, enviar (texto + link WhatsApp), cancelar
-- [ ] API: receber com "chegou tudo certo" ou por linha, item não pedido, entrada automática, texto de cobrança, novo custo (RN-RC-01…06); histórico do fornecedor (RN-RC-07)
-- [ ] Painel: "Pedido sugerido pronto — R$ X" no dashboard; tela do pedido (+/−, enviar); tela de recebimento com Faltou / Veio a mais / Não pedido e botão de cobrança
-- [ ] Montagem automática no dia do pedido (painel chama `montar` ao abrir; `BackgroundService` quando a API estiver acordada)
+**Pronto quando:** a dona imprime o pedido da semana para os pais, confere a entrega pela folha preenchida em menos de 2 minutos e o que faltou volta no pedido seguinte.
 
-**Pronto quando:** um pedido real sai do painel para o WhatsApp do fornecedor, a entrega é conferida em menos de 2 minutos e o que faltou aparece no pedido seguinte.
-
-### Sprint 7 — Baixa automática
-- [ ] App: **"Abasteci a frente"** (sabor + caixas, passo 0,5) e **"Abri um balde"**, offline, com desfazer em 10 min; `POST /api/sync/estoque` (RN-ES-05/06)
-- [ ] Produto de venda ligado a grupo de estoque no painel (RN-PR-06); conferência vendido × abastecido por grupo e semana (RN-ES-11)
-- [ ] Consumo diário, dias restantes, sugestão por consumo real e aviso "pedir hoje" (RN-ES-09/10, RN-PF-02 completo)
-- [ ] (Se a dona pedir) grupo com venda por sabor (`VendaComSabor`): grade de sabores na venda e baixa no sync da comanda
-- [ ] Teste com 2 semanas reais; ajustar alvos com a dona
-
-**Pronto quando:** a dona abre o painel no dia do pedido, confere o sugerido e envia sem contar o freezer.
+### Sprint 7 — Potes automáticos (teste)
+- [ ] Produto de venda ligado a grupo (RN-PR-06); grade de sabores **só nos potes**; `ItemEstoqueId` opcional no sync; baixa e estorno no servidor (RN-ES-08/09)
+- [ ] Aviso automático de mínimo e zerado (RN-AV-04); conferência do saldo na contagem semanal
+- [ ] Avaliar com a dona depois de 2 semanas: se as diferenças dos potes forem grandes, o grupo volta para `Contagem`
 
 ## Fase 3 — Análise e relatórios
 
