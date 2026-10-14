@@ -39,6 +39,7 @@ namespace SorveteriaMaui
             builder.Services.AddSingleton<AvisoRepository>();       // Fase 2
             builder.Services.AddSingleton<CaixaAppService>(); // C3: abrir, sangria/suprimento, fechar com conferência
             builder.Services.AddSingleton<ComandaAppService>();
+            builder.Services.AddSingleton<AvisoAppService>(); // Fase 2: "Está acabando", urgente e resumo do dia
             // Diálogos de pagamento (não gravam nada)
             builder.Services.AddSingleton<IPaymentService, PaymentService>();
 
@@ -61,6 +62,10 @@ namespace SorveteriaMaui
             // Histórico do turno (C5)
             builder.Services.AddTransient<HistoricoTurnoView>();
             builder.Services.AddTransient<HistoricoTurnoViewModel>();
+
+            // "Está acabando" (Fase 2)
+            builder.Services.AddTransient<EstaAcabandoView>();
+            builder.Services.AddTransient<EstaAcabandoViewModel>();
 
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();

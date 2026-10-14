@@ -17,8 +17,18 @@ public class ListarComandasViewModel : BindableObject
     private readonly CaixaAppService _caixa;
     private readonly SyncService _sync;
     private readonly CatalogoService _catalogoCiclo;
+    private readonly EstoqueService _estoque;
+    private readonly AvisoRepository _avisos;
 
     public ObservableCollection<Comanda> Comandas { get; set; } = new();
+
+    private string _textoEstaAcabando = "📦  Está acabando";
+    /// <summary>Fase 2: botão do "Está acabando", com quantos avisos estão abertos.</summary>
+    public string TextoEstaAcabando
+    {
+        get => _textoEstaAcabando;
+        set { _textoEstaAcabando = value; OnPropertyChanged(); }
+    }
 
     private string _indicadorEnvio = string.Empty;
     /// <summary>RN-SY-05: "X vendas aguardando envio", sempre visível. Toque = enviar agora (ou entrar com o PIN).</summary>
@@ -42,15 +52,38 @@ public class ListarComandasViewModel : BindableObject
     private async Task AtualizarIndicador()
     {
         var estado = await _sync.EstadoAsync();
+        // Avisos "Está acabando" na fila entram junto, sem misturar com a contagem de vendas.
+        var avisosNaFila = estado.AvisosPendentes > 0 ? $" · {estado.AvisosPendentes} aviso(s) de estoque" : string.Empty;
         MainThread.BeginInvokeOnMainThread(() =>
         {
             IndicadorEnvio = estado.Sincronizando ? "⏳ Enviando vendas…"
                 : estado.PrecisaPin ? "🔒 Sessão vencida — toque para entrar e enviar"
-                : estado.Pendentes == 0 ? (estado.Rejeitadas > 0 ? $"⚠ {estado.Rejeitadas} venda(s) rejeitada(s) — veja o histórico" : "✅ Tudo enviado")
-                : estado.ComandasPendentes == 1 && estado.CaixasPendentes == 0 ? "📤 1 venda aguardando envio"
-                : $"📤 {estado.ComandasPendentes} venda(s) e {estado.CaixasPendentes} caixa(s) aguardando envio";
-            MensagemEnvio = estado.Pendentes > 0 || estado.PrecisaPin ? estado.UltimaMensagem : string.Empty;
+                : estado.Pendentes == 0 ? (estado.Rejeitadas > 0 ? $"⚠ {estado.Rejeitadas} venda(s) rejeitada(s) — veja o histórico"
+                    : estado.AvisosPendentes > 0 ? $"📤 {estado.AvisosPendentes} aviso(s) de estoque aguardando envio"
+                    : "✅ Tudo enviado")
+                : estado.ComandasPendentes == 1 && estado.CaixasPendentes == 0 ? $"📤 1 venda aguardando envio{avisosNaFila}"
+                : $"📤 {estado.ComandasPendentes} venda(s) e {estado.CaixasPendentes} caixa(s) aguardando envio{avisosNaFila}";
+            MensagemEnvio = estado.Pendentes > 0 || estado.AvisosPendentes > 0 || estado.PrecisaPin ? estado.UltimaMensagem : string.Empty;
         });
+        await AtualizarBotaoEstaAcabando();
+    }
+
+    /// <summary>
+    /// Quantos avisos estão abertos, no próprio botão. É só um contador: se a leitura falhar, o botão fica sem número
+    /// e nada mais muda — a lista de comandas (a venda) nunca depende da Fase 2.
+    /// </summary>
+    private async Task AtualizarBotaoEstaAcabando()
+    {
+        try
+        {
+            var abertos = await _avisos.ContarAbertosAsync();
+            MainThread.BeginInvokeOnMainThread(() =>
+                TextoEstaAcabando = abertos == 0 ? "📦  Está acabando" : $"📦  Está acabando  ·  {abertos} avisado(s)");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Sorveteria] Contador do \"Está acabando\" não atualizado: {ex.Message}");
+        }
     }
 
     private async Task EnviarAgora()
@@ -89,8 +122,9 @@ public class ListarComandasViewModel : BindableObject
     public ICommand VendaRapidaCommand { get; }
     public ICommand VerDetalhesCommand { get; }
     public ICommand SairCommand { get; }
+    public ICommand EstaAcabandoCommand { get; }
 
-    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa, SyncService sync)
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa, SyncService sync, EstoqueService estoque, AvisoRepository avisos)
     {
         _comandas = comandas;
         _repositorio = repositorio;
@@ -100,11 +134,17 @@ public class ListarComandasViewModel : BindableObject
         _catalogoCiclo = catalogo;
         _caixa = caixa;
         _sync = sync;
+        _estoque = estoque;
+        _avisos = avisos;
 
         EnviarAgoraCommand = new Command(async () => await EnviarAgora());
         _sync.Mudou += async (_, _) => await AtualizarIndicador();
         _sync.CatalogoNoCiclo ??= () => _catalogoCiclo.AtualizarSeAntigoAsync(TimeSpan.FromMinutes(5));
+        _sync.EstoqueNoCiclo ??= () => _estoque.AtualizarSeAntigoAsync(TimeSpan.FromMinutes(5)); // Fase 2: no máximo a cada 5 min
         _sync.IniciarCiclo(); // C4: a cada 1 min (idempotente)
+
+        // Fase 2 (docs/10 §2.2): não depende do caixa — dá para avisar com o caixa fechado
+        EstaAcabandoCommand = new Command(async () => await Shell.Current.GoToAsync("EstaAcabandoView"));
 
         SairCommand = new Command(async () => await Sair());
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());
@@ -120,6 +160,7 @@ public class ListarComandasViewModel : BindableObject
     {
         OnPropertyChanged(nameof(NomeAtendente));
         _ = _catalogo.AtualizarAoAbrirAsync(); // C2: uma vez por execução, em segundo plano; nunca segura a tela
+        _ = _estoque.AtualizarAoAbrirAsync();  // Fase 2: catálogo de estoque, WhatsApp da dona e avisos abertos (idem)
         _sync.Disparar();                      // C4: ao abrir o app / voltar à tela
         _ = AtualizarIndicador();
         await Operacao.CarregarAsync(async () =>
