@@ -5,6 +5,7 @@ import { entrar as entrarNaApi } from '../api/auth.ts'
 import { deveTentarDeNovo, ErroApi, ESPERA_ENTRE_TENTATIVAS_MS, mensagemDoErro } from '../api/erros.ts'
 import { PERFIL_ADMIN, type LoginRequest } from '../api/tipos.ts'
 import ConectandoServidor from '../componentes/ConectandoServidor.tsx'
+import { LOGO_LOJA, NOME_LOJA } from '../marca.ts'
 import { MENSAGEM_SO_ADMIN, useSessao } from '../sessao/contexto.ts'
 
 // Depois deste tempo sem resposta, avisa que a API pode estar acordando.
@@ -54,9 +55,15 @@ export default function Login() {
   const conectando = mutacao.isPending && (demorou || mutacao.failureCount > 0)
 
   return (
-    <main className="tela-central">
-      <form className="cartao formulario" onSubmit={enviar}>
-        <h1>Painel da sorveteria</h1>
+    <main className="tela-login">
+      <form className="cartao formulario login" onSubmit={enviar}>
+        <div className="login-marca">
+          <img src={LOGO_LOJA} alt="" width={64} height={74} />
+          <div>
+            <h1>{NOME_LOJA}</h1>
+            <p className="suave">Painel da administração</p>
+          </div>
+        </div>
 
         {aviso && !mutacao.isPending && <p className="alerta alerta-aviso">{aviso}</p>}
 

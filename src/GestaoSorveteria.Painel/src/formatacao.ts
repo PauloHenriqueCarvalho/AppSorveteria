@@ -79,3 +79,30 @@ const STATUS: Record<string, string> = {
 export function nomeDoStatus(status: string): string {
   return STATUS[status] ?? status
 }
+
+const diaExtenso = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' })
+
+/** Dia comercial "2026-10-14" → "terça-feira, 14 de outubro" (sem depender do fuso do aparelho). */
+export function formatarDiaPorExtenso(dia: string): string {
+  return diaExtenso.format(new Date(`${dia}T12:00:00Z`))
+}
+
+/** Primeiro nome para a saudação ("Dona Laura Silva" → "Laura"; "Laura" → "Laura"). */
+export function primeiroNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter((p) => !/^(dona|seu|sr\.?|sra\.?)$/i.test(p))
+  return partes[0] ?? nome
+}
+
+/** Iniciais para o avatar ("Dona Laura" → "DL"). */
+export function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  return ((partes[0]?.[0] ?? '') + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase()
+}
+
+const horaDoDia = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO_LOJA, hour: 'numeric', hourCycle: 'h23' })
+
+/** "Bom dia" / "Boa tarde" / "Boa noite" pelo relógio da loja. */
+export function saudacao(agora: Date = new Date()): string {
+  const h = Number(horaDoDia.format(agora))
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+}

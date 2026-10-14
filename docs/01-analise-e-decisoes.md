@@ -126,6 +126,7 @@ Depois da análise do MVP (docs/06) e da conversa sobre hospedagem, estas decis�
 | ADR | Decisão | Por quê |
 |---|---|---|
 | 018 | **Painel da dona em React + Vite + TypeScript** (`src/GestaoSorveteria.Painel`, npm), publicado no **Cloudflare Pages**. Fecha a dúvida do ADR 004 revisado | Gera um site estático leve que abre rápido no celular da dona (Blazor WebAssembly baixa o runtime .NET, vários MB, na primeira visita); ecossistema grande para telas simples. Custo: os DTOs de `Contracts` são reescritos em TypeScript à mão. Por isso o painel **nunca calcula dinheiro**: só mostra o que a API devolve (R$ pt-BR, datas em America/Sao_Paulo) |
+| 020 | **Painel com cara de ERP** (14/10/2026): menu lateral escuro agrupado por área, barra superior com trilha, indicadores no topo, tabelas densas, rosa da marca só em destaques; no celular, menu em gaveta + barra de atalhos. Componentes próprios (`componentes/Ui.tsx`, `Icone.tsx`), **sem biblioteca de UI**. Marca "Verão Tropical" com o mascote enviado pela dona (`public/marca`, `src/marca.ts`) | A dona mostra e usa o painel como o sistema da loja; o visual de celular esticado não passava confiança. Biblioteca de componentes pesaria no celular dela e não é necessária para ~10 telas |
 
 ## 8. O que **não** muda
 
