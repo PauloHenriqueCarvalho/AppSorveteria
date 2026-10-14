@@ -238,6 +238,72 @@ public sealed class SaldoEstoqueService
             .ToList();
     }
 
+    /// <summary>Diferença acima disso (em unidades) entre o contado e o sistema vai para o resumo da dona (RN-ES-08).</summary>
+    public const int DiferencaQueAvisa = 1;
+
+    /// <summary>
+    /// RN-ES-08: quanto o sistema esperava de cada pote na hora em que ele foi contado = contagem anterior + movimentos até a
+    /// hora do item (sem hora, a conclusão; aberta, agora). Calculado na leitura: venda que sincroniza depois entra certa.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<Guid, int>> SaldoEsperadoNaContagemAsync(
+        Contagem contagem, IReadOnlyCollection<Guid> potes, CancellationToken cancellationToken = default)
+    {
+        var ids = potes.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        var anteriores = await _contagens.UltimaContagemPorItemAsync(contagem.IniciadaEm, cancellationToken);
+        var movimentos = await _movimentos.ListarDosItensAsync(ids, cancellationToken: cancellationToken);
+        var agora = _clock.UtcNow;
+        return ids.ToDictionary(id => id, id =>
+        {
+            var quando = contagem.Itens.FirstOrDefault(i => i.ItemEstoqueId == id)?.ContadoEm ?? contagem.ConcluidaEm ?? agora;
+            var ate = movimentos.Where(m => m.ItemEstoqueId == id && m.Em <= quando);
+            return CalculoEstoque.Saldo(
+                anteriores.TryGetValue(id, out var anterior) ? new CalculoEstoque.BaseDoSaldo(anterior.Unidades, anterior.Em) : null, ate);
+        });
+    }
+
+    /// <summary>RN-ES-08: potes das contagens concluídas no período em que o contado ficou mais de 1 longe do sistema.</summary>
+    public async Task<IReadOnlyList<MensagensWhatsApp.LinhaDiferencaContagem>> DiferencasDasContagensAsync(
+        DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default)
+    {
+        var contagens = (await _contagens.ListarAsync(deUtc, ateUtc, cancellationToken))
+            .Where(c => c.ConcluidaEm >= deUtc && c.ConcluidaEm < ateUtc)
+            .OrderBy(c => c.ConcluidaEm)
+            .ToList();
+        if (contagens.Count == 0)
+        {
+            return [];
+        }
+
+        var grupos = (await _estoque.ListarGruposAsync(cancellationToken)).ToDictionary(g => g.Id);
+        var itens = (await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken)).ToDictionary(i => i.Id);
+        var linhas = new List<MensagensWhatsApp.LinhaDiferencaContagem>();
+        foreach (var contagem in contagens)
+        {
+            var potes = contagem.Itens
+                .Where(i => i.ContadoUnidades is not null && itens.TryGetValue(i.ItemEstoqueId, out var item)
+                    && grupos.GetValueOrDefault(item.GrupoId)?.ModoControle == ModoControle.SaldoPelaVenda)
+                .ToList();
+            var esperados = await SaldoEsperadoNaContagemAsync(contagem, potes.Select(p => p.ItemEstoqueId).ToList(), cancellationToken);
+            foreach (var linha in potes)
+            {
+                var esperado = esperados[linha.ItemEstoqueId];
+                if (Math.Abs(linha.ContadoUnidades!.Value - esperado) > DiferencaQueAvisa)
+                {
+                    var item = itens[linha.ItemEstoqueId];
+                    linhas.Add(new MensagensWhatsApp.LinhaDiferencaContagem(
+                        MensagensWhatsApp.DescricaoDoItem(grupos[item.GrupoId].Nome, item.Nome), esperado, linha.ContadoUnidades.Value));
+                }
+            }
+        }
+
+        return linhas;
+    }
+
     private async Task<bool> EhPoteAsync(Guid itemEstoqueId, CancellationToken cancellationToken)
     {
         var item = await _estoque.ObterItemAsync(itemEstoqueId, cancellationToken);

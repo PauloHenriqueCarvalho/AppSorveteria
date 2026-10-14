@@ -55,7 +55,8 @@ public static class MensagensWhatsApp
         IReadOnlyList<LinhaAviso> urgentes,
         IReadOnlyList<LinhaAviso> altas,
         IReadOnlyList<LinhaAviso> medias,
-        decimal? totalVendido)
+        decimal? totalVendido,
+        IReadOnlyList<LinhaDiferencaContagem>? diferencasDaContagem = null)
     {
         var texto = new StringBuilder()
             .Append("Resumo de ").Append(DiasDaSemana[(int)dia.DayOfWeek]).Append(' ')
@@ -70,6 +71,12 @@ public static class MensagensWhatsApp
         Secao(texto, "🟠 Alta", altas);
         Secao(texto, "🟡 Média", medias);
 
+        if (diferencasDaContagem is { Count: > 0 })
+        {
+            texto.Append("\n📋 Contagem dos potes (").Append(diferencasDaContagem.Count).Append("): ")
+                .AppendJoin(" · ", diferencasDaContagem.Select(d => $"{d.Descricao.Trim()} sistema {d.Sistema}, contado {d.Contado}"));
+        }
+
         if (totalVendido is { } total)
         {
             texto.Append("\nVendas do dia: ").Append(Reais(total));
@@ -77,6 +84,9 @@ public static class MensagensWhatsApp
 
         return texto.ToString();
     }
+
+    /// <summary>RN-ES-08: pote em que o contado ficou mais de 1 longe do saldo do sistema ("Pote 1L Flocos sistema 6, contado 3").</summary>
+    public sealed record LinhaDiferencaContagem(string Descricao, int Sistema, int Contado);
 
     /// <summary>Uma linha do pedido para o texto do fornecedor.</summary>
     public sealed record LinhaPedido(string Grupo, string Item, decimal Embalagens, UnidadeCompra Unidade);

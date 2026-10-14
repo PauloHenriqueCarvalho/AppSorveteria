@@ -27,6 +27,17 @@ public class MensagensWhatsAppTests
     }
 
     [Fact]
+    public void ResumoDoDia_ComDiferencaNaContagemDosPotes_MostraSistemaEContado()
+    {
+        var texto = MensagensWhatsApp.ResumoDoDia("Verão Tropical", new DateOnly(2026, 10, 18), [], [], [], null,
+            [new MensagensWhatsApp.LinhaDiferencaContagem("Pote 1L Flocos", 6, 3)]);
+
+        Assert.Equal(
+            "Resumo de domingo 18/10 — Verão Tropical\n✅ Nenhum aviso de estoque aberto.\n📋 Contagem dos potes (1): Pote 1L Flocos sistema 6, contado 3",
+            texto);
+    }
+
+    [Fact]
     public void ResumoDoDia_SoComMedia_MostraSoAsSecoesQueTem()
     {
         var texto = MensagensWhatsApp.ResumoDoDia("Verão Tropical", new DateOnly(2026, 10, 18), [], [],

@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Contracts.Avisos;
 using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Comandas;
@@ -22,6 +23,7 @@ public sealed class AvisoService
     /// <summary>Folga para o relógio do tablet adiantado; além disso a data é recusada (senão travaria as atualizações seguintes).</summary>
     public static readonly TimeSpan FolgaRelogio = TimeSpan.FromMinutes(10);
 
+    private readonly SaldoEstoqueService _saldos;
     private readonly IAvisoRepository _avisos;
     private readonly IEstoqueRepository _estoque;
     private readonly IUsuarioRepository _usuarios;
@@ -36,9 +38,11 @@ public sealed class AvisoService
         IUsuarioRepository usuarios,
         IConfiguracaoLojaRepository configuracao,
         IComandaRepository comandas,
+        SaldoEstoqueService saldos,
         IUnitOfWork uow,
         IClock clock)
     {
+        _saldos = saldos;
         _avisos = avisos;
         _estoque = estoque;
         _usuarios = usuarios;
@@ -174,6 +178,9 @@ public sealed class AvisoService
         var vendas = await _comandas.ListarFechadasAsync(inicioUtc, fimUtc, cancellationToken);
         var total = Moeda.Arredondar(vendas.Where(c => c.Status == StatusComanda.Fechada).Sum(c => c.Total));
 
+        // RN-ES-08: potes da contagem do dia que ficaram mais de 1 longe do sistema.
+        var diferencas = await _saldos.DiferencasDasContagensAsync(inicioUtc, fimUtc, cancellationToken);
+
         var configuracao = await ConfiguracaoAsync(cancellationToken);
         var texto = MensagensWhatsApp.ResumoDoDia(
             configuracao.NomeLoja,
@@ -181,7 +188,8 @@ public sealed class AvisoService
             urgentes.Select(a => nomes.Linha(a) with { Resolvido = !a.Aberto }).ToList(),
             altas.Select(nomes.Linha).ToList(),
             medias.Select(nomes.Linha).ToList(),
-            total);
+            total,
+            diferencas);
 
         return new ResumoDoDiaResponse(
             data,

@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Common;
@@ -17,6 +18,7 @@ public sealed class ContagemService
     /// <summary>A lista do painel mostra as contagens dos últimos dias (e as que ainda não foram concluídas).</summary>
     public const int DiasNaLista = 60;
 
+    private readonly SaldoEstoqueService _saldos;
     private readonly IContagemRepository _contagens;
     private readonly IEstoqueRepository _estoque;
     private readonly IUsuarioRepository _usuarios;
@@ -24,8 +26,14 @@ public sealed class ContagemService
     private readonly IClock _clock;
 
     public ContagemService(
-        IContagemRepository contagens, IEstoqueRepository estoque, IUsuarioRepository usuarios, IUnitOfWork uow, IClock clock)
+        IContagemRepository contagens,
+        IEstoqueRepository estoque,
+        IUsuarioRepository usuarios,
+        SaldoEstoqueService saldos,
+        IUnitOfWork uow,
+        IClock clock)
     {
+        _saldos = saldos;
         _contagens = contagens;
         _estoque = estoque;
         _usuarios = usuarios;
@@ -234,6 +242,13 @@ public sealed class ContagemService
         var anteriores = await _contagens.UltimaContagemPorItemAsync(contagem.ConcluidaEm ?? contagem.IniciadaEm, cancellationToken);
         var nomes = await NomesDosUsuariosAsync(cancellationToken);
         var registradas = contagem.Itens.ToDictionary(i => i.ItemEstoqueId);
+        // Potes: o saldo que o sistema esperava, para conferir (RN-ES-08) — calculado agora, não guardado.
+        var potes = catalogo.Itens.Values
+            .Where(i => catalogo.Grupos.TryGetValue(i.GrupoId, out var g) && g.ModoControle == ModoControle.SaldoPelaVenda
+                && (i.Ativo || registradas.ContainsKey(i.Id)))
+            .Select(i => i.Id)
+            .ToList();
+        var esperados = await _saldos.SaldoEsperadoNaContagemAsync(contagem, potes, cancellationToken);
 
         // Linhas: todo item ativo que entra na contagem + os que já estão na contagem (mesmo que desativados depois).
         var linhas = catalogo.Itens.Values
@@ -257,7 +272,7 @@ public sealed class ContagemService
                     registrada?.ContadoUnidades is { } contado ? x.Item.EmEmbalagens(contado) : null,
                     anterior,
                     anterior is { } valor ? x.Item.EmEmbalagens(valor) : null,
-                    registrada?.SaldoSistemaUnidades);
+                    esperados.TryGetValue(x.Item.Id, out var esperado) ? esperado : null);
             })
             .ToList();
 

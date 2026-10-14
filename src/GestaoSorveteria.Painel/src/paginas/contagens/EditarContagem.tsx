@@ -135,6 +135,16 @@ function Planilha({ contagem, nova }: { contagem: ContagemDto; nova: boolean }) 
                     <tr key={l.itemEstoqueId}>
                       <td>
                         <strong>{l.itemNome}</strong>
+                        {concluida && l.saldoSistemaUnidades !== null && l.contadoUnidades !== null &&
+                          Math.abs(l.contadoUnidades - l.saldoSistemaUnidades) > 1 && (
+                            <>
+                              {' '}
+                              <Selo tom="atencao">
+                                {l.contadoUnidades > l.saldoSistemaUnidades ? '+' : '−'}
+                                {Math.abs(l.contadoUnidades - l.saldoSistemaUnidades)} do sistema
+                              </Selo>
+                            </>
+                          )}
                         <span className="suave bloco pequeno">
                           {l.unidadesPorEmbalagem > 1 ? `${l.unidade.toLowerCase()} com ${l.unidadesPorEmbalagem}` : l.unidade.toLowerCase()}
                           {l.anteriorEmbalagens !== null && (
@@ -143,6 +153,7 @@ function Planilha({ contagem, nova }: { contagem: ContagemDto; nova: boolean }) 
                               · antes {formatarEmbalagens(l.anteriorEmbalagens)}
                             </span>
                           )}
+                          {l.saldoSistemaUnidades !== null && <> · sistema {l.saldoSistemaUnidades}</>}
                         </span>
                       </td>
                       <td className="numero so-largo suave">

@@ -256,6 +256,29 @@ public class PotesServiceTests
     }
 
     [Fact]
+    public async Task DiferencasDasContagens_PoteLongeDoSistema_EntraNoResumoComOSaldoEsperado()
+    {
+        await AbrirCaixa();
+        await Enviar(VendaDe(_pote, 1, _flocos)); // saldo de Flocos: 5 − 1 = 4
+        // Contagem de hoje à noite: Flocos 1 (sistema 4), Chocolate 1 (sistema 1).
+        var hoje = Contagem.Iniciar(_ana.Id, Abertura.AddHours(10), OrigemContagem.App);
+        hoje.Registrar(_flocos, _pote1L, 1m, contadoEmUtc: Abertura.AddHours(10).AddMinutes(5));
+        hoje.Registrar(_chocolate, _pote1L, 1m);
+        hoje.Concluir(Abertura.AddHours(10).AddMinutes(20));
+        _contagens.Contagens.Add(hoje);
+        _clock.UtcNow = Abertura.AddHours(11);
+
+        var diferencas = await _saldos.DiferencasDasContagensAsync(Abertura.AddHours(-12), Abertura.AddHours(12), Ct);
+
+        var flocos = Assert.Single(diferencas);
+        Assert.Equal("Pote 1L Flocos", flocos.Descricao);
+        Assert.Equal(4, flocos.Sistema);
+        Assert.Equal(1, flocos.Contado);
+        // Depois da contagem, ela é a nova base.
+        Assert.Equal(1, await SaldoDe(_flocos));
+    }
+
+    [Fact]
     public async Task LigarAoEstoque_GrupoDePotes_PedeSaborEGrupoDeInsumosRecusa()
     {
         var produtos = new ProdutoService(_produtos, _estoque, _uow, _clock);

@@ -43,7 +43,7 @@ public class ContagemServiceTests
         _estoque.Grupos.AddRange([frutas, massa, copos]);
         _estoque.Itens.AddRange([_uva, _limao, _flocos, _copo]);
 
-        _service = new ContagemService(_contagens, _estoque, _usuarios, _uow, _clock);
+        _service = new ContagemService(_contagens, _estoque, _usuarios, SaldosFake.Novo(_clock, _estoque, _contagens), _uow, _clock);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -170,6 +170,24 @@ public class ContagemServiceTests
         Assert.Equal(OrigemContagem.App, contagem.Origem);
         Assert.Equal(Agora.AddMinutes(-2), contagem.ConcluidaEm);
         Assert.Null(contagem.Itens.Single(i => i.ItemEstoqueId == _uva.Id).ContadoUnidades); // não contado continua não contado
+    }
+
+    [Fact]
+    public async Task Obter_PoteComSaldoPelaVenda_MostraOSaldoQueOSistemaEsperava()
+    {
+        var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);
+        var morango = ItemEstoque.Criar(potes.Id, _limao.FornecedorId, "Morango", UnidadeCompra.Unidade, 1, 14m, 1);
+        _estoque.Grupos.Add(potes);
+        _estoque.Itens.Add(morango);
+        var anterior = Contagem.Iniciar(_ana.Id, Agora.AddDays(-7), OrigemContagem.App);
+        anterior.Registrar(morango, potes, 6m);
+        anterior.Concluir(Agora.AddDays(-7).AddMinutes(10));
+        _contagens.Contagens.Add(anterior);
+
+        var nova = await _service.ModeloAsync(_ana.Id, Ct);
+
+        Assert.Equal(6, nova.Linhas.Single(l => l.ItemEstoqueId == morango.Id).SaldoSistemaUnidades);
+        Assert.Null(nova.Linhas.Single(l => l.ItemEstoqueId == _limao.Id).SaldoSistemaUnidades); // picolé vai pela contagem
     }
 
     [Fact]
