@@ -12,13 +12,14 @@ public class ProdutoServiceTests
     private static readonly DateTime Hoje = new(2026, 9, 17, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly ProdutoRepositoryFake _produtos = new();
+    private readonly EstoqueRepositoryFake _estoque = new();
     private readonly UnitOfWorkFake _uow = new();
     private readonly ClockFake _clock = new();
     private readonly ProdutoService _service;
 
     public ProdutoServiceTests()
     {
-        _service = new ProdutoService(_produtos, _uow, _clock);
+        _service = new ProdutoService(_produtos, _estoque, _uow, _clock);
     }
 
     private static SalvarProdutoRequest Picole(string nome = "Picolé", decimal preco = 5m) =>

@@ -22,6 +22,7 @@ public class PedidoServiceTests
     private readonly ConfiguracaoLojaRepositoryFake _configuracao = new();
     private readonly UnitOfWorkFake _uow = new();
     private readonly ClockFake _clock = new() { UtcNow = Agora };
+    private readonly MovimentoEstoqueRepositoryFake _movimentos = new();
     private readonly PedidoService _service;
 
     private readonly Usuario _dona;
@@ -67,7 +68,9 @@ public class PedidoServiceTests
         _avisos.Avisos.Add(Aviso.DoItem(_flocos.Id, 0, PrioridadeAviso.Urgente, null, _ana.Id, Agora.AddHours(-3)));
         _avisos.Avisos.Add(Aviso.DoItem(_guardanapo.Id, 1, PrioridadeAviso.Alta, null, _ana.Id, Agora.AddHours(-2)));
 
-        _service = new PedidoService(_pedidos, _estoque, _contagens, _avisos, _usuarios, _configuracao, _uow, _clock);
+        _service = new PedidoService(
+            _pedidos, _estoque, _contagens, _avisos, _usuarios, _configuracao,
+            SaldosFake.Novo(_clock, _estoque, _contagens, _avisos, _movimentos), _uow, _clock);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -403,6 +406,47 @@ public class PedidoServiceTests
         await Assert.ThrowsAsync<DomainException>(() => _service.ReceberAsync(pedido.Id,
             new ReceberPedidoRequest(null, null, null, ChegouEm: Agora.AddHours(-1)), _dona.Id, Ct));
         Assert.Equal(StatusPedido.Enviado, _pedidos.Pedidos.Single().Status);
+    }
+
+    [Fact]
+    public async Task Montar_PoteComSaldo_UsaOSaldoEAsVendasNoLugarDaContagem()
+    {
+        var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);
+        var flocos = ItemEstoque.Criar(potes.Id, _fabrica.Id, "Flocos", UnidadeCompra.Unidade, 1, 14m, 1);
+        _estoque.Grupos.Add(potes);
+        _estoque.Itens.Add(flocos);
+        Contagem(Agora.AddDays(-8), (flocos, 10m));
+        foreach (var dias in new[] { 6, 4, 2 })
+        {
+            _movimentos.Movimentos.Add(MovimentoEstoque.BaixaVenda(
+                flocos.Id, 2, Guid.NewGuid(), Guid.NewGuid(), Agora.AddDays(-dias), Agora.AddDays(-dias)));
+        }
+
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        // Vendeu 6 desde a primeira venda (6 dias → conta 1 semana): 6 por semana. Saldo 10 − 6 = 4.
+        // 9 dias até o pedido seguinte chegar: 6 × 9 ÷ 7 = 7,7 − 4 = 3,7 → 4 potes.
+        Assert.Equal(4m, Linha(pedido, flocos).SugeridoEmbalagens);
+    }
+
+    [Fact]
+    public async Task Receber_PoteQueVeio_EntraNoSaldo()
+    {
+        var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);
+        var flocos = ItemEstoque.Criar(potes.Id, _fabrica.Id, "Flocos", UnidadeCompra.Unidade, 1, 14m, 1);
+        _estoque.Grupos.Add(potes);
+        _estoque.Itens.Add(flocos);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(flocos.Id, 6m)]), Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(2);
+
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest(null, null, null), _dona.Id, Ct);
+
+        var entrada = Assert.Single(_movimentos.Movimentos);
+        Assert.Equal(TipoMovimentoEstoque.Entrada, entrada.Tipo);
+        Assert.Equal(flocos.Id, entrada.ItemEstoqueId);
+        Assert.Equal(6, entrada.Unidades);
     }
 
     [Fact]

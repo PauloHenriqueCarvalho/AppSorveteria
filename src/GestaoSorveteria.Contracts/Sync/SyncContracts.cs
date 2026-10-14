@@ -125,7 +125,8 @@ public sealed record ComandaSyncDto(
 
 /// <summary>
 /// RN-CM-03/05. <paramref name="ProdutoId"/> nulo = item livre (self-service, venda avulsa).
-/// Descrição e preço são os praticados na venda (RN-PR-04).
+/// Descrição e preço são os praticados na venda (RN-PR-04). <paramref name="ItemEstoqueId"/>: sabor do pote (RN-ES-09), só em
+/// produto que pede sabor; opcional — sabor desconhecido ou de outro grupo não rejeita a venda, ela entra sem sabor.
 /// </summary>
 public sealed record ItemComandaSyncDto(
     Guid Id,
@@ -133,7 +134,8 @@ public sealed record ItemComandaSyncDto(
     string? Descricao,
     int Quantidade,
     decimal PrecoUnitario,
-    decimal Subtotal);
+    decimal Subtotal,
+    Guid? ItemEstoqueId = null);
 
 /// <summary>
 /// RN-PG-01/03. <paramref name="Forma"/>: "Dinheiro", "Pix", "CartaoDebito" ou "CartaoCredito".

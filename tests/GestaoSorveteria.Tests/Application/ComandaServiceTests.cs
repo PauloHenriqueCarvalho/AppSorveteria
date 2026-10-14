@@ -19,6 +19,7 @@ public class ComandaServiceTests
     private readonly UsuarioRepositoryFake _usuarios = new();
     private readonly UnitOfWorkFake _uow = new();
     private readonly ClockFake _clock = new() { UtcNow = Venda.AddHours(2) };
+    private readonly MovimentoEstoqueRepositoryFake _movimentos = new();
     private readonly ComandaService _service;
     private readonly Usuario _dona = Cenario.Admin();
     private readonly Caixa _caixa;
@@ -27,7 +28,7 @@ public class ComandaServiceTests
     {
         _usuarios.Usuarios.Add(_dona);
         var consulta = new ComandaConsultaService(_comandas, _usuarios, _clock);
-        _service = new ComandaService(_comandas, _usuarios, _uow, _clock, consulta);
+        _service = new ComandaService(_comandas, _usuarios, _uow, _clock, consulta, SaldosFake.Novo(_clock, movimentos: _movimentos));
         _caixa = Caixa.Abrir(_dona.Id, 100m, Venda.AddHours(-1));
         _caixas.Caixas.Add(_caixa);
     }

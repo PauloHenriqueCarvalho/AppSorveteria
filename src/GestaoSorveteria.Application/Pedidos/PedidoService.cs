@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Contracts.Pedidos;
 using GestaoSorveteria.Domain.Common;
 using GestaoSorveteria.Domain.Estoque;
@@ -33,6 +34,7 @@ public sealed class PedidoService
     private readonly IAvisoRepository _avisos;
     private readonly IUsuarioRepository _usuarios;
     private readonly IConfiguracaoLojaRepository _configuracao;
+    private readonly SaldoEstoqueService _saldos;
     private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
 
@@ -43,9 +45,11 @@ public sealed class PedidoService
         IAvisoRepository avisos,
         IUsuarioRepository usuarios,
         IConfiguracaoLojaRepository configuracao,
+        SaldoEstoqueService saldos,
         IUnitOfWork uow,
         IClock clock)
     {
+        _saldos = saldos;
         _pedidos = pedidos;
         _estoque = estoque;
         _contagens = contagens;
@@ -239,6 +243,9 @@ public sealed class PedidoService
             agora,
             request.ChegouEm);
 
+        // RN-RC-03: os potes que vieram entram no saldo (na hora em que a entrega chegou).
+        await _saldos.RegistrarEntradaAsync(pedido, cancellationToken);
+
         var avisosFechados = 0;
         foreach (var linha in pedido.Itens.Where(i => i.RecebidoEmbalagens > 0))
         {
@@ -327,6 +334,10 @@ public sealed class PedidoService
             .OrderBy(p => p.RecebidoEm)
             .ToList();
         var diasACobrir = SugestaoPedido.DiasACobrir(hoje.DayOfWeek, fornecedor.DiasPedido, fornecedor.PrazoEntregaDias);
+        // Potes (SaldoPelaVenda): o saldo do sistema faz o papel da contagem e as vendas dão a média (RN-PF-02).
+        var potes = itens.Where(i => catalogo.Grupos[i.GrupoId].ModoControle == ModoControle.SaldoPelaVenda).Select(i => i.Id).ToList();
+        var saldosPotes = await _saldos.SaldosAsync(potes, cancellationToken: cancellationToken);
+        var vendasPotes = await _saldos.SaidaSemanalPelasVendasAsync(potes, cancellationToken);
 
         var linhas = new List<LinhaSugerida>();
         foreach (var item in itens.OrderBy(i => catalogo.Grupos[i.GrupoId].Ordem).ThenBy(i => i.Ordem).ThenBy(i => i.Nome))
@@ -346,13 +357,26 @@ public sealed class PedidoService
                     .Select(x => new SugestaoPedido.Contado(x.Linha!.ContadoEm ?? x.ConcluidaEm!.Value, x.Linha!.ContadoUnidades!.Value))
                     .ToList();
                 var media = SugestaoPedido.SaidaSemanalMedia(historico, (de, ate) => RecebidoEntre(recebidos, item, de, ate));
+                var ehPote = saldosPotes.TryGetValue(item.Id, out var saldoPote);
+                if (ehPote)
+                {
+                    media = vendasPotes.GetValueOrDefault(item.Id) ?? media;
+                }
 
-                // Estoque de agora: pela última contagem (menos a saída estimada desde ela) ou, sem contagem que sirva, pelo que o
-                // ciclo já trouxe; mais o que está a caminho.
+                // Estoque de agora: pote pelo saldo; o resto pela última contagem (menos a saída estimada desde ela) ou, sem
+                // contagem que sirva, pelo que o ciclo já trouxe; mais o que está a caminho.
                 decimal? estoque = null;
                 var temContagem = ultimaContagem.TryGetValue(item.Id, out var contado);
-                var contagemAntiga = temContagem && agora - contado.Em > ContagemRecente;
-                if (temContagem && (media is not null || !contagemAntiga))
+                var contagemAntiga = !ehPote && temContagem && agora - contado.Em > ContagemRecente;
+                if (ehPote)
+                {
+                    estoque = Math.Max(0, saldoPote);
+                    if (saldoPote < 0)
+                    {
+                        marcas.Add($"Saldo do sistema {saldoPote}: confira na contagem");
+                    }
+                }
+                else if (temContagem && (media is not null || !contagemAntiga))
                 {
                     var diasDesde = (decimal)(agora - contado.Em).Ticks / TimeSpan.TicksPerDay;
                     estoque = SugestaoPedido.EstoqueEstimado(

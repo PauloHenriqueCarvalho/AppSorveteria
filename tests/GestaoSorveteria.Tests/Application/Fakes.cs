@@ -1,4 +1,5 @@
 using GestaoSorveteria.Application.Abstractions;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Estoque;
@@ -336,4 +337,50 @@ internal sealed class PedidoFornecedorRepositoryFake : IPedidoFornecedorReposito
         Pedidos.Add(pedido);
         return Task.CompletedTask;
     }
+}
+
+internal sealed class MovimentoEstoqueRepositoryFake : IMovimentoEstoqueRepository
+{
+    public List<MovimentoEstoque> Movimentos { get; } = new();
+
+    public Task AdicionarAsync(MovimentoEstoque movimento, CancellationToken cancellationToken = default)
+    {
+        // Mesmos índices únicos do banco: uma baixa/estorno por linha de venda, uma entrada por item e pedido.
+        if (Movimentos.Any(m => m.Tipo == movimento.Tipo
+                && ((movimento.ItemComandaId is not null && m.ItemComandaId == movimento.ItemComandaId)
+                    || (movimento.PedidoId is not null && m.PedidoId == movimento.PedidoId && m.ItemEstoqueId == movimento.ItemEstoqueId))))
+        {
+            throw new InvalidOperationException("Movimento repetido (índice único).");
+        }
+
+        Movimentos.Add(movimento);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<MovimentoEstoque>> ListarDosItensAsync(
+        IReadOnlyCollection<Guid> itemEstoqueIds, DateTime? desdeUtc = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<MovimentoEstoque>>(Movimentos
+            .Where(m => itemEstoqueIds.Contains(m.ItemEstoqueId) && (desdeUtc is null || m.Em > desdeUtc))
+            .OrderBy(m => m.Em)
+            .ToList());
+
+    public Task<IReadOnlyList<MovimentoEstoque>> ListarDaComandaAsync(Guid comandaId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<MovimentoEstoque>>(Movimentos.Where(m => m.ComandaId == comandaId).ToList());
+}
+
+/// <summary>Saldo dos potes com os fakes: passe os que o teste olha, o resto nasce vazio.</summary>
+internal static class SaldosFake
+{
+    public static SaldoEstoqueService Novo(
+        IClock clock,
+        IEstoqueRepository? estoque = null,
+        IContagemRepository? contagens = null,
+        IAvisoRepository? avisos = null,
+        IMovimentoEstoqueRepository? movimentos = null) =>
+        new(
+            movimentos ?? new MovimentoEstoqueRepositoryFake(),
+            contagens ?? new ContagemRepositoryFake(),
+            estoque ?? new EstoqueRepositoryFake(),
+            avisos ?? new AvisoRepositoryFake(),
+            clock);
 }
