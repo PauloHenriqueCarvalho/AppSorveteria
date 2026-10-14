@@ -410,7 +410,7 @@ public class PedidoServiceTests
     }
 
     [Fact]
-    public async Task Mensagens_ReabreOWhatsAppDoPedidoEDoQueVeioDiferente()
+    public async Task MensagensAsync_EnviadoERecebido_DevolveOPedidoEOQueVeioDiferente()
     {
         var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         var rascunho = await _service.MensagensAsync(pedido.Id, Ct);
@@ -426,6 +426,40 @@ public class PedidoServiceTests
         var recebido = await _service.MensagensAsync(pedido.Id, Ct);
         Assert.Equal("Entrega do pedido nº 1 — Verão Tropical\nFaltou: Uva 1 cx", recebido.Divergencias);
         Assert.NotNull(recebido.LinkDivergencias);
+    }
+
+    [Fact]
+    public async Task MensagensAsync_CanceladoOuFornecedorSoDeFolha_SemMensagemDoPedido()
+    {
+        var cancelado = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(cancelado.Id, Ct);
+        await _service.CancelarAsync(cancelado.Id, new CancelarPedidoRequest("Montei errado"), _dona.Id, Ct);
+        var doCancelado = await _service.MensagensAsync(cancelado.Id, Ct);
+        Assert.Null(doCancelado.Pedido);
+        Assert.Null(doCancelado.Divergencias);
+
+        _fabrica.Atualizar("Fábrica", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, true);
+        var impresso = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(impresso.Id, Ct);
+        var doImpresso = await _service.MensagensAsync(impresso.Id, Ct);
+        Assert.Null(doImpresso.Pedido);
+        Assert.Null(doImpresso.LinkPedido);
+    }
+
+    [Fact]
+    public async Task Receber_SaborTrocadoQueEstavaComZero_VeioSemPedirComOPrecoNovo()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_uva.Id, 0m)]), Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+
+        var recebido = await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest(
+            [new LinhaRecebidaRequest(_uva.Id, 1m)], null, [new NovoCustoRequest(_uva.Id, 27m)]), _dona.Id, Ct);
+
+        var uva = Linha(recebido.Pedido, _uva);
+        Assert.Equal("NaoPedido", uva.Situacao);
+        Assert.Equal(27m, uva.CustoEmbalagem);
+        Assert.Equal("Entrega do pedido nº 1 — Verão Tropical\nVeio sem pedir: Uva 1 cx", recebido.MensagemFornecedor);
     }
 
     [Fact]

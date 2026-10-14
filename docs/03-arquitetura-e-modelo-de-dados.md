@@ -300,6 +300,7 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
 | GET | `/api/pedidos-fornecedor?fornecedorId=`, `/api/pedidos-fornecedor/{id}` | lista (90 dias + não recebidos) e o pedido completo — também os dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
 | POST | `/api/pedidos-fornecedor/{id}/receber` | conferência; diferenças e texto para o fornecedor |
 | POST | `/api/pedidos-fornecedor/{id}/cancelar` | com motivo |
+| GET | `/api/pedidos-fornecedor/{id}/mensagens` | WhatsApp para reabrir: o pedido (fornecedor que recebe por WhatsApp) e o que veio diferente na entrega |
 | GET | `/api/fornecedores/{id}/historico` | % atendido, itens que mais faltam |
 
 **Montagem automática do rascunho:** o painel chama `montar` ao abrir no dia do pedido (idempotente); um `BackgroundService` faz o mesmo quando a API estiver acordada. Não depende de agendador pago.

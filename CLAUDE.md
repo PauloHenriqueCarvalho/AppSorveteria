@@ -49,7 +49,8 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 - **Painel (Sprint 3): concluído (07/10/2026).** Login, dashboard do dia, vendas com estorno, produtos, caixas (com fechamento forçado), usuários, "Conectando ao servidor…". Falta só publicar (Sprint 4).
 - **Painel profissional (ADR 020, 14/10/2026):** estrutura de ERP (menu lateral, trilha, indicadores, tabelas) e marca Verão Tropical. Componentes em `src/componentes/Ui.tsx` e `Icone.tsx`; tela nova usa esses componentes e as classes de `index.css`, sem biblioteca de UI. Próximo: API do dashboard e Vendas/Caixas em tabela (docs/04).
 - **Deploy (Sprint 4): nada publicado ainda.** `Dockerfile`, `/health` e docs/07 prontos.
-- **Próximo:** docs/08 — Sessão B (Etapa C do app, C2→C5; C1 entregue no #44), Sessão C (deploy, espera as contas Neon/Render/Cloudflare). Sessão A concluída.
+- **Fase 2 — estoque e pedidos (Sprints 5 e 6, 14/10/2026), na develop:** catálogo da planilha com fornecedores (importação com prévia), avisos "Está acabando" com urgente/resumo no WhatsApp da dona, contagem semanal (painel e `POST /api/sync/contagens`), pedido ao fornecedor (sugestão pela contagem estimada + entregas + a caminho + avisos + faltas, folha A4, WhatsApp, conferência da entrega, histórico) — #68–#75, #77, #79, #80. **App, abertos para o Paulo testar no tablet:** #67 (quantidade digitada) e #76 ("Está acabando", resumo do dia e a contagem semanal do #78, que já foi juntado nele).
+- **Próximo:** Sprint 7 (potes com saldo automático, docs/04) e deploy (Sessão C do docs/08, espera as contas Neon/Render/Cloudflare). Etapa C do app (C2→C5) segue no docs/08.
 
 ## Comandos
 
@@ -122,7 +123,7 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - **Permissões:** `.claude/settings.json` libera build/test/ef/docker/git/gh sem perguntar e **bloqueia** push na `main`, `--force`, `reset --hard`, `rm -rf` e apagar o banco.
 - **Duas frentes em paralelo:** use `git worktree` (ex.: `../AppSorveteria-app` na branch do app) e uma sessão do Claude Code em cada pasta, para API e app não se atropelarem.
 - **Migração sem `dotnet ef` à mão** (ex.: sessão na nuvem com NuGet bloqueado): commit numa branch `feature/**` com `[gerar-migracao: NomeEmPascalCase]` na mensagem; o workflow `Gerar migração EF` gera a migração + snapshot, confere que não sobrou mudança pendente, mostra o SQL no log e faz o commit na branch. Revise como manda a skill `migracao-ef`. O teste `Modelo_ComparadoComAsMigracoes_NaoTemMudancaPendente` reprova o CI quando o modelo muda sem migração.
-- **CI:** `CI` (API + testes, Ubuntu) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam; `Painel` (npm ci, lint, testes, build) quando `src/GestaoSorveteria.Painel` muda.
+- **CI:** `CI` (API + testes, Ubuntu) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam; `Painel` (npm ci, lint, testes, build) quando `src/GestaoSorveteria.Painel` muda. O `App Android` só dispara sozinho em PR para `main`/`develop`; num PR empilhado rode `gh api repos/PauloHenriqueCarvalho/AppSorveteria/actions/workflows/app.yml/dispatches -f ref=<branch>`.
 - **Merge na `main`:** só o Paulo, por PR da `develop`.
 
 ## Como trabalhar aqui (para o Claude)

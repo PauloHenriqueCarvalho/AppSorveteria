@@ -78,14 +78,15 @@ function Conferencia({ pedido, aoConferir }: { pedido: PedidoDto; aoConferir: (r
   const receber = useMutation({
     mutationFn: (dados: { diferencas: LinhaRecebidaRequest[]; naoPedidos: LinhaRecebidaRequest[]; novosCustos: NovoCustoRequest[] }) =>
       receberPedido(pedido.id, dados),
-    onSuccess: async (resposta) => {
+    onSuccess: (resposta) => {
+      // Mostra o resultado primeiro; com o cache já "Recebido", esta tela diria "não está aguardando entrega".
+      aoConferir(resposta)
       queryClient.setQueryData([...CHAVE_PEDIDOS, pedido.id], resposta.pedido)
-      await Promise.all([
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: CHAVE_PEDIDOS }),
         queryClient.invalidateQueries({ queryKey: CHAVE_AVISOS }),
         queryClient.invalidateQueries({ queryKey: CHAVE_CATALOGO_ESTOQUE }),
       ])
-      aoConferir(resposta)
     },
   })
 
@@ -134,8 +135,10 @@ function Conferencia({ pedido, aoConferir }: { pedido: PedidoDto; aoConferir: (r
     try {
       for (const linha of pedidas) {
         const { veio, preco } = ler(linha.itemNome, campos[linha.itemEstoqueId], passos.get(linha.itemEstoqueId) ?? 1)
-        if (veio !== linha.pedidoEmbalagens || !campos[linha.itemEstoqueId].pedirDeNovo) {
-          diferencas.push({ itemEstoqueId: linha.itemEstoqueId, recebidoEmbalagens: veio, pedirDeNovo: campos[linha.itemEstoqueId].pedirDeNovo })
+        if (veio !== linha.pedidoEmbalagens) {
+          // "Pedir de novo" só vale quando faltou; desmarcado e depois corrigido para o certo não conta.
+          const pedirDeNovo = veio < linha.pedidoEmbalagens ? campos[linha.itemEstoqueId].pedirDeNovo : true
+          diferencas.push({ itemEstoqueId: linha.itemEstoqueId, recebidoEmbalagens: veio, pedirDeNovo })
         }
         if (preco !== null) {
           if (veio === 0) {
