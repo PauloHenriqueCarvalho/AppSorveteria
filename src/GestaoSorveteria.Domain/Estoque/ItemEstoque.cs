@@ -91,6 +91,9 @@ public sealed class ItemEstoque : Entity
         MinimoUnidades = minimoUnidades;
     }
 
+    /// <summary>A dona reorganiza o catálogo (ex.: um sabor que estava em "Picolé de fruta" vai para "Picolé ao leite").</summary>
+    public void MoverParaGrupo(Guid grupoId) => GrupoId = Guard.NaoVazio(grupoId, "o grupo");
+
     /// <summary>RN-PF-05/RN-RC-05: novo preço da nota vale para os próximos pedidos.</summary>
     public void AlterarCusto(decimal custoEmbalagem) =>
         CustoEmbalagem = Guard.Dinheiro(custoEmbalagem, "o custo da embalagem", permiteZero: true);
