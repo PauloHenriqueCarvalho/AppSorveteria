@@ -33,7 +33,15 @@ public sealed class PedidoFornecedor : Entity
     public DateTime CriadoEm { get; private set; }
     public DateTime AtualizadoEm { get; private set; }
     public DateTime? EnviadoEm { get; private set; }
+    /// <summary>Quando a entrega foi conferida no sistema.</summary>
     public DateTime? RecebidoEm { get; private set; }
+
+    /// <summary>
+    /// Quando a entrega chegou na loja (RN-RC-01: a dona pode conferir dias depois). É esta data que conta para o estoque:
+    /// a entrega que chegou antes da contagem já está no que foi contado, mesmo que a conferência tenha sido depois.
+    /// </summary>
+    public DateTime? ChegouEm { get; private set; }
+
     public Guid? RecebidoPorUsuarioId { get; private set; }
     public DateTime? CanceladoEm { get; private set; }
     public Guid? CanceladoPorUsuarioId { get; private set; }
@@ -179,12 +187,19 @@ public sealed class PedidoFornecedor : Entity
     /// Calcula o total recebido e o % atendido.
     /// </summary>
     public void Receber(
-        IEnumerable<LinhaRecebida> diferencas, IEnumerable<LinhaNaoPedida> naoPedidos, Guid usuarioId, DateTime agoraUtc)
+        IEnumerable<LinhaRecebida> diferencas,
+        IEnumerable<LinhaNaoPedida> naoPedidos,
+        Guid usuarioId,
+        DateTime agoraUtc,
+        DateTime? chegouEmUtc = null)
     {
         Guard.Contra(Status != StatusPedido.Enviado,
             Status == StatusPedido.Rascunho ? "Envie o pedido antes de conferir a entrega." : "Este pedido não está aguardando entrega.");
         var agora = Guard.Utc(agoraUtc, "a data da entrega");
         Guard.Contra(EnviadoEm is { } enviado && agora < enviado, "A entrega não pode ser anterior ao envio do pedido.");
+        var chegou = chegouEmUtc is { } informado ? Guard.Utc(informado, "quando a entrega chegou") : agora;
+        Guard.Contra(chegou > agora, "A entrega não pode ter chegado depois de agora.");
+        Guard.Contra(EnviadoEm is { } envio && chegou < envio, "A entrega não pode ter chegado antes do envio do pedido.");
         var quemConferiu = Guard.NaoVazio(usuarioId, "quem conferiu");
 
         // Valida tudo antes de mudar qualquer linha: erro na conferência não deixa o pedido pela metade.
@@ -225,6 +240,7 @@ public sealed class PedidoFornecedor : Entity
 
         Status = StatusPedido.Recebido;
         RecebidoEm = agora;
+        ChegouEm = chegou;
         RecebidoPorUsuarioId = quemConferiu;
         AtualizadoEm = agora;
         Recalcular();

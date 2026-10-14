@@ -373,6 +373,39 @@ public class PedidoServiceTests
     }
 
     [Fact]
+    public async Task Montar_EntregaQueChegouAntesDaContagemEConferidaDepois_NaoContaDuasVezes()
+    {
+        // Pedido de quinta; a entrega chega no domingo antes da contagem; a dona só confere na segunda.
+        _clock.UtcNow = Agora.AddDays(-4);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_limao.Id, 2m)]), Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora;
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest(null, null, null, ChegouEm: Agora.AddDays(-1).AddHours(-1)), _dona.Id, Ct);
+
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        // Os 56 picolés entram na semana em que chegaram (saída 42 + 56 − 14 = 84; média com a anterior = 56 por semana) e não
+        // somam de novo nos 14 contados: 72 para 9 dias − (14 − 8 que saíram desde domingo) = 66 → 3 caixas. Pela data da
+        // conferência seriam 14 + 56 em estoque e nenhuma caixa.
+        Assert.Equal(3m, Linha(proximo, _limao).SugeridoEmbalagens);
+    }
+
+    [Fact]
+    public async Task Receber_ChegouDepoisDeAgoraOuAntesDoEnvio_Lanca()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(1);
+
+        await Assert.ThrowsAsync<DomainException>(() => _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest(null, null, null, ChegouEm: Agora.AddDays(2)), _dona.Id, Ct));
+        await Assert.ThrowsAsync<DomainException>(() => _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest(null, null, null, ChegouEm: Agora.AddHours(-1)), _dona.Id, Ct));
+        Assert.Equal(StatusPedido.Enviado, _pedidos.Pedidos.Single().Status);
+    }
+
+    [Fact]
     public async Task Montar_PedidoEnviadoAindaNaoChegou_ContaOQueEstaACaminhoENaoRepeteOAviso()
     {
         var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);

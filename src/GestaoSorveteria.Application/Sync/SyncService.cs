@@ -153,7 +153,8 @@ public sealed class SyncService
             dto.CriadaEm,
             _clock.UtcNow,
             dto.Observacao,
-            itens.Select(i => new DadosItemRecebido(i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal)).ToList(),
+            // Sabor dos potes (RN-ES-09) chega com o contrato da Sprint 7; até lá a venda vem sem sabor.
+            itens.Select(i => new DadosItemRecebido(i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal, null)).ToList(),
             dto.Total,
             pagamentos.Select(p => new DadosPagamento(
                 TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco)).ToList(),

@@ -238,7 +238,7 @@ public sealed class Comanda : Entity
             }
         }
 
-        var descricao = sabor is null ? produto.Nome : $"{produto.Nome} · {sabor.Nome}";
+        var descricao = sabor is null ? produto.Nome : DescricaoComSabor(produto.Nome, sabor.Nome);
         var item = new ItemComanda(Id, produto.Id, descricao, quantidade, preco, itemId, sabor?.Id);
         _itens.Add(item);
         RecalcularTotal();
@@ -406,6 +406,16 @@ public sealed class Comanda : Entity
         }
 
         return comanda;
+    }
+
+    /// <summary>"Pote 1L · Flocos"; nome longo encurta o do produto para caber nos 120 da linha (o sabor fica inteiro).</summary>
+    internal static string DescricaoComSabor(string produto, string sabor)
+    {
+        const string separador = " · ";
+        var cabe = ItemComanda.DescricaoMaxima - separador.Length - sabor.Length;
+        var nomeProduto = produto.Length <= cabe ? produto : produto[..Math.Max(1, cabe - 1)].TrimEnd() + "…";
+        var descricao = $"{nomeProduto}{separador}{sabor}";
+        return descricao.Length <= ItemComanda.DescricaoMaxima ? descricao : descricao[..ItemComanda.DescricaoMaxima];
     }
 
     private ItemComanda ObterItem(Guid itemId) =>

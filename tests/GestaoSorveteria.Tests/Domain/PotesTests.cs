@@ -120,7 +120,7 @@ public class PotesTests
     }
 
     [Fact]
-    public void Movimentos_EfeitoPeloTipoEEstornoComOMomentoDaVenda()
+    public void EstornoVenda_DaBaixa_DevolveComOMomentoDaVenda()
     {
         var entrada = MovimentoEstoque.Entrada(_flocos.Id, 6, Guid.NewGuid(), Agora);
         var baixa = MovimentoEstoque.BaixaVenda(_flocos.Id, 2, Guid.NewGuid(), Guid.NewGuid(), Agora.AddHours(2), Agora.AddHours(5));
@@ -138,7 +138,7 @@ public class PotesTests
     }
 
     [Fact]
-    public void Saldo_ContagemEhABaseEMovimentoDeAntesDelaNaoConta()
+    public void Saldo_MovimentoAntesDaContagem_NaoConta()
     {
         var contagem = new CalculoEstoque.BaseDoSaldo(5, Agora);
         var movimentos = new[]
@@ -151,6 +151,84 @@ public class PotesTests
 
         Assert.Equal(9, CalculoEstoque.Saldo(contagem, movimentos)); // 5 + 6 − 2
         Assert.Equal(3, CalculoEstoque.Saldo(null, movimentos)); // sem contagem: −1 + 6 − 2
+    }
+
+    [Fact]
+    public void Saldo_VendaNaMesmaHoraDaContagem_JaEstaNoQueFoiContado()
+    {
+        var contagem = new CalculoEstoque.BaseDoSaldo(5, Agora);
+        var venda = MovimentoEstoque.BaixaVenda(_flocos.Id, 1, Guid.NewGuid(), Guid.NewGuid(), Agora, Agora.AddMinutes(5));
+
+        Assert.Equal(5, CalculoEstoque.Saldo(contagem, [venda]));
+    }
+
+    [Fact]
+    public void Saldo_EstornoDeVendaDeAntesDaContagem_NaoMudaOSaldo()
+    {
+        // Venda lançada errada no sábado (o pote nem saiu), contado no domingo, estornada na segunda.
+        var contagem = new CalculoEstoque.BaseDoSaldo(5, Agora);
+        var baixa = MovimentoEstoque.BaixaVenda(_flocos.Id, 1, Guid.NewGuid(), Guid.NewGuid(), Agora.AddDays(-1), Agora.AddDays(-1));
+        var estorno = MovimentoEstoque.EstornoVenda(baixa, Agora.AddDays(1));
+
+        Assert.Equal(5, CalculoEstoque.Saldo(contagem, [baixa, estorno]));
+    }
+
+    [Fact]
+    public void Remontar_ItemComSabor_GuardaOSabor()
+    {
+        var caixa = Cenario.CaixaAberto();
+        var item = new DadosItemRecebido(Guid.NewGuid(), _pote.Id, "Pote 1L · Flocos", 1, 28m, 28m, _flocos.Id);
+
+        var comanda = Comanda.Remontar(caixa, Guid.NewGuid(), Cenario.Atendente, 1, TipoComanda.Balcao, StatusComanda.Fechada,
+            Agora.AddMinutes(1), Agora.AddMinutes(2), null, [item], 28m,
+            [new DadosPagamento(FormaPagamento.Pix, 28m)], fechadaEmUtc: Agora.AddMinutes(1));
+
+        Assert.Equal(_flocos.Id, comanda.Itens.Single().ItemEstoqueId);
+    }
+
+    [Fact]
+    public void AdicionarProduto_SaborDesativado_Lanca()
+    {
+        _chocolate.Desativar();
+
+        Assert.Throws<DomainException>(() => Cenario.ComandaAberta().AdicionarProduto(_pote, 1, sabor: _chocolate));
+    }
+
+    [Fact]
+    public void Restaurar_SaborVazio_Lanca()
+    {
+        var item = new DadosItem(Guid.NewGuid(), _pote.Id, "Pote 1L", 1, 28m, Guid.Empty);
+
+        Assert.Throws<DomainException>(() => Comanda.Restaurar(
+            Guid.NewGuid(), Guid.NewGuid(), Cenario.Atendente, 1, TipoComanda.Balcao, StatusComanda.Aberta, Agora, Agora, null, [item]));
+    }
+
+    [Fact]
+    public void AdicionarProduto_NomesLongos_EncurtaOProdutoEMantemOSabor()
+    {
+        var produto = Produto.Criar(new string('P', 80), "Potes", 28m, false, 9, Agora);
+        produto.LigarAoEstoque(_pote1L.Id, 1, Agora);
+        var sabor = ItemEstoque.Criar(_pote1L.Id, Fabrica, "Chocolate com " + new string('a', 60), UnidadeCompra.Unidade, 1, 14m, 3);
+
+        var item = Cenario.ComandaAberta().AdicionarProduto(produto, 1, sabor: sabor);
+
+        Assert.True(item.Descricao.Length <= ItemComanda.DescricaoMaxima);
+        Assert.EndsWith(" · " + sabor.Nome, item.Descricao);
+    }
+
+    [Fact]
+    public void Registrar_HoraDoItem_SoMudaQuandoONumeroMuda()
+    {
+        var contagem = Contagem.Iniciar(Cenario.Atendente, Agora, OrigemContagem.App);
+        contagem.Registrar(_flocos, _pote1L, 3m, contadoEmUtc: Agora.AddMinutes(5));
+
+        contagem.Registrar(_flocos, _pote1L, 3m, contadoEmUtc: Agora.AddMinutes(20)); // salvou de novo, mesmo número
+        Assert.Equal(Agora.AddMinutes(5), contagem.Itens.Single().ContadoEm);
+
+        contagem.Registrar(_flocos, _pote1L, 2m, contadoEmUtc: Agora.AddMinutes(30));
+        Assert.Equal(Agora.AddMinutes(30), contagem.Itens.Single().ContadoEm);
+
+        Assert.Throws<DomainException>(() => contagem.Registrar(_chocolate, _pote1L, 1m, contadoEmUtc: Agora.AddMinutes(-1)));
     }
 
     [Theory]

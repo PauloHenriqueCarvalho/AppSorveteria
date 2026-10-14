@@ -34,7 +34,7 @@ internal sealed class ContagemRepository : IContagemRepository
                 join contagem in _db.Contagens on linha.ContagemId equals contagem.Id
                 where contagem.ConcluidaEm != null && contagem.ConcluidaEm < antesDeUtc && contagem.ConcluidaEm >= desde
                     && linha.ContadoUnidades != null
-                select new { linha.ItemEstoqueId, contagem.ConcluidaEm, linha.ContadoUnidades })
+                select new { linha.ItemEstoqueId, contagem.ConcluidaEm, linha.ContadoUnidades, linha.ContadoEm })
             .ToListAsync(cancellationToken);
 
         return linhas
@@ -42,7 +42,7 @@ internal sealed class ContagemRepository : IContagemRepository
             .ToDictionary(g => g.Key, g =>
             {
                 var ultima = g.OrderByDescending(l => l.ConcluidaEm).First();
-                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value);
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value, ultima.ContadoEm);
             });
     }
 

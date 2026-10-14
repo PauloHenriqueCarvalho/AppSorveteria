@@ -6,14 +6,14 @@ namespace GestaoSorveteria.Domain.Comandas;
 /// Item já gravado, usado em <see cref="Comanda.Restaurar"/>. ProdutoId nulo = item livre.
 /// <paramref name="ItemEstoqueId"/>: sabor do pote (RN-ES-09); nulo no resto.
 /// </summary>
-public readonly record struct DadosItem(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, Guid? ItemEstoqueId = null);
+public readonly record struct DadosItem(Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, Guid? ItemEstoqueId);
 
 /// <summary>
 /// Item de uma comanda recebida na sincronização, usado em <see cref="Comanda.Remontar"/>: descrição e preço
 /// praticados na venda e o subtotal calculado no app, conferido no servidor (RN-SY-06).
 /// </summary>
 public readonly record struct DadosItemRecebido(
-    Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal, Guid? ItemEstoqueId = null);
+    Guid Id, Guid? ProdutoId, string Descricao, int Quantidade, decimal PrecoUnitario, decimal Subtotal, Guid? ItemEstoqueId);
 
 /// <summary>
 /// Linha da comanda. Guarda descrição e preço praticado no momento (snapshot, RN-PR-04).
@@ -23,6 +23,7 @@ public readonly record struct DadosItemRecebido(
 public sealed class ItemComanda : Entity
 {
     public const int QuantidadeMaxima = 999;
+    public const int DescricaoMaxima = 120;
 
     public Guid ComandaId { get; private set; }
     public Guid? ProdutoId { get; private set; }
@@ -53,7 +54,7 @@ public sealed class ItemComanda : Entity
         ComandaId = comandaId;
         ProdutoId = produtoId;
         ItemEstoqueId = itemEstoqueId;
-        Descricao = Guard.Texto(descricao, "a descrição do item", 1, 120);
+        Descricao = Guard.Texto(descricao, "a descrição do item", 1, DescricaoMaxima);
         PrecoUnitario = Guard.Dinheiro(precoUnitario, "o preço", permiteZero: produtoId is not null);
         Quantidade = ValidarQuantidade(quantidade);
         Recalcular();

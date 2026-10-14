@@ -290,12 +290,12 @@ internal sealed class ContagemRepositoryFake : IContagemRepository
     public Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyDictionary<Guid, UltimaContagemDoItem>>(Contagens
             .Where(c => c.ConcluidaEm < antesDeUtc)
-            .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades)))
+            .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades, i.ContadoEm)))
             .GroupBy(x => x.ItemEstoqueId)
             .ToDictionary(g => g.Key, g =>
             {
                 var ultima = g.OrderByDescending(x => x.ConcluidaEm).First();
-                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value);
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value, ultima.ContadoEm);
             }));
 
     public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)

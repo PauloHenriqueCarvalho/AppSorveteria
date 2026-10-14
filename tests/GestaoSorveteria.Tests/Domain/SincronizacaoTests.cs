@@ -21,7 +21,7 @@ public class SincronizacaoTests
             [], 0m, pagamentos, fechadaEm, canceladaEmUtc: Fechada, motivoCancelamento: "cliente desistiu");
 
     private static DadosItemRecebido Item(Guid? produtoId, string descricao, int quantidade, decimal preco) =>
-        new(Guid.NewGuid(), produtoId, descricao, quantidade, preco, Moeda.Arredondar(quantidade * preco));
+        new(Guid.NewGuid(), produtoId, descricao, quantidade, preco, Moeda.Arredondar(quantidade * preco), null);
 
     private static DadosItemRecebido Avulsa(decimal valor) => Item(null, "Venda avulsa", 1, valor);
 
@@ -64,7 +64,7 @@ public class SincronizacaoTests
     [Fact]
     public void Remontar_SubtotalEnviadoErrado_Lanca()
     {
-        var item = new DadosItemRecebido(Guid.NewGuid(), null, "Venda avulsa", 3, 3.33m, 10m);
+        var item = new DadosItemRecebido(Guid.NewGuid(), null, "Venda avulsa", 3, 3.33m, 10m, null);
 
         var ex = Assert.Throws<DomainException>(() => RemontarFechada(CaixaAberto(), 10m, Pix(10m), item));
         Assert.Contains("subtotal", ex.Message);

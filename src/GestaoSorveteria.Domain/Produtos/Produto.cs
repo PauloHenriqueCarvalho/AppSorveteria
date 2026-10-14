@@ -121,13 +121,13 @@ public sealed class Produto : Entity
 
     private void Aplicar(string nome, string categoria, decimal preco, bool permiteValorLivre, int ordem)
     {
+        Guard.Contra(permiteValorLivre && GrupoEstoqueId is not null,
+            "Produto ligado ao estoque não pode ter valor livre: desligue do grupo de estoque antes.");
         Nome = Guard.Texto(nome, "o nome do produto", 2, 80);
         NomeNormalizado = NormalizarNome(Nome);
         Categoria = Guard.Texto(categoria, "a categoria", 1, 50);
         Preco = Guard.Dinheiro(preco, "o preço", permiteZero: true);
         Guard.Contra(ordem < 0, "A ordem não pode ser negativa.");
-        Guard.Contra(permiteValorLivre && GrupoEstoqueId is not null,
-            "Produto ligado ao estoque não pode ter valor livre: desligue do grupo de estoque antes.");
         PermiteValorLivre = permiteValorLivre;
         Ordem = ordem;
     }
