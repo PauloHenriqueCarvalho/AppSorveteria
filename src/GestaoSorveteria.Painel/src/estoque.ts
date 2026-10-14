@@ -1,5 +1,6 @@
 // Textos do estoque na linguagem da dona e leitura do arquivo da planilha. Nenhuma conta de dinheiro aqui (ADR 018).
-import type { DiaSemana, FormaEnvioPedido, ModoControle, UnidadeCompra } from './api/tipos.ts'
+import type { DiaSemana, FormaEnvioPedido, ModoControle, PrioridadeAviso, UnidadeCompra } from './api/tipos.ts'
+import type { Tom } from './componentes/Ui.tsx'
 
 export const MODOS: { valor: ModoControle; nome: string; explicacao: string }[] = [
   {
@@ -114,3 +115,41 @@ export const COLUNAS_CSV = [
   'custo_embalagem',
   'fornecedor',
 ] as const
+
+/** RN-AV-02: significado fixo da prioridade, mostrado na tela para não virar tudo urgente. */
+export const PRIORIDADES: { valor: PrioridadeAviso; nome: string; quando: string; chega: string }[] = [
+  { valor: 'Urgente', nome: 'Urgente', quando: 'Acabou, ou cliente pediu e não tinha', chega: 'Na hora, pelo WhatsApp' },
+  { valor: 'Alta', nome: 'Alta', quando: 'Acaba hoje ou amanhã', chega: 'No resumo do fim do dia' },
+  { valor: 'Media', nome: 'Média', quando: 'Está baixando; entra no próximo pedido', chega: 'No resumo do fim do dia' },
+]
+
+export const TOM_DA_PRIORIDADE: Record<PrioridadeAviso, Tom> = { Urgente: 'ruim', Alta: 'atencao', Media: 'neutro' }
+
+export function nomeDaPrioridade(prioridade: PrioridadeAviso): string {
+  return PRIORIDADES.find((p) => p.valor === prioridade)?.nome ?? prioridade
+}
+
+/** 0 → "Acabou"; 3 → "Restam 3". */
+export function descreverQuantidade(quantidade: number): string {
+  return quantidade === 0 ? 'Acabou' : `Restam ${quantidade}`
+}
+
+const diaDaLoja = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' })
+const horaDaLoja = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+const diaMesDaLoja = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' })
+
+/** Data/hora UTC da API → "hoje 15:42", "ontem 09:10" ou "12/10 14:00" (horário da loja). */
+export function quando(isoUtc: string, agora: Date = new Date()): string {
+  const data = new Date(isoUtc)
+  const dia = diaDaLoja.format(data)
+  const hoje = diaDaLoja.format(agora)
+  const ontem = diaDaLoja.format(new Date(agora.getTime() - 24 * 60 * 60 * 1000))
+  const hora = horaDaLoja.format(data)
+  if (dia === hoje) {
+    return `hoje ${hora}`
+  }
+  if (dia === ontem) {
+    return `ontem ${hora}`
+  }
+  return `${diaMesDaLoja.format(data)} ${hora}`
+}

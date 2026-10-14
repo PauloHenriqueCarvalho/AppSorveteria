@@ -119,7 +119,8 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
-- [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, WhatsApp da dona
+- [x] Painel: avisos (abertos/fechados, contador no menu, novo, "ainda falta", fechar com motivo), resumo do dia, configurações (WhatsApp da dona) — 14/10
+- [ ] Painel: contagem pelo painel
 
 **Pronto quando:** o atendente avisa "acabou Coco preto" e a dona recebe no WhatsApp na hora; no fim do dia chega o resumo; a contagem semanal substitui a planilha.
 

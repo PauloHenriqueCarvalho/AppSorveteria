@@ -56,7 +56,9 @@ Abra o **endereço do painel** (no alto desta página) e entre com o usuário **
 | **Vendas** | Cada comanda do dia com itens, pagamentos e troco | **Estornar** uma venda errada, escrevendo o motivo (a venda fica no histórico como estornada; nada some) |
 | **Caixas** | Cada abertura e fechamento: fundo, vendas em dinheiro, retiradas, reforços, **esperado × contado × diferença** | Ver quem abriu/fechou e o que foi registrado |
 | **Produtos** | Cardápio que aparece no tablet | Cadastrar, mudar preço, **desativar** (nunca apagar) e escolher a **ordem dos botões** (os mais vendidos primeiro) |
+| **Configurações** | Nome da loja nas mensagens e o **seu WhatsApp** | Cadastrar o número que recebe o urgente na hora e o resumo do fim do dia; "Enviar mensagem de teste" |
 | **Usuários** | Atendentes | Criar atendente, **redefinir o PIN**, desativar quem saiu |
+| **Avisos** (Estoque e compras) | O que o balcão avisou que está acabando: urgentes primeiro, quanto tem agora, quem avisou e quando. O número vermelho no menu é quantos estão abertos | **Fechar** o aviso com o motivo ("comprei no mercado") — ele também fecha sozinho quando a entrega chegar; "Ainda falta" (a prioridade só sobe); criar aviso; **Resumo do dia** pronto para o WhatsApp |
 | **Catálogo** (Estoque e compras) | O que a loja compra, separado por grupo como na planilha: sabor, fornecedor, embalagem, custo, mínimo e alvo | **Importar a planilha** (primeiro mostra a prévia, depois você confirma; o que já está cadastrado não muda), cadastrar item (copos, casquinhas, insumos), trocar o modo de controle do grupo, desativar sabor que saiu, exportar para o Excel |
 | **Fornecedores** | Quem vende para a loja, dia do pedido, prazo de entrega e como o pedido é enviado | Cadastrar, mudar o dia do pedido, WhatsApp, meia caixa, mostrar preços na folha. Fornecedor com itens ativos só é desativado depois de trocar ou desativar os itens |
 

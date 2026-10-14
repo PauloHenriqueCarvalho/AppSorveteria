@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { decodificarCsv, descreverDias, descreverEmbalagem, formatarWhatsApp, lerQuantidade } from './estoque.ts'
+import {
+  decodificarCsv,
+  descreverDias,
+  descreverEmbalagem,
+  descreverQuantidade,
+  formatarWhatsApp,
+  lerQuantidade,
+  quando,
+} from './estoque.ts'
 
 describe('descreverEmbalagem', () => {
   it('mostra quantas vêm na caixa e omite o 1', () => {
@@ -53,5 +61,28 @@ describe('decodificarCsv', () => {
     // "Picolé;Limão" em Windows-1252: é = 0xE9, ã = 0xE3.
     const bytes = new Uint8Array([0x50, 0x69, 0x63, 0x6f, 0x6c, 0xe9, 0x3b, 0x4c, 0x69, 0x6d, 0xe3, 0x6f])
     expect(decodificarCsv(bytes.buffer)).toBe('Picolé;Limão')
+  })
+})
+
+describe('quando', () => {
+  // Quarta 14/10/2026, 15:42 em Brasília.
+  const agora = new Date('2026-10-14T18:42:00Z')
+
+  it('diz hoje e ontem pelo dia da loja, não pelo UTC', () => {
+    expect(quando('2026-10-14T18:42:00Z', agora)).toBe('hoje 15:42')
+    // 01:30 UTC do dia 15 ainda é dia 14 em Brasília.
+    expect(quando('2026-10-15T01:30:00Z', new Date('2026-10-15T02:00:00Z'))).toBe('hoje 22:30')
+    expect(quando('2026-10-13T12:10:00Z', agora)).toBe('ontem 09:10')
+  })
+
+  it('mostra dia/mês para datas mais antigas', () => {
+    expect(quando('2026-10-12T17:00:00Z', agora)).toBe('12/10 14:00')
+  })
+})
+
+describe('descreverQuantidade', () => {
+  it('zero é acabou', () => {
+    expect(descreverQuantidade(0)).toBe('Acabou')
+    expect(descreverQuantidade(3)).toBe('Restam 3')
   })
 })

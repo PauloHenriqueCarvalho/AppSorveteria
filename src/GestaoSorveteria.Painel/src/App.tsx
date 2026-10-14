@@ -8,6 +8,11 @@ import Login from './paginas/Login.tsx'
 import DetalheCaixa from './paginas/caixas/DetalheCaixa.tsx'
 import ListaCaixas from './paginas/caixas/ListaCaixas.tsx'
 import NaoEncontrada from './paginas/NaoEncontrada.tsx'
+import DetalheAviso from './paginas/avisos/DetalheAviso.tsx'
+import ListaAvisos from './paginas/avisos/ListaAvisos.tsx'
+import NovoAviso from './paginas/avisos/NovoAviso.tsx'
+import ResumoDoDia from './paginas/avisos/ResumoDoDia.tsx'
+import Configuracoes from './paginas/configuracoes/Configuracoes.tsx'
 import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
 import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
 import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
@@ -51,6 +56,10 @@ const router = createBrowserRouter([
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },
           { path: 'produtos/:id', element: <EditarProduto /> },
+          { path: 'avisos', element: <ListaAvisos /> },
+          { path: 'avisos/novo', element: <NovoAviso /> },
+          { path: 'avisos/resumo', element: <ResumoDoDia /> },
+          { path: 'avisos/:id', element: <DetalheAviso /> },
           { path: 'estoque', element: <CatalogoEstoque /> },
           { path: 'estoque/importar', element: <ImportarCatalogo /> },
           { path: 'estoque/itens/novo', element: <EditarItemEstoque /> },
@@ -63,6 +72,7 @@ const router = createBrowserRouter([
           { path: 'usuarios', element: <ListaUsuarios /> },
           { path: 'usuarios/novo', element: <NovoUsuario /> },
           { path: 'usuarios/:id', element: <DetalheUsuario /> },
+          { path: 'configuracoes', element: <Configuracoes /> },
           { path: '*', element: <NaoEncontrada /> },
         ],
       },

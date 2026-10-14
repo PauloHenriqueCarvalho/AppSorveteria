@@ -1588,6 +1588,109 @@ a.lista-item:hover {
   width: 100%;
 }
 
+/* Ficha de informações (rótulo à esquerda, valor ao lado), como no detalhe do aviso. */
+.ficha {
+  display: grid;
+  grid-template-columns: minmax(110px, 160px) 1fr;
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+
+.ficha-linha {
+  display: contents;
+}
+
+.ficha dt {
+  color: var(--cor-texto-suave);
+}
+
+.ficha dd {
+  margin: 0;
+}
+
+.texto-ruim {
+  color: var(--cor-ruim);
+}
+
+.sem-quebra {
+  white-space: nowrap;
+}
+
+.acoes + .dica {
+  display: block;
+  margin: 0.75rem 0 0;
+}
+
+.campo-com-botao {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.campo-com-botao input {
+  flex: 1;
+  min-width: 0;
+}
+
+.formulario > h2 {
+  margin: 0;
+}
+
+.formulario > h2 + .suave {
+  margin: -0.6rem 0 0;
+}
+
+.mensagem-whatsapp {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--raio-pequeno);
+  background: #e7f8e9;
+  border: 1px solid #c7ebcc;
+  color: var(--cor-texto);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Contador ao lado do item do menu (avisos abertos). */
+.lateral-contador {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--cor-lateral-ativo);
+  color: var(--cor-lateral-texto);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.lateral-contador-urgente {
+  background: var(--cor-ruim);
+  color: #fff;
+}
+
+.barra-item {
+  position: relative;
+}
+
+.barra-contador {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--cor-ruim);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
 /* Linha de botões que não estica (estado vazio, importação). */
 .acoes-inicio {
   justify-content: flex-start;

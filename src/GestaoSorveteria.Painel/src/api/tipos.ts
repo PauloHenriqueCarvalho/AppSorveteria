@@ -351,3 +351,70 @@ export interface LinhaImportacaoDto {
   linha: number
   mensagem: string
 }
+
+// ---------------------------------------------------------------- Fase 2 — avisos "Está acabando" (Contracts/Avisos)
+
+export type PrioridadeAviso = 'Urgente' | 'Alta' | 'Media'
+
+/** Contracts/Avisos/AvisoDto — descrição já pronta ("Picolé ao leite Coco preto" ou o texto livre). */
+export interface AvisoDto {
+  id: string
+  itemEstoqueId: string | null
+  descricao: string
+  grupoNome: string | null
+  fornecedorNome: string | null
+  /** Na menor unidade (picolé, pote, balde, copo); 0 = acabou. */
+  quantidadeAtual: number
+  prioridade: PrioridadeAviso
+  observacao: string | null
+  /** "Sistema" quando nasceu sozinho (pote no mínimo). */
+  criadoPorNome: string
+  criadoEm: string
+  atualizadoPorNome: string | null
+  atualizadoEm: string
+  status: 'Aberto' | 'Fechado'
+  fechadoEm: string | null
+  fechadoPorNome: string | null
+  motivoFechamento: string | null
+  whatsAppAbertoEm: string | null
+}
+
+export interface CriarAvisoRequest {
+  id: string | null
+  itemEstoqueId: string | null
+  textoLivre: string | null
+  quantidadeAtual: number
+  prioridade: PrioridadeAviso
+  observacao: string | null
+}
+
+export interface AindaFaltaRequest {
+  quantidadeAtual: number
+  prioridade: PrioridadeAviso
+  observacao: string | null
+}
+
+export interface AvisoSalvoResponse {
+  aviso: AvisoDto
+  /** O item já tinha aviso aberto: ele foi atualizado em vez de criar outro (RN-AV-03). */
+  jaExistia: boolean
+  enviarAgora: boolean
+  mensagemWhatsApp: string | null
+  linkWhatsApp: string | null
+}
+
+/** GET /api/avisos/resumo-do-dia (RN-AV-07) */
+export interface ResumoDoDiaResponse {
+  data: string
+  texto: string
+  linkWhatsApp: string
+  urgentes: number
+  altas: number
+  medias: number
+}
+
+/** GET/PUT /api/configuracoes */
+export interface ConfiguracaoLojaDto {
+  nomeLoja: string
+  whatsAppDona: string | null
+}
