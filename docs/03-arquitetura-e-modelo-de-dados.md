@@ -220,7 +220,7 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 Desenho em docs/10 (revisto em 14/10); regras RN-ES / RN-AV / RN-PF / RN-RC em docs/02, seção 6. Mesmas convenções da Fase 1 (uuid gerado no cliente/domínio, `numeric(12,2)` para dinheiro, `timestamptz`, enums como texto, nada apagado).
 
 ```
-configuracoes_loja  (id, whatsapp_dona varchar(20), nome_loja)          -- 1 linha
+configuracao_loja   (id fixo, nome_loja varchar(60), whatsapp_dona varchar(13)?, atualizado_em)  -- 1 linha
 
 fornecedores        (id, nome, nome_normalizado, whatsapp varchar(13)?, dias_pedido text[] -- {"Monday","Thursday"},
                      prazo_entrega_dias int, aceita_meia_caixa bool,
@@ -271,20 +271,28 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
 
 **Sincronização (local-first):**
 - Comanda: `ItemComandaSyncDto` ganha `ItemEstoqueId` **opcional** (só potes). App antigo continua aceito; a baixa sai no servidor ao gravar a comanda fechada, na mesma transação.
-- Novo `POST /api/sync/estoque`: lote de **contagens** e **avisos** criados/atualizados no tablet, idempotente pelo `Id` (`aceita` / `ja_recebida` / `rejeitada`).
-- O app baixa grupos, itens (sabores e insumos) e avisos abertos junto com o catálogo: `GET /api/estoque/itens?desde=`, `GET /api/avisos?abertos=true`.
-- O WhatsApp sai do aparelho (link `wa.me`), não do servidor. `GET /api/avisos/resumo-do-dia?data=` devolve o texto pronto para o app e o painel.
+- **`POST /api/sync/avisos`**: avisos criados ou atualizados no tablet, cada um com o **estado atual** (não o histórico de toques), idempotente pelo `Id`. Resultado por aviso: `aceita` / `ja_recebida` / `rejeitada` + `avisoId` (o que vale no servidor) + `aberto`.
+  - Item que já tem aviso aberto no servidor (do painel ou de outro aparelho): o do tablet é **juntado** a ele e o app passa a usar o `avisoId` devolvido.
+  - Prioridade fica com a **maior**; quantidade e observação só mudam se a informação for **mais nova** que a do servidor (reenvio fora de ordem não volta a quantidade).
+  - Aviso que a dona (ou a entrega) **fechou**: reenvio sem novidade → `ja_recebida` com `aberto = false` (o app tira da lista); mudança feita no tablet **depois** do fechamento → `rejeitada` com "A dona fechou este aviso às HH:mm. Se ainda está faltando, avise de novo".
+  - Aviso juntado a outro que depois foi fechado: se tudo o que o tablet sabe é anterior ao fechamento, não reabre (`ja_recebida`, `aberto = false`).
+  - Datas além de agora + 10 min são recusadas (relógio do tablet adiantado travaria as atualizações seguintes).
+- Contagens sobem por `POST /api/sync/contagens` (próximo passo do Sprint 5).
+- O app baixa grupos e itens **sem custo** em `GET /api/estoque/itens` e os avisos abertos em `GET /api/avisos?abertos=true`; o WhatsApp da dona vem de `GET /api/configuracoes`.
+- O WhatsApp sai do aparelho (link `wa.me`), não do servidor. O texto do urgente é montado no próprio app (`MensagensWhatsApp.Urgente`, no Domain), para sair mesmo sem internet. `GET /api/avisos/resumo-do-dia` devolve o texto do resumo e o link; o app pede **depois de enviar a fila** (o total vendido conta só as vendas que já chegaram). Atendente só pede o de hoje; outros dias, só a dona.
 
 **Endpoints (Admin, painel):**
 
 | Método | Rota | Uso |
 |---|---|---|
-| GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja |
+| GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja (GET para todos; PUT só Admin) |
+| GET/POST | `/api/avisos`, `/api/avisos/{id}/ainda-falta`, `/{id}/whatsapp-aberto` | listar e criar avisos, "ainda falta" (atendente e dona) |
+| POST | `/api/avisos/{id}/fechar` | fechar com motivo (só Admin) |
+| GET | `/api/avisos/resumo-do-dia?data=` | texto e link do resumo (RN-AV-07) |
 | GET | `/api/estoque/catalogo` | fornecedores, grupos e itens (com custo) para o painel |
 | POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` (+ `/{id}/ativar`, `/{id}/desativar`) | catálogo (RN-ES-01/02/11, RN-PF-01/09) |
 | POST | `/api/estoque/itens/importar` | CSV da planilha; `simular: true` devolve a prévia sem gravar (RN-ES-10) |
 | GET/POST | `/api/estoque/contagens` | contagem pelo painel; histórico e saída semanal por item |
-| GET/POST/PUT | `/api/avisos` | listar, criar, "ainda falta", fechar com motivo |
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
 | PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
 | POST | `/api/pedidos-fornecedor/{id}/enviar` | confirma; devolve texto do WhatsApp |

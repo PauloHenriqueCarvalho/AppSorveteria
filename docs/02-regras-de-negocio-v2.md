@@ -110,6 +110,8 @@ Desenho e motivo em **docs/10** (revisto em 14/10). A loja compra sorvete **pron
 | RN-AV-06 | **Urgente** → logo após salvar, o app abre o WhatsApp com a mensagem pronta para o número da dona (configurado no painel). Sem internet, fica "a enviar" e o app lembra quando a conexão voltar | F2 | App |
 | RN-AV-07 | **Resumo do dia** → oferecido no **fechamento do caixa**: urgentes do dia, altas e médias abertas, potes no mínimo, diferenças da última contagem, total vendido do dia. Mensagem pronta para o WhatsApp da dona. Se o caixa for fechado pelo painel, o resumo fica disponível no painel | F2 | App + Application |
 | RN-AV-08 | Envio do WhatsApp é por link (`wa.me`): o sistema nunca afirma que a mensagem foi entregue, só que foi aberta para envio. A troca para envio automático (API oficial) não muda as regras acima | F2 | App |
+| RN-AV-09 | **Sincronização dos avisos** (tablet offline): o tablet manda o estado atual de cada aviso. Item que já tem aviso aberto no servidor junta no aberto; a prioridade fica com a maior das duas; quantidade e observação só mudam com informação mais nova. Mudança feita no tablet depois que a dona fechou o aviso é recusada com o motivo (o atendente avisa de novo) — nunca some em silêncio | F2 | Application (sync) |
+| RN-AV-10 | **Configuração da loja**: nome que aparece nas mensagens e WhatsApp da dona (DDD + número; com 12–13 dígitos só com o 55 na frente). O app e o painel leem; só a dona altera | F2 | Domain + Application |
 
 ### 6.4 Fornecedores e pedido
 

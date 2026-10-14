@@ -97,11 +97,13 @@ Exemplo de resumo:
 ```
 Resumo de quarta 14/10 — Sorveteria
 🔴 Urgente (1): Picolé ao leite Coco preto — acabou
-🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1 pacote
-🟡 Média (1): Massa Pistache — 1 balde
+🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1
+🟡 Média (1): Massa Pistache — 1
 📦 Potes no mínimo: Pote 1L Amarena (2)
 Vendas do dia: R$ 1.284,50 · Caixa fechado por Ana
 ```
+
+Quantidades na menor unidade (picolé, pote, balde, copo). Hoje o resumo já traz urgentes, altas, médias e vendas do dia; **potes no mínimo** entram com o saldo dos potes (Sprint 7), **diferenças da contagem** com a contagem semanal, e "caixa fechado por" quando o app pedir o resumo no fechamento. Urgente que a dona já resolveu no dia aparece com "(resolvido)".
 
 ### 2.4 Fornecedores e pedido
 

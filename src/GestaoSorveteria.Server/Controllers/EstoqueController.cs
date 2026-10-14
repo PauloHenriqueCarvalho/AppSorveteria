@@ -8,7 +8,7 @@ namespace GestaoSorveteria.Server.Controllers;
 
 /// <summary>
 /// Catálogo de estoque da Fase 2 (docs/10): grupos, itens e importação da planilha.
-/// Só Admin (RN-RC-07): traz custo e fornecedor. O app do atendente terá a lista dele, sem custos, junto com a sincronização.
+/// Só Admin (RN-RC-07: traz custo e fornecedor). A lista sem custos do app fica em <see cref="EstoqueAppController"/>.
 /// </summary>
 [ApiController]
 [Route("api/estoque")]
