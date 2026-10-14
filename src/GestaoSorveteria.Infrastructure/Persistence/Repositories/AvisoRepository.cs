@@ -27,9 +27,17 @@ internal sealed class AvisoRepository : IAvisoRepository
             .OrderByDescending(a => a.AtualizadoEm)
             .ToListAsync(cancellationToken);
 
+    public Task<Aviso?> ObterUltimoFechadoDoItemAsync(Guid itemEstoqueId, CancellationToken cancellationToken = default) =>
+        _db.Avisos
+            .Where(a => a.ItemEstoqueId == itemEstoqueId && a.Status == StatusAviso.Fechado)
+            .OrderByDescending(a => a.FechadoEm)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<Aviso>> ListarAtualizadosEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         await _db.Avisos
-            .Where(a => (a.CriadoEm >= deUtc && a.CriadoEm < ateUtc) || (a.AtualizadoEm >= deUtc && a.AtualizadoEm < ateUtc))
+            .Where(a => (a.CriadoEm >= deUtc && a.CriadoEm < ateUtc)
+                || (a.AtualizadoEm >= deUtc && a.AtualizadoEm < ateUtc)
+                || (a.FechadoEm >= deUtc && a.FechadoEm < ateUtc))
             .ToListAsync(cancellationToken);
 
     public async Task AdicionarAsync(Aviso aviso, CancellationToken cancellationToken = default) =>

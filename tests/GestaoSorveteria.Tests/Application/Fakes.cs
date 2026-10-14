@@ -243,9 +243,14 @@ internal sealed class AvisoRepositoryFake : IAvisoRepository
             .OrderByDescending(a => a.AtualizadoEm)
             .ToList());
 
+    public Task<Aviso?> ObterUltimoFechadoDoItemAsync(Guid itemEstoqueId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Avisos.Where(a => a.ItemEstoqueId == itemEstoqueId && !a.Aberto).OrderByDescending(a => a.FechadoEm).FirstOrDefault());
+
     public Task<IReadOnlyList<Aviso>> ListarAtualizadosEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Aviso>>(Avisos
-            .Where(a => (a.CriadoEm >= deUtc && a.CriadoEm < ateUtc) || (a.AtualizadoEm >= deUtc && a.AtualizadoEm < ateUtc))
+            .Where(a => (a.CriadoEm >= deUtc && a.CriadoEm < ateUtc)
+                || (a.AtualizadoEm >= deUtc && a.AtualizadoEm < ateUtc)
+                || (a.FechadoEm >= deUtc && a.FechadoEm < ateUtc))
             .ToList());
 
     public Task AdicionarAsync(Aviso aviso, CancellationToken cancellationToken = default)

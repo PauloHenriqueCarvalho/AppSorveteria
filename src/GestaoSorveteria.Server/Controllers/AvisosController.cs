@@ -1,4 +1,6 @@
 using GestaoSorveteria.Application.Avisos;
+using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Contracts.Avisos;
 using GestaoSorveteria.Server.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -17,10 +19,14 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class AvisosController : ControllerBase
 {
     private readonly AvisoService _avisos;
+    private readonly IAuthorizationService _autorizacao;
+    private readonly IClock _clock;
 
-    public AvisosController(AvisoService avisos)
+    public AvisosController(AvisoService avisos, IAuthorizationService autorizacao, IClock clock)
     {
         _avisos = avisos;
+        _autorizacao = autorizacao;
+        _clock = clock;
     }
 
     /// <summary>Abertos (urgente primeiro). Com <c>abertos=false</c> vêm também os fechados dos últimos 30 dias.</summary>
@@ -86,10 +92,22 @@ public sealed class AvisosController : ControllerBase
     public async Task<ActionResult<AvisoDto>> WhatsAppAberto(Guid id, CancellationToken cancellationToken) =>
         Ok(await _avisos.MarcarWhatsAppAbertoAsync(id, cancellationToken));
 
-    /// <summary>RN-AV-07: texto do resumo do dia e o link para o WhatsApp da dona. Sem <c>data</c> = hoje.</summary>
+    /// <summary>
+    /// RN-AV-07: texto do resumo do dia e o link para o WhatsApp da dona. Sem <c>data</c> = hoje.
+    /// O resumo traz o total vendido: o atendente só pede o de hoje (fechamento do caixa); outros dias, só a dona.
+    /// </summary>
     [HttpGet("resumo-do-dia")]
     [ProducesResponseType(typeof(ResumoDoDiaResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ResumoDoDiaResponse>> ResumoDoDia([FromQuery] DateOnly? data, CancellationToken cancellationToken) =>
-        Ok(await _avisos.ResumoDoDiaAsync(data, cancellationToken));
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ResumoDoDiaResponse>> ResumoDoDia([FromQuery] DateOnly? data, CancellationToken cancellationToken)
+    {
+        if (data is { } dia && dia != DiaComercial.DataDe(_clock.UtcNow)
+            && !(await _autorizacao.AuthorizeAsync(User, Politicas.Admin)).Succeeded)
+        {
+            return Forbid();
+        }
+
+        return Ok(await _avisos.ResumoDoDiaAsync(data, cancellationToken));
+    }
 }

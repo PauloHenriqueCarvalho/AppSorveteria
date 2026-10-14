@@ -576,6 +576,23 @@ public class CatalogoEstoqueServiceTests
         Assert.Equal("Contagem", catalogo.Grupos[0].ModoControle);
     }
 
+    [Fact]
+    public async Task ObterCatalogoApp_CatalogoImportado_TrazGruposEItensSemCusto()
+    {
+        await _service.ImportarAsync(Csv(Cabecalho, "Picolé de fruta,Limão,Caixa,28,25.20,Fábrica,,"), Ct);
+
+        var catalogo = await _service.ObterCatalogoAppAsync(Ct);
+
+        var item = Assert.Single(catalogo.Itens);
+        Assert.Equal("Limão", item.Nome);
+        Assert.Equal("Caixa", item.Unidade);
+        Assert.Equal(28, item.UnidadesPorEmbalagem);
+        Assert.Equal(item.GrupoId, Assert.Single(catalogo.Grupos).Id);
+        // O DTO do app não tem propriedade de custo nem de fornecedor.
+        Assert.DoesNotContain(typeof(GestaoSorveteria.Contracts.Estoque.ItemEstoqueAppDto).GetProperties(),
+            p => p.Name.Contains("Custo") || p.Name.Contains("Fornecedor"));
+    }
+
     /// <summary>O CSV de verdade (docs/fase2): sobe as pastas a partir do binário ou da pasta atual até achar o repositório.</summary>
     private static string LerCatalogoInicial()
     {

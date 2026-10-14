@@ -115,7 +115,9 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso`, `CalculoEstoque` + 24 testes (RN-ES-01…07, RN-AV-01/03/05/08, RN-PF-01) — 14/10
 - [x] Application: catálogo — fornecedores, grupos, itens e importação da planilha com prévia (RN-ES-10/11, RN-PF-09) + testes — 14/10
 - [ ] Infrastructure: configurações EF (`snake_case`, índices únicos: item grupo+nome, grupo nome, fornecedor nome, 1 aviso aberto por item) + repositório + migração `Fase2Estoque` (skill `migracao-ef`)
-- [ ] API: endpoints do catálogo (GET para o app e o painel; alterações e importação só Admin), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
+- [x] Infrastructure + API do catálogo: tabelas da Fase 2 (migração `Fase2Estoque`), `GET /api/estoque/catalogo` e alterações (Admin), `GET /api/estoque/itens` (app, sem custo) — 14/10
+- [x] API: avisos (criar sem duplicar, "ainda falta", fechar, WhatsApp aberto), resumo do dia, configuração (WhatsApp da dona), `POST /api/sync/avisos` (RN-AV-01…10) — 14/10
+- [ ] API: contagens (painel e `POST /api/sync/contagens`), diferenças da contagem no resumo do dia
 - [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10

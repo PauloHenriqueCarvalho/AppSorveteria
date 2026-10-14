@@ -123,16 +123,29 @@ public class AvisoServiceTests
     }
 
     [Fact]
-    public async Task Criar_MesmoIdDeNovo_DevolveOJaGravadoSemCriarOutro()
+    public async Task Criar_MesmoIdDeNovo_DevolveOJaGravadoEOLinkSoEnquantoNinguemAbriuOWhatsApp()
     {
         var id = Guid.NewGuid();
         await _service.CriarAsync(new CriarAvisoRequest(id, null, "Guardanapo", 0, "Urgente", null), _ana.Id, Ct);
 
         var reenvio = await _service.CriarAsync(new CriarAvisoRequest(id, null, "Guardanapo", 0, "Urgente", null), _ana.Id, Ct);
+        await _service.MarcarWhatsAppAbertoAsync(id, Ct);
+        var depoisDeAbrir = await _service.CriarAsync(new CriarAvisoRequest(id, null, "Guardanapo", 0, "Urgente", null), _ana.Id, Ct);
 
         Assert.Single(_avisos.Avisos);
         Assert.True(reenvio.JaExistia);
-        Assert.False(reenvio.EnviarAgora); // o WhatsApp já foi aberto na primeira vez
+        Assert.True(reenvio.EnviarAgora); // a primeira resposta pode não ter chegado ao aparelho
+        Assert.False(depoisDeAbrir.EnviarAgora);
+    }
+
+    [Fact]
+    public async Task Criar_PeloPainelDepoisDeUmTabletComRelogioAdiantado_AplicaAQuantidadeInformada()
+    {
+        await Enviar(DoTablet(_flocos, 3, "Alta", criado: Agora.AddMinutes(-20), atualizado: Agora.AddMinutes(8)));
+
+        var resposta = await Avisar(_flocos, 0, "Alta", por: _dona.Id);
+
+        Assert.Equal(0, resposta.Aviso.QuantidadeAtual);
     }
 
     [Fact]
@@ -241,7 +254,7 @@ public class AvisoServiceTests
         Assert.Equal(new DateOnly(2026, 10, 14), resumo.Data);
         Assert.Equal(
             "Resumo de quarta 14/10 — Verão Tropical\n" +
-            "🔴 Urgente (2): Picolé ao leite Coco preto — acabou · Casquinha — acabou\n" +
+            "🔴 Urgente (2): Picolé ao leite Coco preto — acabou · Casquinha — acabou (resolvido)\n" +
             "🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1\n" +
             "🟡 Média (1): Massa Pistache — 1\n" +
             "Vendas do dia: R$ 1.284,50",
@@ -383,6 +396,76 @@ public class AvisoServiceTests
         Assert.Contains("UTC", resultados[2].Motivo);
         Assert.Contains("catálogo", resultados[3].Motivo);
         Assert.Single(_avisos.Avisos);
+    }
+
+    [Fact]
+    public async Task Sync_AvisoJuntadoAOutroQueDepoisFoiFechado_ReenvioNaoReabre()
+    {
+        var doPainel = await Avisar(_flocos, 2, "Alta", por: _dona.Id);
+        var doTablet = DoTablet(_flocos, 1, "Alta", criado: Agora.AddMinutes(-5));
+        await Enviar(doTablet); // juntado no aviso do painel; a resposta "se perdeu"
+        _clock.UtcNow = Agora.AddMinutes(30);
+        await _service.FecharAsync(doPainel.Aviso.Id, new FecharAvisoRequest("Chegou na entrega"), _dona.Id, Ct);
+
+        var resultado = Assert.Single((await Enviar(doTablet)).Resultados);
+
+        Assert.Equal(StatusSync.JaRecebida, resultado.Status);
+        Assert.Equal(doPainel.Aviso.Id, resultado.AvisoId);
+        Assert.False(resultado.Aberto);
+        Assert.DoesNotContain(_avisos.Avisos, a => a.Aberto);
+    }
+
+    [Fact]
+    public async Task Sync_AvisoOfflineAnteriorAoFechamentoDoItem_NaoReabreMasOPosteriorCriaOutro()
+    {
+        var doPainel = await Avisar(_cocoPreto, 0, "Urgente", por: _dona.Id);
+        _clock.UtcNow = Agora.AddHours(2);
+        await _service.FecharAsync(doPainel.Aviso.Id, new FecharAvisoRequest("Comprei no mercado"), _dona.Id, Ct);
+
+        var antigo = Assert.Single((await Enviar(DoTablet(_cocoPreto, 0, "Urgente", criado: Agora.AddHours(1)))).Resultados);
+        var novo = Assert.Single((await Enviar(DoTablet(_cocoPreto, 0, "Urgente", criado: Agora.AddHours(2).AddMinutes(1)))).Resultados);
+
+        Assert.Equal(StatusSync.JaRecebida, antigo.Status);
+        Assert.False(antigo.Aberto);
+        Assert.Equal(StatusSync.Aceita, novo.Status);
+        Assert.True(novo.Aberto);
+        Assert.Equal(2, _avisos.Avisos.Count);
+    }
+
+    [Fact]
+    public async Task Sync_AindaFaltaFeitoOfflineDepoisQueADonaFechou_RejeitaComOMotivo()
+    {
+        var dto = DoTablet(_cocoPreto, 2, "Alta");
+        await Enviar(dto);
+        await _service.FecharAsync(dto.Id, new FecharAvisoRequest("Chegou"), _dona.Id, Ct);
+        _clock.UtcNow = Agora.AddMinutes(30);
+
+        var resultado = Assert.Single((await Enviar(dto with { QuantidadeAtual = 0, Prioridade = "Urgente", AtualizadoEm = Agora.AddMinutes(20) })).Resultados);
+
+        Assert.Equal(StatusSync.Rejeitada, resultado.Status);
+        Assert.Contains("A dona fechou este aviso às 14/10 15:42", resultado.Motivo);
+    }
+
+    [Fact]
+    public async Task Sync_DataDeAtualizacaoNoFuturo_Rejeita()
+    {
+        var resultado = Assert.Single((await Enviar(DoTablet(_flocos, 1, "Alta", atualizado: Agora.AddYears(1)))).Resultados);
+
+        Assert.Equal(StatusSync.Rejeitada, resultado.Status);
+        Assert.Contains("relógio", resultado.Motivo);
+        Assert.Empty(_avisos.Avisos);
+    }
+
+    [Fact]
+    public async Task Sync_MesmoIdParaOutroItem_Rejeita()
+    {
+        var dto = DoTablet(_flocos, 1, "Alta");
+        await Enviar(dto);
+
+        var resultado = Assert.Single((await Enviar(dto with { ItemEstoqueId = _cocoPreto.Id })).Resultados);
+
+        Assert.Equal(StatusSync.Rejeitada, resultado.Status);
+        Assert.Equal(_flocos.Id, Assert.Single(_avisos.Avisos).ItemEstoqueId);
     }
 
     private void Venda(DateTime fechadaEm, decimal valor)

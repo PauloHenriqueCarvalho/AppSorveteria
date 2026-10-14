@@ -28,6 +28,10 @@ internal sealed class AvisoConfiguration : IEntityTypeConfiguration<Aviso>
         builder.Property(a => a.FechadoPeloPedidoId); // pedido ao fornecedor (Sprint 6): a FK entra com a tabela de pedidos
         builder.Property(a => a.WhatsAppAbertoEm).HasColumnName("whatsapp_aberto_em");
 
+        // Duas gravações ao mesmo tempo (tablet sincronizando + painel) não podem desfazer uma à outra (ex.: baixar a
+        // prioridade). xmin muda a cada UPDATE: a segunda falha com 409 e quem enviou tenta de novo (mesmo padrão do caixa).
+        builder.Property<uint>("Versao").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
+
         builder.Ignore(a => a.Aberto);
         builder.Ignore(a => a.CriadoPeloSistema);
 

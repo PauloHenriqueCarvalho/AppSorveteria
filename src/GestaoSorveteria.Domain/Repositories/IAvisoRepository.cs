@@ -13,7 +13,10 @@ public interface IAvisoRepository
     /// <summary>Abertos (qualquer data) e, se <paramref name="fechadosDesdeUtc"/> vier, os fechados a partir dali. Mais recentes primeiro.</summary>
     Task<IReadOnlyList<Aviso>> ListarAsync(DateTime? fechadosDesdeUtc, CancellationToken cancellationToken = default);
 
-    /// <summary>Criados ou atualizados no intervalo [de, até), em qualquer situação (resumo do dia, RN-AV-07).</summary>
+    /// <summary>O aviso do item fechado mais recentemente, se houver (sincronização: o tablet avisou antes de a dona fechar).</summary>
+    Task<Aviso?> ObterUltimoFechadoDoItemAsync(Guid itemEstoqueId, CancellationToken cancellationToken = default);
+
+    /// <summary>Criados, atualizados ou fechados no intervalo [de, até), em qualquer situação (resumo do dia, RN-AV-07).</summary>
     Task<IReadOnlyList<Aviso>> ListarAtualizadosEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 
     Task AdicionarAsync(Aviso aviso, CancellationToken cancellationToken = default);

@@ -39,7 +39,7 @@ public class MensagensWhatsAppTests
     [InlineData("11987654321", "https://wa.me/5511987654321?text=Oi%20dona")]
     [InlineData("5511987654321", "https://wa.me/5511987654321?text=Oi%20dona")]
     [InlineData(null, "https://wa.me/?text=Oi%20dona")]
-    public void Link_ComOuSemOCodigoDoPais_SempreLevaO55(string? numero, string esperado)
+    public void Link_ComNumero_LevaO55ESemNumeroDeixaEscolherOContato(string? numero, string esperado)
     {
         Assert.Equal(esperado, MensagensWhatsApp.Link(numero, "Oi dona"));
     }
@@ -51,6 +51,14 @@ public class MensagensWhatsAppTests
     public void Reais_FormataComoNoBrasilSemDependerDaCultura(string valor, string esperado)
     {
         Assert.Equal(esperado, MensagensWhatsApp.Reais(decimal.Parse(valor, System.Globalization.CultureInfo.InvariantCulture)));
+    }
+
+    [Theory]
+    [InlineData("011987654321")]
+    [InlineData("4411987654321")]
+    public void Telefone_DozeOuTrezeDigitosSemO55_Lanca(string numero)
+    {
+        Assert.Throws<DomainException>(() => Telefone.NormalizarWhatsApp(numero));
     }
 
     [Fact]

@@ -13,8 +13,11 @@ public static class MensagensWhatsApp
 {
     private static readonly string[] DiasDaSemana = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
-    /// <summary>Uma linha do resumo: "Picolé ao leite Coco preto" e a quantidade que tinha quando avisaram.</summary>
-    public sealed record LinhaAviso(string Descricao, int QuantidadeAtual);
+    /// <summary>
+    /// Uma linha do resumo: "Picolé ao leite Coco preto" e a quantidade que tinha quando avisaram (na menor unidade:
+    /// picolé, pote, balde, copo). <paramref name="Resolvido"/>: urgente do dia que a dona já fechou.
+    /// </summary>
+    public sealed record LinhaAviso(string Descricao, int QuantidadeAtual, bool Resolvido = false);
 
     /// <summary>"Coco preto" do grupo "Picolé ao leite" → "Picolé ao leite Coco preto"; texto livre fica como veio.</summary>
     public static string DescricaoDoItem(string? grupo, string nome) =>
@@ -97,7 +100,8 @@ public static class MensagensWhatsApp
         }
 
         texto.Append('\n').Append(titulo).Append(" (").Append(linhas.Count).Append("): ")
-            .AppendJoin(" · ", linhas.Select(l => $"{l.Descricao.Trim()} — {Quantidade(l.QuantidadeAtual, maiusculo: false)}"));
+            .AppendJoin(" · ", linhas.Select(l =>
+                $"{l.Descricao.Trim()} — {Quantidade(l.QuantidadeAtual, maiusculo: false)}{(l.Resolvido ? " (resolvido)" : string.Empty)}"));
     }
 
     private static string Quantidade(int quantidade, bool maiusculo) =>

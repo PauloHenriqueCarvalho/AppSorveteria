@@ -94,7 +94,12 @@ public sealed class Aviso : Entity
     /// a prioridade fica com a maior das duas (nunca baixa), e quantidade/observação só mudam se a informação for mais nova
     /// que a do servidor — reenvio fora de ordem não volta a quantidade para trás. Devolve <c>true</c> se virou Urgente agora.
     /// </summary>
-    public bool ReceberAtualizacao(int quantidadeAtual, PrioridadeAviso prioridade, string? observacao, Guid? usuarioId, DateTime emUtc)
+    /// <param name="aplicarMesmoSeMaisAntiga">
+    /// true no caminho online (painel ou app conectado): o que a pessoa acabou de informar vale, mesmo que o relógio de quem
+    /// gravou antes estivesse adiantado. A prioridade continua nunca baixando.
+    /// </param>
+    public bool ReceberAtualizacao(
+        int quantidadeAtual, PrioridadeAviso prioridade, string? observacao, Guid? usuarioId, DateTime emUtc, bool aplicarMesmoSeMaisAntiga = false)
     {
         Guard.Contra(!Aberto, "Este aviso já foi fechado.");
         ValidarPrioridade(prioridade);
@@ -104,7 +109,7 @@ public sealed class Aviso : Entity
 
         var maior = prioridade > Prioridade ? prioridade : Prioridade;
         var virouUrgente = maior == PrioridadeAviso.Urgente && Prioridade != PrioridadeAviso.Urgente;
-        if (em >= AtualizadoEm)
+        if (aplicarMesmoSeMaisAntiga || em >= AtualizadoEm)
         {
             QuantidadeAtual = quantidade;
             Observacao = obs ?? Observacao;

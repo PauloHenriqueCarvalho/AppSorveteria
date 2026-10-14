@@ -8,12 +8,12 @@ namespace GestaoSorveteria.Server.Controllers;
 
 /// <summary>
 /// Catálogo de estoque da Fase 2 (docs/10): grupos, itens e importação da planilha.
-/// Tudo é só Admin (RN-RC-07: traz custo e fornecedor), menos <c>GET /api/estoque/itens</c>, a lista sem custos do app.
+/// Só Admin (RN-RC-07: traz custo e fornecedor). A lista sem custos do app fica em <see cref="EstoqueAppController"/>.
 /// </summary>
 [ApiController]
 [Route("api/estoque")]
 [Produces("application/json")]
-[Authorize]
+[Authorize(Policy = Politicas.Admin)]
 public sealed class EstoqueController : ControllerBase
 {
     private readonly CatalogoEstoqueService _catalogo;
@@ -23,15 +23,7 @@ public sealed class EstoqueController : ControllerBase
         _catalogo = catalogo;
     }
 
-    /// <summary>Para o app do atendente: grupos e itens (inclusive desativados, para o app esconder), sem custo nem fornecedor.</summary>
-    [HttpGet("itens")]
-    [ProducesResponseType(typeof(CatalogoEstoqueAppResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<CatalogoEstoqueAppResponse>> ItensParaOApp(CancellationToken cancellationToken) =>
-        Ok(await _catalogo.ObterCatalogoAppAsync(cancellationToken));
-
     /// <summary>Fornecedores, grupos (na ordem da planilha) e itens, inclusive os desativados.</summary>
-    [Authorize(Policy = Politicas.Admin)]
     [HttpGet("catalogo")]
     [ProducesResponseType(typeof(CatalogoEstoqueResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -40,7 +32,6 @@ public sealed class EstoqueController : ControllerBase
         Ok(await _catalogo.ObterCatalogoAsync(cancellationToken));
 
     /// <summary>RN-ES-02: modo de controle <c>Contagem</c>, <c>SaldoPelaVenda</c> ou <c>SoAviso</c>.</summary>
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPost("grupos")]
     [ProducesResponseType(typeof(GrupoEstoqueDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -48,7 +39,6 @@ public sealed class EstoqueController : ControllerBase
     public async Task<ActionResult<GrupoEstoqueDto>> CriarGrupo(SalvarGrupoEstoqueRequest request, CancellationToken cancellationToken) =>
         Ok(await _catalogo.CriarGrupoAsync(request, cancellationToken));
 
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPut("grupos/{id:guid}")]
     [ProducesResponseType(typeof(GrupoEstoqueDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -58,7 +48,6 @@ public sealed class EstoqueController : ControllerBase
         Ok(await _catalogo.AtualizarGrupoAsync(id, request, cancellationToken));
 
     /// <summary>RN-ES-01: grupo + nome único. Item de pote sem mínimo informado ganha o mínimo padrão (2).</summary>
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPost("itens")]
     [ProducesResponseType(typeof(ItemEstoqueDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -66,7 +55,6 @@ public sealed class EstoqueController : ControllerBase
     public async Task<ActionResult<ItemEstoqueDto>> CriarItem(SalvarItemEstoqueRequest request, CancellationToken cancellationToken) =>
         Ok(await _catalogo.CriarItemAsync(request, cancellationToken));
 
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPut("itens/{id:guid}")]
     [ProducesResponseType(typeof(ItemEstoqueDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -75,7 +63,6 @@ public sealed class EstoqueController : ControllerBase
     public async Task<ActionResult<ItemEstoqueDto>> AtualizarItem(Guid id, SalvarItemEstoqueRequest request, CancellationToken cancellationToken) =>
         Ok(await _catalogo.AtualizarItemAsync(id, request, cancellationToken));
 
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPost("itens/{id:guid}/ativar")]
     [ProducesResponseType(typeof(ItemEstoqueDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -84,7 +71,6 @@ public sealed class EstoqueController : ControllerBase
         Ok(await _catalogo.AtivarItemAsync(id, cancellationToken));
 
     /// <summary>Item nunca é apagado: sai da contagem e do pedido, o histórico fica.</summary>
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPost("itens/{id:guid}/desativar")]
     [ProducesResponseType(typeof(ItemEstoqueDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -95,7 +81,6 @@ public sealed class EstoqueController : ControllerBase
     /// RN-ES-10: importa o CSV da planilha criando só o que falta. Mande primeiro com <c>simular = true</c> (prévia, nada gravado)
     /// e depois com <c>simular = false</c> para confirmar.
     /// </summary>
-    [Authorize(Policy = Politicas.Admin)]
     [HttpPost("itens/importar")]
     [RequestSizeLimit(4_000_000)]
     [ProducesResponseType(typeof(ImportarCatalogoResponse), StatusCodes.Status200OK)]

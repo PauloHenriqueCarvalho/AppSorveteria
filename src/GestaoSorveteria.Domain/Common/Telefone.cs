@@ -13,6 +13,9 @@ public static class Telefone
 
         var digitos = new string(texto.Where(char.IsDigit).ToArray());
         Guard.Contra(digitos.Length is < 10 or > 13, "WhatsApp inválido: use DDD + número, ex.: (11) 98765-4321.");
+        // 12 ou 13 dígitos só com o 55 do Brasil na frente; "011 98765-4321" (zero de operadora) não é aceito.
+        Guard.Contra(digitos.Length >= 12 && !digitos.StartsWith("55", StringComparison.Ordinal),
+            "WhatsApp inválido: use DDD + número sem o zero da operadora, ex.: (11) 98765-4321.");
         return digitos;
     }
 

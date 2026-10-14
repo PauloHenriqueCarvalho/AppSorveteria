@@ -19,6 +19,9 @@ public sealed class AvisoService
     /// <summary>A lista do painel mostra os fechados dos últimos dias junto com os abertos.</summary>
     public const int DiasDeFechadosNaLista = 30;
 
+    /// <summary>Folga para o relógio do tablet adiantado; além disso a data é recusada (senão travaria as atualizações seguintes).</summary>
+    public static readonly TimeSpan FolgaRelogio = TimeSpan.FromMinutes(10);
+
     private readonly IAvisoRepository _avisos;
     private readonly IEstoqueRepository _estoque;
     private readonly IUsuarioRepository _usuarios;
@@ -71,7 +74,8 @@ public sealed class AvisoService
         if (request.Id is { } idInformado && idInformado != Guid.Empty
             && await _avisos.ObterPorIdAsync(idInformado, cancellationToken) is { } repetido)
         {
-            return await RespostaAsync(repetido, jaExistia: true, enviarAgora: false, cancellationToken);
+            // Reenvio (a primeira resposta pode não ter chegado): o link volta enquanto ninguém abriu o WhatsApp.
+            return await RespostaAsync(repetido, jaExistia: true, enviarAgora: AindaSemWhatsApp(repetido), cancellationToken);
         }
 
         Aviso aviso;
@@ -83,7 +87,9 @@ public sealed class AvisoService
             var aberto = await _avisos.ObterAbertoDoItemAsync(itemId, cancellationToken);
             if (aberto is not null)
             {
-                enviarAgora = aberto.ReceberAtualizacao(request.QuantidadeAtual, prioridade, request.Observacao, usuarioId, agora);
+                var virouUrgente = aberto.ReceberAtualizacao(
+                    request.QuantidadeAtual, prioridade, request.Observacao, usuarioId, agora, aplicarMesmoSeMaisAntiga: true);
+                enviarAgora = virouUrgente || AindaSemWhatsApp(aberto);
                 aviso = aberto;
                 jaExistia = true;
             }
@@ -154,6 +160,7 @@ public sealed class AvisoService
         var nomes = await NomesAsync(cancellationToken);
 
         // Abertos criados depois do dia consultado não entram no resumo de um dia passado.
+        // Urgentes: os do dia (criados, atualizados ou fechados nele — fechados aparecem como resolvidos) e os ainda abertos.
         var abertosAteODia = abertos.Where(a => a.CriadoEm < fimUtc).ToList();
         var urgentes = abertosAteODia.Concat(doDia)
             .Where(a => a.Prioridade == PrioridadeAviso.Urgente)
@@ -171,7 +178,7 @@ public sealed class AvisoService
         var texto = MensagensWhatsApp.ResumoDoDia(
             configuracao.NomeLoja,
             data,
-            urgentes.Select(nomes.Linha).ToList(),
+            urgentes.Select(a => nomes.Linha(a) with { Resolvido = !a.Aberto }).ToList(),
             altas.Select(nomes.Linha).ToList(),
             medias.Select(nomes.Linha).ToList(),
             total);
@@ -261,13 +268,22 @@ public sealed class AvisoService
         var atualizadoPor = dto.AtualizadoPorUsuarioId ?? dto.CriadoPorUsuarioId;
         await ExigirUsuarioAsync(atualizadoPor, usuariosConhecidos, cancellationToken);
         Exigir.Que(dto.AtualizadoEm >= dto.CriadoEm, "A atualização do aviso não pode ser anterior à criação.");
-        Exigir.Que(dto.CriadoEm <= _clock.UtcNow.AddMinutes(10), "A data do aviso está no futuro: confira o relógio do tablet.");
+        var limite = _clock.UtcNow + FolgaRelogio;
+        Exigir.Que(dto.AtualizadoEm <= limite && (dto.WhatsAppAbertoEm ?? dto.CriadoEm) <= limite,
+            "A data do aviso está no futuro: confira o relógio do tablet.");
 
         var existente = await _avisos.ObterPorIdAsync(dto.Id, cancellationToken);
         if (existente is not null)
         {
+            Exigir.Que(existente.ItemEstoqueId == dto.ItemEstoqueId
+                    && (dto.ItemEstoqueId is not null || existente.TextoLivre == dto.TextoLivre?.Trim()),
+                "Já existe um aviso com este Id para outro item: nada foi alterado.");
+
             if (!existente.Aberto)
             {
+                // O tablet mexeu no aviso (offline) depois que a dona fechou: a informação nova não pode sumir em silêncio.
+                Exigir.Que(dto.AtualizadoEm <= existente.AtualizadoEm || dto.AtualizadoEm <= existente.FechadoEm,
+                    $"A dona fechou este aviso às {HoraNaLoja(existente.FechadoEm!.Value)}. Se ainda está faltando, avise de novo.");
                 return (StatusSync.JaRecebida, existente);
             }
 
@@ -283,6 +299,14 @@ public sealed class AvisoService
             {
                 AplicarAtualizacao(aberto, dto, prioridade, atualizadoPor);
                 return (StatusSync.Aceita, aberto);
+            }
+
+            // O aviso do tablet pode ter sido juntado a outro que depois foi fechado (pela dona ou pela entrega), e a resposta
+            // não chegou ao tablet. Se tudo o que o tablet sabe é anterior ao fechamento, ele já foi resolvido: não reabre.
+            if (await _avisos.ObterUltimoFechadoDoItemAsync(itemId, cancellationToken) is { } fechado
+                && fechado.FechadoEm >= dto.AtualizadoEm)
+            {
+                return (StatusSync.JaRecebida, fechado);
             }
         }
 
@@ -337,6 +361,13 @@ public sealed class AvisoService
             TimeZoneInfo.ConvertTimeFromUtc(aviso.AtualizadoEm, DiaComercial.Fuso));
         return new AvisoSalvoResponse(dto, jaExistia, EnviarAgora: true, mensagem, MensagensWhatsApp.Link(configuracao.WhatsAppDona, mensagem));
     }
+
+    /// <summary>Urgente cujo WhatsApp ninguém abriu ainda: quem chamou deve abrir o link (RN-AV-06).</summary>
+    private static bool AindaSemWhatsApp(Aviso aviso) =>
+        aviso.Aberto && aviso.Prioridade == PrioridadeAviso.Urgente && aviso.WhatsAppAbertoEm is null;
+
+    private static string HoraNaLoja(DateTime utc) =>
+        TimeZoneInfo.ConvertTimeFromUtc(utc, DiaComercial.Fuso).ToString("dd/MM HH:mm", System.Globalization.CultureInfo.InvariantCulture);
 
     private async Task<ConfiguracaoLoja> ConfiguracaoAsync(CancellationToken cancellationToken) =>
         await _configuracao.ObterAsync(cancellationToken) ?? ConfiguracaoLoja.Padrao(_clock.UtcNow);
