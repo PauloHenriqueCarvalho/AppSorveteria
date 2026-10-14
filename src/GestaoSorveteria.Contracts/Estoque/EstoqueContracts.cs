@@ -84,3 +84,20 @@ public sealed record ImportarCatalogoResponse(
 
 /// <summary><paramref name="Linha"/> é a que o Excel mostra, com o cabeçalho na linha 1.</summary>
 public sealed record LinhaImportacaoDto(int Linha, string Mensagem);
+
+/// <summary>
+/// GET /api/estoque/itens — o que o app do atendente precisa para "Está acabando" e para a contagem: grupos e itens
+/// sem custo nem fornecedor (o atendente não vê preço de compra).
+/// </summary>
+public sealed record CatalogoEstoqueAppResponse(
+    IReadOnlyList<GrupoEstoqueDto> Grupos,
+    IReadOnlyList<ItemEstoqueAppDto> Itens);
+
+public sealed record ItemEstoqueAppDto(
+    Guid Id,
+    Guid GrupoId,
+    string Nome,
+    string Unidade,
+    int UnidadesPorEmbalagem,
+    int Ordem,
+    bool Ativo);

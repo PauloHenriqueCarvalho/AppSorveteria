@@ -1,4 +1,5 @@
 using GestaoSorveteria.Domain.Estoque;
+using GestaoSorveteria.Domain.Loja;
 using GestaoSorveteria.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -47,6 +48,16 @@ public class ModeloEfTests
             modelo.FindEntityType(typeof(ItemEstoque))!.FindProperty(nameof(ItemEstoque.Unidade))!.GetColumnName());
         Assert.Equal("whatsapp_aberto_em",
             modelo.FindEntityType(typeof(Aviso))!.FindProperty(nameof(Aviso.WhatsAppAbertoEm))!.GetColumnName());
+    }
+
+    [Fact]
+    public void ConfiguracaoLoja_UmaTabelaComOWhatsAppDaDona()
+    {
+        using var db = Contexto();
+        var configuracao = ModeloDeDesign(db).FindEntityType(typeof(ConfiguracaoLoja))!;
+
+        Assert.Equal("configuracao_loja", configuracao.GetTableName());
+        Assert.Equal("whatsapp_dona", configuracao.FindProperty(nameof(ConfiguracaoLoja.WhatsAppDona))!.GetColumnName());
     }
 
     [Fact]

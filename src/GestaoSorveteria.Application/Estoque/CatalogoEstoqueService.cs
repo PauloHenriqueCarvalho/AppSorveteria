@@ -54,6 +54,16 @@ public sealed class CatalogoEstoqueService
                 .ToList());
     }
 
+    /// <summary>Para o app do atendente: grupos e itens sem custo nem fornecedor ("Está acabando" e contagem).</summary>
+    public async Task<CatalogoEstoqueAppResponse> ObterCatalogoAppAsync(CancellationToken cancellationToken = default)
+    {
+        var grupos = await _estoque.ListarGruposAsync(cancellationToken);
+        var itens = await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken);
+        return new CatalogoEstoqueAppResponse(
+            grupos.Select(g => g.ToDto()).ToList(),
+            itens.Select(i => new ItemEstoqueAppDto(i.Id, i.GrupoId, i.Nome, i.Unidade.ToString(), i.UnidadesPorEmbalagem, i.Ordem, i.Ativo)).ToList());
+    }
+
     // ---------- Fornecedores (RN-PF-01) ----------
 
     public async Task<FornecedorDto> CriarFornecedorAsync(SalvarFornecedorRequest request, CancellationToken cancellationToken = default)

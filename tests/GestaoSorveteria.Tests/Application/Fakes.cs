@@ -2,6 +2,7 @@ using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Estoque;
+using GestaoSorveteria.Domain.Loja;
 using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Domain.Usuarios;
@@ -221,6 +222,48 @@ internal sealed class EstoqueRepositoryFake : IEstoqueRepository
     public Task AdicionarItemAsync(ItemEstoque item, CancellationToken cancellationToken = default)
     {
         Itens.Add(item);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Avisos "Está acabando" em memória.</summary>
+internal sealed class AvisoRepositoryFake : IAvisoRepository
+{
+    public List<Aviso> Avisos { get; } = new();
+
+    public Task<Aviso?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Avisos.FirstOrDefault(a => a.Id == id));
+
+    public Task<Aviso?> ObterAbertoDoItemAsync(Guid itemEstoqueId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Avisos.FirstOrDefault(a => a.ItemEstoqueId == itemEstoqueId && a.Aberto));
+
+    public Task<IReadOnlyList<Aviso>> ListarAsync(DateTime? fechadosDesdeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Aviso>>(Avisos
+            .Where(a => a.Aberto || (fechadosDesdeUtc is { } desde && a.FechadoEm >= desde))
+            .OrderByDescending(a => a.AtualizadoEm)
+            .ToList());
+
+    public Task<IReadOnlyList<Aviso>> ListarAtualizadosEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Aviso>>(Avisos
+            .Where(a => (a.CriadoEm >= deUtc && a.CriadoEm < ateUtc) || (a.AtualizadoEm >= deUtc && a.AtualizadoEm < ateUtc))
+            .ToList());
+
+    public Task AdicionarAsync(Aviso aviso, CancellationToken cancellationToken = default)
+    {
+        Avisos.Add(aviso);
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class ConfiguracaoLojaRepositoryFake : IConfiguracaoLojaRepository
+{
+    public ConfiguracaoLoja? Configuracao { get; set; }
+
+    public Task<ConfiguracaoLoja?> ObterAsync(CancellationToken cancellationToken = default) => Task.FromResult(Configuracao);
+
+    public Task AdicionarAsync(ConfiguracaoLoja configuracao, CancellationToken cancellationToken = default)
+    {
+        Configuracao = configuracao;
         return Task.CompletedTask;
     }
 }

@@ -1,6 +1,7 @@
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Estoque;
+using GestaoSorveteria.Domain.Loja;
 using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Domain.Usuarios;
@@ -34,6 +35,7 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Contagem> Contagens => Set<Contagem>();
     public DbSet<ItemContagem> ItensContagem => Set<ItemContagem>();
     public DbSet<Aviso> Avisos => Set<Aviso>();
+    public DbSet<ConfiguracaoLoja> ConfiguracoesLoja => Set<ConfiguracaoLoja>();
 
     public void DescartarAlteracoes() => ChangeTracker.Clear();
 

@@ -89,6 +89,33 @@ public sealed class Aviso : Entity
         return virouUrgente;
     }
 
+    /// <summary>
+    /// Atualização que chega pela sincronização (o tablet pode ter ficado sem internet). Diferente do "Ainda falta" na hora:
+    /// a prioridade fica com a maior das duas (nunca baixa), e quantidade/observação só mudam se a informação for mais nova
+    /// que a do servidor — reenvio fora de ordem não volta a quantidade para trás. Devolve <c>true</c> se virou Urgente agora.
+    /// </summary>
+    public bool ReceberAtualizacao(int quantidadeAtual, PrioridadeAviso prioridade, string? observacao, Guid? usuarioId, DateTime emUtc)
+    {
+        Guard.Contra(!Aberto, "Este aviso já foi fechado.");
+        ValidarPrioridade(prioridade);
+        var quantidade = ValidarQuantidade(quantidadeAtual);
+        var obs = Guard.TextoOpcional(observacao, "a observação", 200);
+        var em = Guard.Utc(emUtc, "a data");
+
+        var maior = prioridade > Prioridade ? prioridade : Prioridade;
+        var virouUrgente = maior == PrioridadeAviso.Urgente && Prioridade != PrioridadeAviso.Urgente;
+        if (em >= AtualizadoEm)
+        {
+            QuantidadeAtual = quantidade;
+            Observacao = obs ?? Observacao;
+            AtualizadoPorUsuarioId = usuarioId;
+            AtualizadoEm = em;
+        }
+
+        Prioridade = maior;
+        return virouUrgente;
+    }
+
     /// <summary>RN-AV-05b: a dona fecha à mão, com motivo ("comprei no mercado").</summary>
     public void Fechar(string motivo, Guid usuarioId, DateTime agoraUtc)
     {

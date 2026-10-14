@@ -1,4 +1,6 @@
+using GestaoSorveteria.Application.Avisos;
 using GestaoSorveteria.Application.Sync;
+using GestaoSorveteria.Contracts.Avisos;
 using GestaoSorveteria.Contracts.Sync;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +20,12 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class SyncController : ControllerBase
 {
     private readonly SyncService _sync;
+    private readonly AvisoService _avisos;
 
-    public SyncController(SyncService sync)
+    public SyncController(SyncService sync, AvisoService avisos)
     {
         _sync = sync;
+        _avisos = avisos;
     }
 
     /// <summary>
@@ -47,4 +51,16 @@ public sealed class SyncController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<SyncResponse>> Comandas(SyncComandasRequest request, CancellationToken cancellationToken) =>
         Ok(await _sync.ReceberComandasAsync(request, cancellationToken));
+
+    /// <summary>
+    /// Avisos "Está acabando" criados ou atualizados no tablet (estado atual de cada um). Item que já tinha aviso aberto no
+    /// servidor é juntado a ele (<c>avisoId</c> diferente do enviado); aviso que a dona fechou volta com <c>aberto = false</c>.
+    /// </summary>
+    [HttpPost("avisos")]
+    [ProducesResponseType(typeof(SyncAvisosResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SyncAvisosResponse>> Avisos(SyncAvisosRequest request, CancellationToken cancellationToken) =>
+        Ok(await _avisos.ReceberSyncAsync(request, cancellationToken));
 }

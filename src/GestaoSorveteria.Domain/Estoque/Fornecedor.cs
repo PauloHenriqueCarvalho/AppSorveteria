@@ -70,7 +70,7 @@ public sealed class Fornecedor : Entity
     {
         // Valida tudo antes de mudar qualquer campo: um erro não deixa o fornecedor alterado pela metade.
         var nomeValido = NomeEstoque.Limpar(Guard.Texto(nome, "o nome do fornecedor", 2, 80));
-        var whatsAppValido = NormalizarWhatsApp(whatsApp);
+        var whatsAppValido = Telefone.NormalizarWhatsApp(whatsApp);
 
         var dias = diasPedido.Distinct().Order().ToList();
         Guard.Contra(dias.Count == 0, "Escolha pelo menos um dia da semana para o pedido.");
@@ -97,17 +97,4 @@ public sealed class Fornecedor : Entity
 
     /// <summary>Dia de pedido: o painel monta o rascunho sozinho (RN-PF-04); o app lembra da contagem na véspera (RN-ES-05).</summary>
     public bool PedeEm(DayOfWeek dia) => _diasPedido.Contains(dia);
-
-    private static string? NormalizarWhatsApp(string? texto)
-    {
-        if (string.IsNullOrWhiteSpace(texto))
-        {
-            return null;
-        }
-
-        var digitos = new string(texto.Where(char.IsDigit).ToArray());
-        Guard.Contra(digitos.Length is < 10 or > 13,
-            "WhatsApp inválido: use DDD + número, ex.: (11) 98765-4321.");
-        return digitos;
-    }
 }
