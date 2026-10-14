@@ -287,6 +287,10 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("descricao");
 
+                    b.Property<Guid?>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
                     b.Property<decimal>("PrecoUnitario")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
@@ -310,6 +314,9 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ComandaId")
                         .HasDatabaseName("ix_itens_comanda_comanda_id");
+
+                    b.HasIndex("ItemEstoqueId")
+                        .HasDatabaseName("ix_itens_comanda_item_estoque_id");
 
                     b.HasIndex("ProdutoId")
                         .HasDatabaseName("ix_itens_comanda_produto_id");
@@ -778,6 +785,74 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.ToTable("itens_pedido_fornecedor", (string)null);
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.MovimentoEstoque", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ComandaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comanda_id");
+
+                    b.Property<DateTime>("Em")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("em");
+
+                    b.Property<Guid?>("ItemComandaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_comanda_id");
+
+                    b.Property<Guid>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
+                    b.Property<Guid?>("PedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<DateTime>("RegistradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("registrado_em");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("tipo");
+
+                    b.Property<int>("Unidades")
+                        .HasColumnType("integer")
+                        .HasColumnName("unidades");
+
+                    b.HasKey("Id")
+                        .HasName("pk_movimentos_estoque");
+
+                    b.HasIndex("ComandaId")
+                        .HasDatabaseName("ix_movimentos_estoque_comanda_id");
+
+                    b.HasIndex("ItemComandaId")
+                        .HasDatabaseName("ix_movimentos_estoque_item_comanda_id");
+
+                    b.HasIndex("PedidoId")
+                        .HasDatabaseName("ix_movimentos_estoque_pedido_id");
+
+                    b.HasIndex("ItemEstoqueId", "Em")
+                        .HasDatabaseName("ix_movimentos_estoque_item_estoque_id_em");
+
+                    b.HasIndex("Tipo", "ItemComandaId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_movimentos_estoque_por_linha_de_venda")
+                        .HasFilter("item_comanda_id IS NOT NULL");
+
+                    b.HasIndex("Tipo", "PedidoId", "ItemEstoqueId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_movimentos_estoque_entrada_por_pedido")
+                        .HasFilter("pedido_id IS NOT NULL");
+
+                    b.ToTable("movimentos_estoque", (string)null);
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", b =>
                 {
                     b.Property<Guid>("Id")
@@ -934,6 +1009,10 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em");
 
+                    b.Property<Guid?>("GrupoEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grupo_estoque_id");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -959,8 +1038,17 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("preco");
 
+                    b.Property<int>("UnidadesPorVenda")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("unidades_por_venda");
+
                     b.HasKey("Id")
                         .HasName("pk_produtos");
+
+                    b.HasIndex("GrupoEstoqueId")
+                        .HasDatabaseName("ix_produtos_grupo_estoque_id");
 
                     b.HasIndex("NomeNormalizado")
                         .IsUnique()
@@ -1085,6 +1173,12 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_itens_comanda_comandas_comanda_id");
 
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_itens_comanda_itens_estoque_item_estoque_id");
+
                     b.HasOne("GestaoSorveteria.Domain.Produtos.Produto", null)
                         .WithMany()
                         .HasForeignKey("ProdutoId")
@@ -1190,6 +1284,34 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_itens_pedido_fornecedor_pedidos_fornecedor_pedido_id");
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.MovimentoEstoque", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Comandas.Comanda", null)
+                        .WithMany()
+                        .HasForeignKey("ComandaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimentos_estoque_comandas_comanda_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Comandas.ItemComanda", null)
+                        .WithMany()
+                        .HasForeignKey("ItemComandaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimentos_estoque_itens_comanda_item_comanda_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_movimentos_estoque_itens_estoque_item_estoque_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", null)
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimentos_estoque_pedidos_fornecedor_pedido_id");
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", b =>
                 {
                     b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
@@ -1217,6 +1339,15 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RecebidoPorUsuarioId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_pedidos_fornecedor_usuarios_recebido_por_usuario_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Produtos.Produto", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.GrupoEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_produtos_grupos_estoque_grupo_estoque_id");
                 });
 
             modelBuilder.Entity("GestaoSorveteria.Domain.Caixas.Caixa", b =>
