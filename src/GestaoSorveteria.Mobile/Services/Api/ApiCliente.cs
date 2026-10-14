@@ -4,6 +4,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization.Metadata;
 using GestaoSorveteria.Contracts.Auth;
+using GestaoSorveteria.Contracts.Avisos;
+using GestaoSorveteria.Contracts.Estoque;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Contracts.Sync;
 
@@ -56,6 +58,43 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
     {
         using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/comandas", request, ApiJsonContext.Default.SyncComandasRequest, autenticado: true, cancellationToken);
         return await LerAsync(resposta, ApiJsonContext.Default.SyncResponse, cancellationToken);
+    }
+
+    // ---------------------------------------------------------------- Fase 2: estoque e avisos "Está acabando"
+
+    /// <summary>GET /api/estoque/itens — grupos e itens sem custo (inclusive os desativados, que a tela esconde) e os dias de contagem.</summary>
+    public async Task<CatalogoEstoqueAppResponse> ObterCatalogoEstoqueAsync(CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, "/api/estoque/itens", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.CatalogoEstoqueAppResponse, cancellationToken);
+    }
+
+    /// <summary>GET /api/configuracoes — nome da loja e WhatsApp da dona (RN-AV-10).</summary>
+    public async Task<ConfiguracaoLojaDto> ObterConfiguracaoLojaAsync(CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, "/api/configuracoes", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.ConfiguracaoLojaDto, cancellationToken);
+    }
+
+    /// <summary>GET /api/avisos?abertos=true — avisos abertos (do painel, de outro aparelho ou deste).</summary>
+    public async Task<List<AvisoDto>> ObterAvisosAbertosAsync(CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, "/api/avisos?abertos=true", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.ListAvisoDto, cancellationToken);
+    }
+
+    /// <summary>POST /api/sync/avisos (RN-AV-09). Um resultado por aviso, com o Id que ficou valendo no servidor.</summary>
+    public async Task<SyncAvisosResponse> EnviarAvisosAsync(SyncAvisosRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/sync/avisos", request, ApiJsonContext.Default.SyncAvisosRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.SyncAvisosResponse, cancellationToken);
+    }
+
+    /// <summary>GET /api/avisos/resumo-do-dia — resumo de hoje pronto para o WhatsApp da dona (RN-AV-07).</summary>
+    public async Task<ResumoDoDiaResponse> ObterResumoDoDiaAsync(CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, "/api/avisos/resumo-do-dia", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.ResumoDoDiaResponse, cancellationToken);
     }
 
     /// <summary>Envia a requisição; 2xx volta para o chamador ler, qualquer outra vira <see cref="ApiException"/>.</summary>

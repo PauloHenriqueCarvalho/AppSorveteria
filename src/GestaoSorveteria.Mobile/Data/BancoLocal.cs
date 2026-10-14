@@ -6,6 +6,8 @@ namespace SorveteriaMaui.Data;
 /// <summary>Conexão única com o SQLite do aparelho. Cria as tabelas no primeiro uso.</summary>
 public sealed class BancoLocal
 {
+    // Nunca trocar o nome do arquivo: um banco novo deixaria para trás as vendas que ainda aguardam envio.
+    // Tabela nova entra no CreateTablesAsync abaixo (o sqlite-net cria a tabela e acrescenta colunas novas sozinho).
     private readonly string _caminho = Path.Combine(FileSystem.AppDataDirectory, "sorveteria_v5.db3");
     private readonly SemaphoreSlim _inicializacao = new(1, 1);
     private SQLiteAsyncConnection? _conexao;
@@ -25,6 +27,7 @@ public sealed class BancoLocal
                 var conexao = new SQLiteAsyncConnection(_caminho);
                 await conexao.CreateTablesAsync<Comanda, ItemComanda, Pagamento, Produto>();
                 await conexao.CreateTablesAsync<Caixa, MovimentoCaixa>(); // C3
+                await conexao.CreateTablesAsync<ItemEstoqueLocal, AvisoLocal>(); // Fase 2: "Está acabando"
                 _conexao = conexao;
             }
 
