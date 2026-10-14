@@ -140,7 +140,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] API: `ItemEstoqueId` opcional no sync com baixa no servidor, estorno, entrada na conferência, aviso automático de mínimo e zerado (RN-AV-04), `GET /api/estoque/saldos`, `PUT /api/produtos/{id}/estoque`, pedido dos potes pelo saldo e pelas vendas
 - [ ] Painel: produto ligado ao grupo, saldo dos potes, diferença da contagem (saldo × contado) e no resumo do dia
 - [ ] Virada: **fazer uma contagem dos potes antes de ligar os produtos de pote** (o saldo parte dela; entregas conferidas antes não têm entrada)
-- [ ] App: grade de sabores **só nos potes** (produto com `pedeSabor`), `itemEstoqueId` na venda, hora de cada item na contagem
+- [x] App: grade de sabores **só nos potes** — decide pelo modo do grupo baixado em `GET /api/estoque/itens` (o `pedeSabor` do produto é a reserva enquanto o tablet não conhece o grupo); 1 toque no sabor, "Voltar" sem lançar, pote sem sabores no tablet vende sem sabor e avisa; cada sabor uma linha pelo Domain ("Pote 1L · Flocos"); `GrupoEstoqueId`/`UnidadesPorVenda` no cache de produtos (carga cheia única depois da atualização); `itemEstoqueId` gravado no SQLite e no `POST /api/sync/comandas`; hora de cada item na contagem (`contadoEm`) no tablet e no envio; "Atualizar" da aba Produtos também baixa os sabores (RN-PR-06, RN-ES-06/08/09) — PR aberto para teste no tablet, empilhado no do "Está acabando" (14/10)
 - [ ] Avaliar com a dona depois de 2 semanas: se as diferenças dos potes forem grandes, o grupo volta para `Contagem`
 
 ## Fase 3 — Análise e relatórios
