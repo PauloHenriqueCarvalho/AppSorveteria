@@ -77,7 +77,7 @@ public class ContagemServiceTests
         Assert.Equal(2.5m, limao.AnteriorEmbalagens);
         Assert.Equal(0.5m, limao.PassoEmbalagens);
         Assert.Equal(1m, modelo.Linhas[2].PassoEmbalagens);
-        Assert.Empty(_contagens.Contagens.Where(c => !c.Concluida)); // nada gravado
+        Assert.DoesNotContain(_contagens.Contagens, c => !c.Concluida); // nada gravado
     }
 
     [Fact]

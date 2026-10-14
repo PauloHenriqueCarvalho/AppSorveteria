@@ -241,7 +241,7 @@ public class CatalogoEstoqueServiceTests
         // A linha errada não deixa grupo nem fornecedor criado pela metade.
         Assert.DoesNotContain(_estoque.Grupos, g => g.Nome == "Grupo fantasma");
         Assert.DoesNotContain(_estoque.Fornecedores, f => f.Nome == "Fornecedor fantasma");
-        Assert.Empty(resultado.FornecedoresNovos.Where(f => f == "Fornecedor fantasma"));
+        Assert.DoesNotContain(resultado.FornecedoresNovos, f => f == "Fornecedor fantasma");
         Assert.Equal(new[] { "Limão", "Uva" }, _estoque.Itens.Select(i => i.Nome).ToArray());
     }
 

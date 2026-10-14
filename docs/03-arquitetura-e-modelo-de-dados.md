@@ -297,7 +297,7 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
 | PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
 | POST | `/api/pedidos-fornecedor/{id}/enviar` | confirma; devolve texto do WhatsApp |
-| GET | `/api/pedidos-fornecedor/{id}/folha` | dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
+| GET | `/api/pedidos-fornecedor?fornecedorId=`, `/api/pedidos-fornecedor/{id}` | lista (90 dias + não recebidos) e o pedido completo — também os dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
 | POST | `/api/pedidos-fornecedor/{id}/receber` | conferência; diferenças e texto para o fornecedor |
 | POST | `/api/pedidos-fornecedor/{id}/cancelar` | com motivo |
 | GET | `/api/fornecedores/{id}/historico` | % atendido, itens que mais faltam |

@@ -114,11 +114,11 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 ### Sprint 5 — Catálogo, contagem e avisos
 - [x] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso`, `CalculoEstoque` + 24 testes (RN-ES-01…07, RN-AV-01/03/05/08, RN-PF-01) — 14/10
 - [x] Application: catálogo — fornecedores, grupos, itens e importação da planilha com prévia (RN-ES-10/11, RN-PF-09) + testes — 14/10
-- [ ] Infrastructure: configurações EF (`snake_case`, índices únicos: item grupo+nome, grupo nome, fornecedor nome, 1 aviso aberto por item) + repositório + migração `Fase2Estoque` (skill `migracao-ef`)
 - [x] Infrastructure + API do catálogo: tabelas da Fase 2 (migração `Fase2Estoque`), `GET /api/estoque/catalogo` e alterações (Admin), `GET /api/estoque/itens` (app, sem custo) — 14/10
 - [x] API: avisos (criar sem duplicar, "ainda falta", fechar, WhatsApp aberto), resumo do dia, configuração (WhatsApp da dona), `POST /api/sync/avisos` (RN-AV-01…10) — 14/10
 - [x] API: contagens pelo painel (modelo, rascunho, concluir) e `POST /api/sync/contagens`; `diasDeContagem` para o lembrete do app (RN-ES-05/06) — 14/10
-- [ ] Saída da semana (RN-ES-07) e diferenças da contagem no resumo: dependem do recebimento (Sprint 6) e do saldo dos potes (Sprint 7)
+- [x] Saída da semana (RN-ES-07): média por semana entre contagens, somando o que foi recebido no intervalo — entra no pedido sugerido (Sprint 6) — 14/10
+- [ ] Diferenças da contagem no resumo: dependem do saldo dos potes (Sprint 7)
 - [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
@@ -128,8 +128,8 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 **Pronto quando:** o atendente avisa "acabou Coco preto" e a dona recebe no WhatsApp na hora; no fim do dia chega o resumo; a contagem semanal substitui a planilha.
 
 ### Sprint 6 — Pedido, impressão e entrega
-- [ ] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes
-- [ ] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou — RN-PF-02…04), +/−, enviar, cancelar, folha, receber, histórico
+- [x] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes — 14/10
+- [x] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou, entregas depois da contagem e o que está a caminho — RN-PF-02…04), +/−, enviar (mensagem do WhatsApp), cancelar, receber (fecha avisos, custo novo, mensagem das diferenças), histórico; migração `PedidosFornecedor` — 14/10
 - [ ] Painel: pedido por fornecedor com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças) com mensagem para o fornecedor; histórico
 
 **Pronto quando:** a dona imprime o pedido da semana para os pais, confere a entrega pela folha preenchida em menos de 2 minutos e o que faltou volta no pedido seguinte.

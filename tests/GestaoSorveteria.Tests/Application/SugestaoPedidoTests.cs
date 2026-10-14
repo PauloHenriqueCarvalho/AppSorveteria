@@ -1,0 +1,104 @@
+using GestaoSorveteria.Application.Pedidos;
+
+namespace GestaoSorveteria.Tests.Application;
+
+/// <summary>Contas do pedido sugerido (RN-PF-02, RN-ES-07).</summary>
+public class SugestaoPedidoTests
+{
+    private static readonly DateTime Domingo = new(2026, 10, 4, 23, 0, 0, DateTimeKind.Utc);
+
+    private static SugestaoPedido.Contado Contado(int semanas, int unidades) => new(Domingo.AddDays(7 * semanas), unidades);
+
+    [Fact]
+    public void SaidaSemanalMedia_ContagensComEntregaNoMeio_SomaORecebido()
+    {
+        // 70 → (recebeu 56) → 84: saiu 42 na semana. Depois 84 → 42: saiu 42.
+        var media = SugestaoPedido.SaidaSemanalMedia(
+            [Contado(0, 70), Contado(1, 84), Contado(2, 42)],
+            (de, ate) => de == Domingo ? 56 : 0);
+
+        Assert.Equal(42m, media);
+    }
+
+    [Fact]
+    public void SaidaSemanalMedia_IntervaloNegativo_FicaDeFora()
+    {
+        // 30 → 40 sem entrega: contou mais do que devia ("conferir"), não entra na média.
+        var media = SugestaoPedido.SaidaSemanalMedia([Contado(0, 30), Contado(1, 40), Contado(2, 26)], (_, _) => 0);
+
+        Assert.Equal(14m, media);
+    }
+
+    [Fact]
+    public void SaidaSemanalMedia_SoAsQuatroUltimasSemanasEIntervaloDeOutroTamanhoViraPorSemana()
+    {
+        var contagens = new[] { Contado(0, 1000), Contado(1, 990), Contado(2, 980), Contado(3, 970), Contado(4, 960), Contado(5, 950) };
+        Assert.Equal(10m, SugestaoPedido.SaidaSemanalMedia(contagens, (_, _) => 0));
+
+        // 14 dias com saída de 28 = 14 por semana.
+        var quinzena = new[] { new SugestaoPedido.Contado(Domingo, 50), new SugestaoPedido.Contado(Domingo.AddDays(14), 22) };
+        Assert.Equal(14m, SugestaoPedido.SaidaSemanalMedia(quinzena, (_, _) => 0));
+    }
+
+    [Fact]
+    public void SaidaSemanalMedia_SemHistorico_Nulo()
+    {
+        Assert.Null(SugestaoPedido.SaidaSemanalMedia([Contado(0, 30)], (_, _) => 0));
+    }
+
+    [Fact]
+    public void DiasACobrir_PedidoTodaSegundaEntregaEmDoisDias_NoveDias()
+    {
+        Assert.Equal(9, SugestaoPedido.DiasACobrir(DayOfWeek.Monday, [DayOfWeek.Monday], 2));
+        Assert.Equal(3, SugestaoPedido.DiasACobrir(DayOfWeek.Monday, [DayOfWeek.Monday, DayOfWeek.Thursday], 0));
+        Assert.Equal(2, SugestaoPedido.DiasACobrir(DayOfWeek.Sunday, [DayOfWeek.Monday], 1));
+    }
+
+    [Theory]
+    [InlineData(42.0, 9, 20, null, 34.0)]   // 42/semana × 9 dias − 20 = 34
+    [InlineData(null, 9, 20, 56, 36.0)]     // sem histórico: alvo 56 − 20
+    [InlineData(null, 9, 20, null, 0.0)]    // sem histórico e sem alvo
+    [InlineData(7.0, 7, 30, null, 0.0)]     // tem de sobra: 0, nunca negativo
+    public void NecessidadeEmUnidades_CasosDaRegra(double? media, int dias, int contado, int? alvo, double esperado)
+    {
+        Assert.Equal((decimal)esperado, SugestaoPedido.NecessidadeEmUnidades((decimal?)media, dias, contado, alvo));
+    }
+
+    [Theory]
+    [InlineData(34.0, 28, 1.0, 2.0)]   // 1,2 caixa → 2 caixas
+    [InlineData(34.0, 28, 0.5, 1.5)]   // aceita meia caixa → 1,5
+    [InlineData(28.0, 28, 1.0, 1.0)]
+    [InlineData(0.0, 28, 1.0, 0.0)]
+    [InlineData(1.0, 1, 1.0, 1.0)]     // balde
+    public void EmEmbalagens_ArredondaParaCimaNoPasso(double unidades, int porEmbalagem, double passo, double esperado)
+    {
+        Assert.Equal((decimal)esperado, SugestaoPedido.EmEmbalagens((decimal)unidades, porEmbalagem, (decimal)passo));
+    }
+
+    [Theory]
+    [InlineData(2026, 10, 19, 2026, 10, 19)] // segunda é dia de pedido: o ciclo começa hoje
+    [InlineData(2026, 10, 22, 2026, 10, 19)] // quinta: começou na segunda
+    [InlineData(2026, 10, 18, 2026, 10, 12)] // domingo: ainda é o ciclo da segunda anterior
+    public void InicioDoCiclo_DiaDePedidoMaisRecenteAteHoje(int a, int m, int d, int ea, int em, int ed)
+    {
+        Assert.Equal(new DateOnly(ea, em, ed), SugestaoPedido.InicioDoCiclo(new DateOnly(a, m, d), [DayOfWeek.Monday]));
+    }
+
+    [Theory]
+    [InlineData(14, 0, 28.0, 7.0, 0.0)]     // contou 14, saem 28 por semana, 7 dias depois: acabou (nunca negativo)
+    [InlineData(14, 56, 28.0, 7.0, 42.0)]   // chegaram 56 depois da contagem
+    [InlineData(14, 56, null, 30.0, 70.0)]  // sem média não dá para descontar a saída
+    public void EstoqueEstimado_DescontaASaidaDesdeAContagem(int contado, int recebido, double? media, double dias, double esperado)
+    {
+        Assert.Equal((decimal)esperado, SugestaoPedido.EstoqueEstimado(contado, recebido, (decimal?)media, (decimal)dias));
+    }
+
+    [Fact]
+    public void EmEmbalagens_DizimaDaMedia_NaoGanhaUmaCaixaAMais()
+    {
+        // 20 picolés em 3 dias = 46,666…/semana; × 9 dias ÷ 7 = 60,000…0001 em decimal. Duas caixas de 30, não três.
+        var necessidade = SugestaoPedido.NecessidadeEmUnidades(20m / 3m * 7m, 9, 0, null) + 0.0000000001m;
+
+        Assert.Equal(2m, SugestaoPedido.EmEmbalagens(necessidade, 30, 1m));
+    }
+}

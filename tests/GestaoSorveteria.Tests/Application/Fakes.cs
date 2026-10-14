@@ -287,16 +287,53 @@ internal sealed class ContagemRepositoryFake : IContagemRepository
             .OrderByDescending(c => c.IniciadaEm)
             .ToList());
 
-    public Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyDictionary<Guid, int>>(Contagens
+    public Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, UltimaContagemDoItem>>(Contagens
             .Where(c => c.ConcluidaEm < antesDeUtc)
             .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades)))
             .GroupBy(x => x.ItemEstoqueId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ConcluidaEm).First().ContadoUnidades!.Value));
+            .ToDictionary(g => g.Key, g =>
+            {
+                var ultima = g.OrderByDescending(x => x.ConcluidaEm).First();
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value);
+            }));
 
     public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)
     {
         Contagens.Add(contagem);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Pedidos aos fornecedores em memória.</summary>
+internal sealed class PedidoFornecedorRepositoryFake : IPedidoFornecedorRepository
+{
+    public List<PedidoFornecedor> Pedidos { get; } = new();
+
+    public Task<PedidoFornecedor?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Pedidos.FirstOrDefault(p => p.Id == id));
+
+    public Task<PedidoFornecedor?> ObterRascunhoAsync(Guid fornecedorId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Pedidos.FirstOrDefault(p => p.FornecedorId == fornecedorId && p.Status == StatusPedido.Rascunho));
+
+    public Task<IReadOnlyList<PedidoFornecedor>> ListarAsync(Guid? fornecedorId, DateTime desdeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PedidoFornecedor>>(Pedidos
+            .Where(p => fornecedorId is null || p.FornecedorId == fornecedorId)
+            .Where(p => p.CriadoEm >= desdeUtc || p.Status is StatusPedido.Rascunho or StatusPedido.Enviado)
+            .OrderByDescending(p => p.CriadoEm)
+            .ToList());
+
+    public Task<IReadOnlyList<PedidoFornecedor>> ListarRecebidosEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PedidoFornecedor>>(Pedidos
+            .Where(p => p.Status == StatusPedido.Recebido && p.RecebidoEm >= deUtc && p.RecebidoEm < ateUtc)
+            .ToList());
+
+    public Task<int> ProximoNumeroAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Pedidos.Count == 0 ? 1 : Pedidos.Max(p => p.Numero) + 1);
+
+    public Task AdicionarAsync(PedidoFornecedor pedido, CancellationToken cancellationToken = default)
+    {
+        Pedidos.Add(pedido);
         return Task.CompletedTask;
     }
 }
