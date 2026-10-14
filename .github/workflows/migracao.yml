@@ -51,6 +51,10 @@ jobs:
           versao=$(grep -oP 'Include="Microsoft.EntityFrameworkCore.Design" Version="\K[^"]+' src/GestaoSorveteria.Server/GestaoSorveteria.Server.csproj)
           dotnet tool install --global dotnet-ef --version "$versao"
 
+      - name: Restaurar pacotes
+        # O dotnet ef lê os metadados do projeto antes de compilar e precisa do project.assets.json.
+        run: dotnet restore src/GestaoSorveteria.Server/GestaoSorveteria.Server.csproj
+
       - name: Gerar a migração
         env:
           NOME: ${{ steps.nome.outputs.nome }}
