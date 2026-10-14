@@ -38,7 +38,7 @@ function Conteudo({ catalogo, pedidos }: { catalogo: CatalogoEstoqueResponse; pe
     .filter((f) => f.ativo && catalogo.itens.some((i) => i.ativo && i.fornecedorId === f.id))
     .map((f) => ({ fornecedor: f, proximo: proximoDiaDePedido(f.diasPedido, hoje) }))
     .sort((a, b) => (a.proximo ?? '9999').localeCompare(b.proximo ?? '9999') || a.fornecedor.nome.localeCompare(b.fornecedor.nome))
-  const montadosHoje = useMontarSozinho(
+  const { montados, falharam } = useMontarSozinho(
     fornecedores.filter((f) => f.proximo === hoje).map((f) => f.fornecedor),
     pedidos,
     hoje,
@@ -46,9 +46,15 @@ function Conteudo({ catalogo, pedidos }: { catalogo: CatalogoEstoqueResponse; pe
 
   return (
     <>
-      {montadosHoje.length > 0 && (
+      {montados.length > 0 && (
         <p className="alerta alerta-aviso">
-          Hoje é dia de pedido: o rascunho de {montadosHoje.join(' e ')} já está montado com a sugestão. Confira e envie.
+          Hoje é dia de pedido: o rascunho de {montados.join(' e ')} já está montado com a sugestão de hoje. Confira e envie.
+        </p>
+      )}
+      {falharam.length > 0 && (
+        <p className="alerta alerta-erro">
+          Não consegui montar o pedido de hoje de {falharam.join(' e ')} (o servidor pode estar acordando). Use “Montar pedido” no
+          fornecedor.
         </p>
       )}
 
@@ -85,13 +91,19 @@ function Conteudo({ catalogo, pedidos }: { catalogo: CatalogoEstoqueResponse; pe
 }
 
 /**
- * RN-PF-04: no dia de pedido, ao abrir a tela, monta o rascunho do fornecedor que ainda não tem rascunho nem pedido enviado
- * hoje. A API também confere (modo automático): se o de hoje já saiu, devolve ele em vez de montar outro.
+ * RN-PF-04: no dia de pedido, ao abrir a tela, monta (ou refaz, mantendo o que a dona mudou) o rascunho do fornecedor com a
+ * sugestão de hoje — rascunho de outro dia ficaria com a contagem e os avisos velhos. Pula se o rascunho já é de hoje ou se
+ * o pedido de hoje já saiu; a API também confere (modo automático) e devolve o enviado em vez de montar outro.
  * Uma vez por fornecedor e dia neste navegador, para não remontar a cada visita.
  */
-function useMontarSozinho(doDia: FornecedorDto[], pedidos: PedidoResumoDto[], hoje: string): string[] {
+function useMontarSozinho(
+  doDia: FornecedorDto[],
+  pedidos: PedidoResumoDto[],
+  hoje: string,
+): { montados: string[]; falharam: string[] } {
   const queryClient = useQueryClient()
   const [montados, setMontados] = useState<string[]>([])
+  const [falharam, setFalharam] = useState<string[]>([])
   const tentados = useRef(new Set<string>())
 
   useEffect(() => {
@@ -99,7 +111,11 @@ function useMontarSozinho(doDia: FornecedorDto[], pedidos: PedidoResumoDto[], ho
       (f) =>
         !tentados.current.has(f.id) &&
         !jaMontadoHoje(f.id, hoje) &&
-        !pedidos.some((p) => p.fornecedorId === f.id && (p.status === 'Rascunho' || enviadoHoje(p.enviadoEm, hoje))),
+        !pedidos.some(
+          (p) =>
+            p.fornecedorId === f.id &&
+            ((p.status === 'Rascunho' && hojeNaLoja(new Date(p.criadoEm)) === hoje) || enviadoHoje(p.enviadoEm, hoje)),
+        ),
     )
     if (pendentes.length === 0) {
       return
@@ -113,14 +129,18 @@ function useMontarSozinho(doDia: FornecedorDto[], pedidos: PedidoResumoDto[], ho
       }),
     ).then(async (resultados) => {
       const nomes = resultados.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []))
+      const comErro = resultados.flatMap((r, i) => (r.status === 'rejected' ? [pendentes[i].nome] : []))
       if (nomes.length > 0) {
         setMontados((atuais) => [...atuais, ...nomes])
+      }
+      if (comErro.length > 0) {
+        setFalharam((atuais) => [...atuais, ...comErro])
       }
       await queryClient.invalidateQueries({ queryKey: CHAVE_PEDIDOS })
     })
   }, [doDia, pedidos, hoje, queryClient])
 
-  return montados
+  return { montados, falharam }
 }
 
 function chaveMontado(fornecedorId: string, hoje: string) {

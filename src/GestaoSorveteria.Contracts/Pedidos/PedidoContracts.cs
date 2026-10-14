@@ -106,7 +106,8 @@ public sealed record ReceberPedidoResponse(PedidoDto Pedido, int AvisosFechados,
 
 /// <summary>
 /// GET /api/pedidos-fornecedor/{id}/mensagens: para reabrir o WhatsApp depois. <paramref name="Pedido"/> existe para pedido
-/// enviado ou recebido; <paramref name="Divergencias"/>, para entrega conferida que veio diferente. Links abrem o WhatsApp do fornecedor.
+/// enviado ou recebido de fornecedor que recebe por WhatsApp (ou ambos), como no envio; <paramref name="Divergencias"/>, para
+/// entrega conferida que veio diferente. Links abrem o WhatsApp do fornecedor (sem número cadastrado, a pessoa escolhe o contato).
 /// </summary>
 public sealed record MensagensPedidoDto(string? Pedido, string? LinkPedido, string? Divergencias, string? LinkDivergencias);
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { mensagemDoErro } from '../../api/erros.ts'
 import {
   alterarItensPedido,
@@ -51,7 +51,8 @@ function useGuardarPedido() {
   }
 }
 
-function Cabecalho({ pedido }: { pedido: PedidoDto }) {
+/** `aoImprimir`: no rascunho, salva o que mudou antes de abrir a folha (senão ela sairia com a quantidade antiga). */
+function Cabecalho({ pedido, aoImprimir, ocupado }: { pedido: PedidoDto; aoImprimir?: () => void; ocupado?: boolean }) {
   const status = STATUS_PEDIDO[pedido.status]
   const subtitulo =
     pedido.status === 'Rascunho'
@@ -68,11 +69,16 @@ function Cabecalho({ pedido }: { pedido: PedidoDto }) {
       acoes={
         <>
           <Selo tom={status.tom}>{status.nome}</Selo>
-          {pedido.status !== 'Cancelado' && (
-            <Link to={`/pedidos/${pedido.id}/imprimir`} className="botao botao-secundario">
-              Imprimir
-            </Link>
-          )}
+          {pedido.status !== 'Cancelado' &&
+            (aoImprimir ? (
+              <button type="button" className="botao botao-secundario" disabled={ocupado} onClick={aoImprimir}>
+                Imprimir
+              </button>
+            ) : (
+              <Link to={`/pedidos/${pedido.id}/imprimir`} className="botao botao-secundario">
+                Imprimir
+              </Link>
+            ))}
           {pedido.status === 'Enviado' && (
             <Link to={`/pedidos/${pedido.id}/conferir`} className="botao">
               Conferir entrega
@@ -87,6 +93,7 @@ function Cabecalho({ pedido }: { pedido: PedidoDto }) {
 // ---------------------------------------------------------------- rascunho
 
 function Rascunho({ pedido }: { pedido: PedidoDto }) {
+  const navegar = useNavigate()
   const guardar = useGuardarPedido()
   const [valores, setValores] = useState<Record<string, string>>(() => camposDe(pedido))
   const [soComQuantidade, setSoComQuantidade] = useState(false)
@@ -112,13 +119,12 @@ function Rascunho({ pedido }: { pedido: PedidoDto }) {
   })
 
   const enviar = useMutation({
-    mutationFn: async () => {
-      const linhas = linhasParaSalvar()
-      if (linhas === null) {
-        throw new Error(erro ?? 'Confira as quantidades.')
-      }
+    mutationFn: async (linhas: { itemEstoqueId: string; embalagens: number }[]) => {
       if (linhas.length > 0) {
-        await alterarItensPedido(pedido.id, linhas)
+        // Grava o que mudou antes de enviar; se o envio falhar, a tela já mostra o que ficou salvo.
+        const salvo = await alterarItensPedido(pedido.id, linhas)
+        setValores(camposDe(salvo))
+        await guardar(salvo)
       }
       return enviarPedido(pedido.id)
     },
@@ -126,6 +132,29 @@ function Rascunho({ pedido }: { pedido: PedidoDto }) {
       await guardar(resposta.pedido)
     },
   })
+
+  /** RN-PF-07: a folha sai com o que está salvo; o que mudou e não foi salvo é salvo antes. */
+  async function imprimir() {
+    const linhas = linhasParaSalvar()
+    if (linhas === null) {
+      return
+    }
+    if (linhas.length > 0) {
+      try {
+        await salvar.mutateAsync(linhas)
+      } catch {
+        return // o erro já aparece na barra de ações
+      }
+    }
+    navegar(`/pedidos/${pedido.id}/imprimir`)
+  }
+
+  function confirmar() {
+    const linhas = linhasParaSalvar()
+    if (linhas !== null) {
+      enviar.mutate(linhas)
+    }
+  }
 
   /** Linhas mudadas, já conferidas (número e passo). Null se alguma estiver errada (a mensagem vai para `erro`). */
   function linhasParaSalvar(): { itemEstoqueId: string; embalagens: number }[] | null {
@@ -168,7 +197,7 @@ function Rascunho({ pedido }: { pedido: PedidoDto }) {
 
   return (
     <>
-      <Cabecalho pedido={pedido} />
+      <Cabecalho pedido={pedido} aoImprimir={() => void imprimir()} ocupado={salvar.isPending || remontar.isPending || enviar.isPending} />
 
       <p className="alerta alerta-aviso">
         A sugestão vem da última contagem, do que chegou depois dela, dos avisos e do que faltou na entrega anterior. Ajuste com − e
@@ -291,14 +320,14 @@ function Rascunho({ pedido }: { pedido: PedidoDto }) {
               <strong>Enviar o pedido nº {pedido.numero}?</strong>{' '}
               <span className="suave">
                 Depois de enviado ele não muda mais (para corrigir, cancele e monte outro).{' '}
-                {pedido.envio !== 'Impresso' ? 'Em seguida abre a mensagem do WhatsApp.' : 'Em seguida, imprima a folha.'}
+                {pedido.envio !== 'Impresso' ? 'Em seguida aparece a mensagem pronta para mandar pelo WhatsApp.' : 'Em seguida, imprima a folha.'}
               </span>
             </p>
             <span className="pagina-acoes">
               <button type="button" className="botao botao-secundario" disabled={ocupado} onClick={() => setConfirmarEnvio(false)}>
                 Voltar
               </button>
-              <button type="button" className="botao" disabled={ocupado} onClick={() => enviar.mutate()}>
+              <button type="button" className="botao" disabled={ocupado} onClick={confirmar}>
                 {enviar.isPending ? 'Enviando…' : 'Confirmar envio'}
               </button>
             </span>
@@ -637,7 +666,7 @@ function MensagensWhatsApp({ pedido }: { pedido: PedidoDto }) {
     return null
   }
   const recebido = pedido.status === 'Recebido'
-  const texto = recebido ? dados.divergencias : pedido.envio === 'Impresso' ? null : dados.pedido
+  const texto = recebido ? dados.divergencias : dados.pedido
   const link = recebido ? dados.linkDivergencias : dados.linkPedido
   if (!texto || !link) {
     return null
