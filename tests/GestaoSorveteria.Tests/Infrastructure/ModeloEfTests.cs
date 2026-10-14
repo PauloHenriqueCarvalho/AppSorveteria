@@ -28,6 +28,21 @@ public class ModeloEfTests
             "O modelo do EF mudou sem migração: gere com `dotnet ef migrations add` ou com [gerar-migracao: Nome] no commit.");
     }
 
+    /// <summary>
+    /// xmin é coluna de sistema do PostgreSQL (token de concorrência do caixa, do aviso e do pedido): o SQL gerado não pode
+    /// tentar criá-la, senão a migração quebra no banco ("conflicts with a system column name").
+    /// </summary>
+    [Fact]
+    public void ScriptDoBanco_NaoTentaCriarAColunaDeSistemaXmin()
+    {
+        using var db = Contexto();
+
+        var script = db.Database.GenerateCreateScript();
+
+        Assert.Contains("CREATE TABLE pedidos_fornecedor", script);
+        Assert.DoesNotContain("xmin", script);
+    }
+
     [Fact]
     public void Estoque_TabelasEColunas_EmSnakeCaseComoNoDocs03()
     {
