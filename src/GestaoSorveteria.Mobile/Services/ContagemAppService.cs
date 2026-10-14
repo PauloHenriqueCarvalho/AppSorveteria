@@ -34,12 +34,6 @@ public sealed class ContagemAppService(
     SessaoUsuario sessao,
     SyncService sync)
 {
-    /// <summary>
-    /// O tablet não conhece o fornecedor (o atendente não vê custo nem fornecedor). O <see cref="ItemEstoque"/> montado aqui
-    /// serve só para aplicar as regras de quantidade do Domain; nada dele é gravado nem enviado.
-    /// </summary>
-    private static readonly Guid FornecedorDesconhecidoNoTablet = new("5f0e2a51-0c0a-4c55-9a3e-7a3b51c0a7e1");
-
     // Um registro por vez: toques rápidos em + não podem se perder nem criar duas contagens.
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
 
@@ -107,7 +101,8 @@ public sealed class ContagemAppService(
                     continue; // a dona tirou o grupo da contagem: a linha não vai no envio (ContagemRepository.ListarLinhasParaEnvioAsync)
                 }
 
-                dominio.Registrar(Regra(local), Grupo(local), linha.Embalagens, linhaId: linha.Id);
+                dominio.Registrar(Regra(local), Grupo(local), linha.Embalagens, linhaId: linha.Id,
+                    contadoEmUtc: ContadoEm(linha, contagem.IniciadaEm));
             }
 
             // Relógio do tablet que voltou para trás não pode concluir "antes" de começar.
@@ -183,12 +178,16 @@ public sealed class ContagemAppService(
     }
 
     /// <summary>O item do catálogo do tablet com as regras de quantidade do Domain (passo, meia caixa, máximo).</summary>
-    private static ItemEstoque Regra(ItemEstoqueLocal item) =>
-        ItemEstoque.Criar(item.GrupoId, FornecedorDesconhecidoNoTablet, item.Nome, item.Unidade, item.UnidadesPorEmbalagem,
-            custoEmbalagem: 0m, item.Ordem, id: item.Id);
+    private static ItemEstoque Regra(ItemEstoqueLocal item) => item.ParaDominio();
 
-    private static GrupoEstoque Grupo(ItemEstoqueLocal item) =>
-        GrupoEstoque.Criar(item.GrupoNome is { Length: >= 2 } nome ? nome : "Sem grupo", item.ModoControleGrupo, item.GrupoOrdem, item.GrupoId);
+    private static GrupoEstoque Grupo(ItemEstoqueLocal item) => item.GrupoParaDominio();
+
+    /// <summary>
+    /// RN-ES-06/08: hora em que o item foi contado, nunca antes do início da contagem (relógio do tablet que voltou para
+    /// trás não pode recusar a conclusão; o servidor faz a mesma conta).
+    /// </summary>
+    private static DateTime? ContadoEm(ItemContagemLocal linha, DateTime iniciadaEm) =>
+        linha.QuandoContado is { } quando && quando < iniciadaEm ? iniciadaEm : linha.QuandoContado;
 
     private async Task<T> UmaPorVezAsync<T>(Func<Task<T>> operacao)
     {

@@ -95,6 +95,7 @@ public class ContagemLocal
 public class ItemContagemLocal
 {
     private DateTime _alteradoEm;
+    private DateTime? _contadoEm;
 
     [PrimaryKey, Column("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -111,8 +112,23 @@ public class ItemContagemLocal
     [Column("contado_embalagens")]
     public string? ContadoEmbalagens { get; set; }
 
+    /// <summary>Último toque na linha (mesmo sem mudar o número).</summary>
     [Column("alterado_em")]
     public DateTime AlteradoEm { get => _alteradoEm; set => _alteradoEm = ComoUtc(value); }
+
+    /// <summary>
+    /// RN-ES-06/08: quando o item foi olhado no freezer (UTC) — muda só quando o número muda (tocar no mesmo valor não
+    /// "reconta"); nulo quando apagado. É a base do saldo dos potes no servidor (<c>LinhaContagemSyncDto.ContadoEm</c>).
+    /// </summary>
+    [Column("contado_em")]
+    public DateTime? ContadoEm { get => _contadoEm; set => _contadoEm = ComoUtc(value); }
+
+    /// <summary>
+    /// O que vai no envio e na conclusão: <see cref="ContadoEm"/>; linha gravada antes da coluna existir usa o último toque.
+    /// Sem número, não tem hora.
+    /// </summary>
+    [Ignore]
+    public DateTime? QuandoContado => Embalagens is null ? null : ContadoEm ?? AlteradoEm;
 
     [Ignore]
     public decimal? Embalagens

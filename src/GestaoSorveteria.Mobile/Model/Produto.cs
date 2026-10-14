@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Estoque;
 using SQLite;
 using static SorveteriaMaui.Model.Conversoes;
 
@@ -48,4 +49,38 @@ public class Produto
 
     [Column("atualizado_em")]
     public DateTime? AtualizadoEm { get => _atualizadoEm; set => _atualizadoEm = ComoUtc(value); }
+
+    // ---------------------------------------------------------------- Fase 2: potes com sabor (Sprint 7)
+
+    /// <summary>
+    /// RN-PR-06: grupo de estoque que a venda deste produto movimenta (ex.: "Pote 1L" → grupo Pote 1L). Nulo = não mexe no
+    /// estoque. Coluna nova: em aparelho que já tinha o catálogo fica nula até a carga cheia (CatalogoService).
+    /// </summary>
+    [Column("grupo_estoque_id")]
+    public Guid? GrupoEstoqueId { get; set; }
+
+    /// <summary>Quantas unidades do grupo saem a cada unidade vendida (padrão 1). Quem baixa o saldo é o servidor.</summary>
+    [Column("unidades_por_venda")]
+    public int UnidadesPorVenda { get; set; } = 1;
+
+    /// <summary>
+    /// Reserva (RN-ES-09): o servidor disse que o grupo é de potes. Só vale enquanto o tablet não conhece o grupo
+    /// (catálogo de estoque ainda não baixado); quem decide é o modo do grupo (<see cref="PedeSaborNoModo"/>).
+    /// </summary>
+    [Column("pede_sabor")]
+    public bool PedeSabor { get; set; }
+
+    /// <summary>Para a tela: preenchido ao montar a lista (aba Produtos e "Adicionar Produto"), nunca gravado.</summary>
+    [Ignore]
+    public bool PedeSaborNaVenda { get; set; }
+
+    /// <summary>
+    /// RN-PR-06 / RN-ES-09: pede o sabor na venda só se o produto está ligado a um grupo <see cref="ModoControle.SaldoPelaVenda"/>
+    /// (potes); picolé e massa vendem sem sabor. Vale o modo do grupo baixado de <c>GET /api/estoque/itens</c>
+    /// (<paramref name="modoDoGrupo"/>), que muda junto quando a dona troca o modo; sem ele, o <see cref="PedeSabor"/> da API.
+    /// </summary>
+    public bool PedeSaborNoModo(ModoControle? modoDoGrupo) =>
+        GrupoEstoqueId is not null
+        && !PermiteValorLivre
+        && (modoDoGrupo is { } modo ? modo == ModoControle.SaldoPelaVenda : PedeSabor);
 }

@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Estoque;
 using SorveteriaMaui.Model;
 
 namespace SorveteriaMaui.Data;
@@ -37,6 +38,31 @@ public sealed class ItemEstoqueRepository(BancoLocal banco)
     {
         var db = await banco.ConexaoAsync();
         return await db.FindAsync<ItemEstoqueLocal>(id);
+    }
+
+    /// <summary>
+    /// Itens de um grupo (inclusive os desativados, que dizem o modo do grupo), na ordem da planilha. Na venda do pote, os
+    /// ativos são os sabores da grade (RN-ES-09).
+    /// </summary>
+    public async Task<List<ItemEstoqueLocal>> ListarDoGrupoAsync(Guid grupoId)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<ItemEstoqueLocal>()
+            .Where(i => i.GrupoId == grupoId)
+            .OrderBy(i => i.Ordem)
+            .ThenBy(i => i.Nome)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// RN-ES-02: modo de controle de cada grupo que o tablet conhece (o modo vem em cada item baixado). Grupo sem item
+    /// nenhum no tablet não aparece: quem pergunta usa a reserva do produto (<c>PedeSabor</c>).
+    /// </summary>
+    public async Task<Dictionary<Guid, ModoControle>> ModosDosGruposAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        var itens = await db.Table<ItemEstoqueLocal>().ToListAsync();
+        return itens.GroupBy(i => i.GrupoId).ToDictionary(g => g.Key, g => g.First().ModoControleGrupo);
     }
 
     /// <summary>

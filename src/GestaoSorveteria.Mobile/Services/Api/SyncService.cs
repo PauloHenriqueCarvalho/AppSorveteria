@@ -269,7 +269,8 @@ public sealed class SyncService(
                     contagem.UsuarioId,
                     contagem.IniciadaEm,
                     contagem.ConcluidaEm,
-                    linhas.Select(l => new LinhaContagemSyncDto(l.Id, l.ItemEstoqueId, l.Embalagens)).ToList()));
+                    // RN-ES-06/08: a hora de cada item vai junto (base do saldo dos potes); o servidor a encaixa na contagem
+                    linhas.Select(l => new LinhaContagemSyncDto(l.Id, l.ItemEstoqueId, l.Embalagens, l.QuandoContado)).ToList()));
             }
 
             var resposta = await api.EnviarContagensAsync(new SyncContagensRequest(dtos));
@@ -407,7 +408,8 @@ public sealed class SyncService(
         var pagamentos = await comandas.ListarPagamentosAsync(c.Id);
         return new ComandaSyncDto(
             c.Id, c.CaixaId, c.UsuarioId, c.Numero, c.Tipo.ToString(), c.Status.ToString(), c.Total, c.CriadaEm,
-            itens.Select(i => new ItemComandaSyncDto(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.Subtotal)).ToList(),
+            // RN-ES-09: o sabor do pote vai na linha; a comanda fechada baixa o saldo dele no servidor
+            itens.Select(i => new ItemComandaSyncDto(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.Subtotal, i.ItemEstoqueId)).ToList(),
             pagamentos.Select(p => new PagamentoSyncDto(p.Id, p.Forma.ToString(), p.Valor, p.ValorRecebido, p.Troco)).ToList(),
             c.Observacao, c.FechadaEm, c.CanceladaEm, c.MotivoCancelamento);
     }

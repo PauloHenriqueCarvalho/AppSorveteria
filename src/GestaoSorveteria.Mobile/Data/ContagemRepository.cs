@@ -120,16 +120,26 @@ public sealed class ContagemRepository(BancoLocal banco)
             var contagemId = contagem.Id;
             linha = tx.Table<ItemContagemLocal>().FirstOrDefault(i => i.ContagemId == contagemId && i.ItemEstoqueId == itemEstoqueId);
 
-            var novoValor = calcular(linha?.Embalagens);
+            var valorAnterior = linha?.Embalagens;
+            var novoValor = calcular(valorAnterior);
+
+            // RN-ES-06/08: a hora do item é a de quando o número mudou (nunca antes do início da contagem, que pode ter
+            // nascido agora mesmo, um instante depois de "agora"); apagado volta a "sem hora".
+            var contadoAgora = agora < contagem.IniciadaEm ? contagem.IniciadaEm : agora;
             if (linha is null)
             {
                 linha = new ItemContagemLocal { ContagemId = contagemId, ItemEstoqueId = itemEstoqueId };
                 linha.Embalagens = novoValor;
                 linha.AlteradoEm = agora;
+                linha.ContadoEm = novoValor is null ? null : contadoAgora;
                 tx.Insert(linha);
             }
             else
             {
+                // Mesmo número de novo: fica a hora que já tinha (linha de antes desta versão: a do último toque).
+                linha.ContadoEm = novoValor is null ? null
+                    : novoValor != valorAnterior ? contadoAgora
+                    : linha.ContadoEm ?? linha.AlteradoEm;
                 linha.Embalagens = novoValor;
                 linha.AlteradoEm = agora;
                 tx.Update(linha);
