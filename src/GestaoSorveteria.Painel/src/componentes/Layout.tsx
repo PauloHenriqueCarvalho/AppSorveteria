@@ -13,7 +13,7 @@ interface ItemMenu {
   noCelular?: boolean
 }
 
-// Menu agrupado como num ERP. Cada tela nova do painel entra no grupo dela (Fase 2: "Estoque e compras").
+// Menu agrupado como num ERP. Cada tela nova do painel entra no grupo dela.
 const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   {
     titulo: 'Operação',
@@ -21,6 +21,13 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
       { para: '/', texto: 'Início', icone: 'inicio', noCelular: true },
       { para: '/vendas', texto: 'Vendas', icone: 'vendas', noCelular: true },
       { para: '/caixas', texto: 'Caixas', icone: 'caixas', noCelular: true },
+    ],
+  },
+  {
+    titulo: 'Estoque e compras',
+    itens: [
+      { para: '/estoque', texto: 'Catálogo', icone: 'estoque' },
+      { para: '/fornecedores', texto: 'Fornecedores', icone: 'fornecedor' },
     ],
   },
   {
@@ -40,6 +47,17 @@ function itemAtual(caminho: string) {
     TODOS.filter((i) => (i.para === '/' ? caminho === '/' : caminho === i.para || caminho.startsWith(`${i.para}/`)))[0] ??
     null
   )
+}
+
+/** Último pedaço da trilha: "/estoque/itens/novo" → "Novo"; "/estoque/importar" → "Importar"; resto → "Detalhe". */
+function nomeDoDetalhe(caminho: string): string {
+  if (caminho.endsWith('/novo')) {
+    return 'Novo'
+  }
+  if (caminho.endsWith('/importar')) {
+    return 'Importar'
+  }
+  return 'Detalhe'
 }
 
 export default function Layout() {
@@ -118,7 +136,7 @@ export default function Layout() {
                 {emDetalhe && (
                   <>
                     <span aria-hidden="true">/</span>
-                    <strong>Detalhe</strong>
+                    <strong>{nomeDoDetalhe(pathname)}</strong>
                   </>
                 )}
               </>

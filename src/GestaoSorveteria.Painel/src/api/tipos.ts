@@ -245,3 +245,109 @@ export interface ProdutoVendidoDto {
   quantidade: number
   total: number
 }
+
+// ---------------------------------------------------------------- Fase 2 — estoque (Contracts/Estoque)
+
+export type ModoControle = 'Contagem' | 'SaldoPelaVenda' | 'SoAviso'
+export type UnidadeCompra = 'Caixa' | 'Balde' | 'Unidade' | 'Pacote'
+export type FormaEnvioPedido = 'Impresso' | 'WhatsApp' | 'Ambos'
+/** Dias da semana como o .NET escreve (DayOfWeek). */
+export type DiaSemana = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'
+
+/** Contracts/Estoque/FornecedorDto (RN-PF-01) */
+export interface FornecedorDto {
+  id: string
+  nome: string
+  /** Só dígitos, com DDD. */
+  whatsApp: string | null
+  diasPedido: DiaSemana[]
+  prazoEntregaDias: number
+  aceitaMeiaCaixa: boolean
+  envio: FormaEnvioPedido
+  mostrarPrecos: boolean
+  ativo: boolean
+}
+
+export interface SalvarFornecedorRequest {
+  nome: string
+  whatsApp: string | null
+  diasPedido: DiaSemana[]
+  prazoEntregaDias: number
+  aceitaMeiaCaixa: boolean
+  envio: FormaEnvioPedido
+  mostrarPrecos: boolean
+}
+
+/** Contracts/Estoque/GrupoEstoqueDto (RN-ES-02) */
+export interface GrupoEstoqueDto {
+  id: string
+  nome: string
+  modoControle: ModoControle
+  ordem: number
+}
+
+export interface SalvarGrupoEstoqueRequest {
+  nome: string
+  modoControle: ModoControle
+  ordem: number
+}
+
+/** Contracts/Estoque/ItemEstoqueDto (RN-ES-01) */
+export interface ItemEstoqueDto {
+  id: string
+  grupoId: string
+  grupoNome: string
+  fornecedorId: string
+  fornecedorNome: string
+  nome: string
+  unidade: UnidadeCompra
+  unidadesPorEmbalagem: number
+  custoEmbalagem: number
+  /** Em embalagens (meia caixa vale). */
+  estoqueAlvoEmbalagens: number | null
+  /** Em unidades (potes). */
+  minimoUnidades: number | null
+  ordem: number
+  ativo: boolean
+}
+
+export interface SalvarItemEstoqueRequest {
+  grupoId: string
+  fornecedorId: string
+  nome: string
+  unidade: UnidadeCompra
+  unidadesPorEmbalagem: number
+  custoEmbalagem: number
+  ordem: number
+  estoqueAlvoEmbalagens: number | null
+  minimoUnidades: number | null
+}
+
+/** GET /api/estoque/catalogo */
+export interface CatalogoEstoqueResponse {
+  fornecedores: FornecedorDto[]
+  grupos: GrupoEstoqueDto[]
+  itens: ItemEstoqueDto[]
+}
+
+/** POST /api/estoque/itens/importar (RN-ES-10) */
+export interface ImportarCatalogoRequest {
+  conteudo: string
+  simular: boolean
+}
+
+export interface ImportarCatalogoResponse {
+  simulacao: boolean
+  fornecedoresNovos: string[]
+  gruposNovos: string[]
+  itensNovos: number
+  itensJaCadastrados: number
+  avisos: LinhaImportacaoDto[]
+  erros: LinhaImportacaoDto[]
+}
+
+/** Linha como o Excel mostra (cabeçalho = 1). */
+export interface LinhaImportacaoDto {
+  linha: number
+  mensagem: string
+}

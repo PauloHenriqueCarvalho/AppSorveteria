@@ -57,6 +57,8 @@ Abra o **endereço do painel** (no alto desta página) e entre com o usuário **
 | **Caixas** | Cada abertura e fechamento: fundo, vendas em dinheiro, retiradas, reforços, **esperado × contado × diferença** | Ver quem abriu/fechou e o que foi registrado |
 | **Produtos** | Cardápio que aparece no tablet | Cadastrar, mudar preço, **desativar** (nunca apagar) e escolher a **ordem dos botões** (os mais vendidos primeiro) |
 | **Usuários** | Atendentes | Criar atendente, **redefinir o PIN**, desativar quem saiu |
+| **Catálogo** (Estoque e compras) | O que a loja compra, separado por grupo como na planilha: sabor, fornecedor, embalagem, custo, mínimo e alvo | **Importar a planilha** (primeiro mostra a prévia, depois você confirma; o que já está cadastrado não muda), cadastrar item (copos, casquinhas, insumos), trocar o modo de controle do grupo, desativar sabor que saiu, exportar para o Excel |
+| **Fornecedores** | Quem vende para a loja, dia do pedido, prazo de entrega e como o pedido é enviado | Cadastrar, mudar o dia do pedido, WhatsApp, meia caixa, mostrar preços na folha. Fornecedor com itens ativos só é desativado depois de trocar ou desativar os itens |
 
 Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produtos para baixo: o cardápio novo chega na hora.
 

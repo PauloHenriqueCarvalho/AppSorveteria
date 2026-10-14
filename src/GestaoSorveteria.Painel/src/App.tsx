@@ -8,6 +8,12 @@ import Login from './paginas/Login.tsx'
 import DetalheCaixa from './paginas/caixas/DetalheCaixa.tsx'
 import ListaCaixas from './paginas/caixas/ListaCaixas.tsx'
 import NaoEncontrada from './paginas/NaoEncontrada.tsx'
+import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
+import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
+import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
+import ImportarCatalogo from './paginas/estoque/ImportarCatalogo.tsx'
+import EditarFornecedor from './paginas/fornecedores/EditarFornecedor.tsx'
+import ListaFornecedores from './paginas/fornecedores/ListaFornecedores.tsx'
 import EditarProduto from './paginas/produtos/EditarProduto.tsx'
 import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
 import DetalheUsuario from './paginas/usuarios/DetalheUsuario.tsx'
@@ -45,6 +51,15 @@ const router = createBrowserRouter([
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },
           { path: 'produtos/:id', element: <EditarProduto /> },
+          { path: 'estoque', element: <CatalogoEstoque /> },
+          { path: 'estoque/importar', element: <ImportarCatalogo /> },
+          { path: 'estoque/itens/novo', element: <EditarItemEstoque /> },
+          { path: 'estoque/itens/:id', element: <EditarItemEstoque /> },
+          { path: 'estoque/grupos/novo', element: <EditarGrupoEstoque /> },
+          { path: 'estoque/grupos/:id', element: <EditarGrupoEstoque /> },
+          { path: 'fornecedores', element: <ListaFornecedores /> },
+          { path: 'fornecedores/novo', element: <EditarFornecedor /> },
+          { path: 'fornecedores/:id', element: <EditarFornecedor /> },
           { path: 'usuarios', element: <ListaUsuarios /> },
           { path: 'usuarios/novo', element: <NovoUsuario /> },
           { path: 'usuarios/:id', element: <DetalheUsuario /> },
