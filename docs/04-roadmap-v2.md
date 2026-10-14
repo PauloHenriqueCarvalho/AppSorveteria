@@ -112,7 +112,8 @@ Detalhes em docs/07.
 Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa por **contagem semanal**, potes com **sabor na venda** (teste), botão **"Está acabando"** com prioridade, **urgente na hora e resumo do dia** pelo WhatsApp da dona, **fornecedores separados** e **pedido impresso** para a fábrica.
 
 ### Sprint 5 — Catálogo, contagem e avisos
-- [ ] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso` + testes (RN-ES-01…07, RN-AV-01…05) + migração
+- [x] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso`, `CalculoEstoque` + 24 testes (RN-ES-01…07, RN-AV-01/03/05/08, RN-PF-01) — 14/10
+- [ ] Infrastructure: configurações EF (`snake_case`, índices únicos grupo+nome e 1 aviso aberto por item) + migração `Fase2Estoque` (skill `migracao-ef`)
 - [ ] API: catálogo (importar CSV), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
 - [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
