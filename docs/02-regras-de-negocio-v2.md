@@ -92,9 +92,11 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 |---|---|---|
 | RN-RL-01 | Faturamento = soma das comandas **fechadas** (as `Estornada` ficam à parte, somadas como estornos no dia da venda) | F3 |
 | RN-RL-02 | Períodos (dia/semana/mês) usam o dia comercial em `America/Sao_Paulo` | F3 |
-| RN-RL-03 | Ranking por quantidade e por valor; itens livres agrupados como "Self-service / venda avulsa" | F3 |
+| RN-RL-03 | Ranking por quantidade e por valor; itens livres agrupados como "Self-service / venda avulsa". No dashboard do dia (adiantado em 14/10/2026): até 5 produtos por faturamento das comandas pagas (estornadas fora); empate → mais unidades, depois nome | F1/F3 |
 | RN-RL-04 | Margem estimada = preço praticado − custo estimado (RN-PR-07); sem custo → "n/d", nunca zero | F3 |
 | RN-RL-05 | Exportação em CSV/Excel de qualquer período | F3 |
+| RN-RL-06 | **Vendas por hora** do dia: comandas pagas agrupadas pela hora local do fechamento (0–23, America/Sao_Paulo); só as horas com venda | F1 |
+| RN-RL-07 | **Comparativo** com o mesmo dia da semana anterior (hoje − 7 dias). Se o dia consultado é hoje, a semana passada conta só até o mesmo horário. Variação % = (atual − anterior) ÷ anterior × 100, 1 casa; anterior zero → sem variação ("—"), nunca 100% | F1 |
 
 ## 8. Sincronização offline (app do atendente)
 

@@ -672,6 +672,199 @@ textarea {
   margin-top: 0.75rem;
 }
 
+/* ---------------------------------------------------------------- comparação, ranking e gráfico */
+
+.pequeno {
+  font-size: 0.82rem;
+}
+
+.variacao {
+  font-weight: 800;
+  color: var(--cor-texto-suave);
+}
+
+.variacao-sobe {
+  color: var(--cor-bom);
+}
+
+.variacao-desce {
+  color: var(--cor-ruim);
+}
+
+.ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ranking li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ranking-posicao {
+  width: 2rem;
+  flex: none;
+  padding-top: 0.05rem;
+  font-weight: 800;
+  color: var(--cor-texto-suave);
+}
+
+.ranking-corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.grafico {
+  --cor-serie-hoje: var(--cor-marca);
+  --cor-serie-antes: #3a73b8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.grafico-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+.grafico-legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.grafico-chave {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.grafico-hoje {
+  background: var(--cor-serie-hoje);
+}
+
+.grafico-antes {
+  background: var(--cor-serie-antes);
+}
+
+.grafico-area {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 200px auto;
+  column-gap: 0.6rem;
+}
+
+.grafico-eixo {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  text-align: right;
+  transform: translateY(-0.45em);
+  margin-bottom: -0.9em;
+}
+
+.grafico-colunas {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--cor-borda-forte);
+}
+
+.grafico-grade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--cor-linha);
+}
+
+.grafico-hora {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 6px 6px 0 0;
+}
+
+.grafico-hora-ativa {
+  background: #f6f8fa;
+}
+
+.grafico-par {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 100%;
+}
+
+.grafico-barra {
+  width: clamp(5px, 1.1vw, 14px);
+  border-radius: 4px 4px 0 0;
+  min-height: 0;
+}
+
+.grafico-dica {
+  position: absolute;
+  bottom: calc(100% - 2.5rem);
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-texto);
+  color: #fff;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+
+.grafico-dica span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.grafico-horas {
+  grid-column: 2;
+  display: flex;
+  padding-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+
+.grafico-horas span {
+  flex: 1;
+  text-align: center;
+}
+
+.grafico-tabela summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cor-marca);
+}
+
+.grafico-tabela .tabela-rolagem {
+  overflow-x: auto;
+  margin-top: 0.6rem;
+}
+
 /* ---------------------------------------------------------------- tabela */
 
 .tabela-caixa {

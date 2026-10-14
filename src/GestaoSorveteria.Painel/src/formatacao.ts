@@ -106,3 +106,11 @@ export function saudacao(agora: Date = new Date()): string {
   const h = Number(horaDoDia.format(agora))
   return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
 }
+
+const percentual = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+/** 12.4 → "+12,4%"; −3 → "−3,0%" (variação já calculada pela API). */
+export function formatarVariacao(valor: number): string {
+  const sinal = valor > 0 ? '+' : valor < 0 ? '−' : ''
+  return `${sinal}${percentual.format(Math.abs(valor))}%`
+}
