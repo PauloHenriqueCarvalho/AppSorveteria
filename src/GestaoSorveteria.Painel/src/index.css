@@ -351,6 +351,11 @@ textarea {
   display: none;
 }
 
+/* Só aparece na impressão (cabeçalho com loja e período). */
+.so-impressao {
+  display: none;
+}
+
 /* Telas sem menu (conectando, erro na entrada): conteúdo centralizado. */
 .tela-central {
   min-height: 100dvh;
@@ -918,6 +923,53 @@ textarea {
   font-weight: 800;
   color: var(--cor-texto);
   text-decoration: none;
+}
+
+.secao.secao-tabela {
+  padding: 0;
+  overflow: hidden;
+}
+
+.secao-tabela .tabela-caixa {
+  margin: 0;
+  border-top: 0;
+}
+
+.rodape-tabela {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.87rem;
+}
+
+.paginacao-botoes {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.paginacao-botoes .botao {
+  min-height: 36px;
+  padding: 0 0.85rem;
+}
+
+.bloco {
+  display: block;
+  font-weight: 400;
+}
+
+.selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.selos .etiqueta {
+  margin-top: 0;
 }
 
 /* ---------------------------------------------------------------- selos */
@@ -1500,5 +1552,91 @@ a.lista-item:hover {
 
   .lateral {
     transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- impressão (relatórios) */
+
+@media print {
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  :root {
+    font-size: 12px;
+    background: #fff;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .lateral,
+  .lateral-fundo,
+  .topo,
+  .barra-celular,
+  .pagina-acoes,
+  .filtros,
+  .so-tela,
+  .grafico-tabela summary {
+    display: none !important;
+  }
+
+  .principal {
+    margin-left: 0;
+  }
+
+  .conteudo {
+    max-width: none;
+    padding: 0;
+  }
+
+  .so-impressao {
+    display: block;
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid #000;
+    font-weight: 700;
+  }
+
+  .so-largo {
+    display: table-cell !important;
+  }
+
+  .secao,
+  .cartao,
+  .indicador {
+    box-shadow: none;
+    border-color: #bbb;
+    break-inside: avoid;
+  }
+
+  .tabela-caixa {
+    overflow: visible;
+  }
+
+  .tabela th {
+    background: #eee;
+    color: #000;
+  }
+
+  .tabela td {
+    border-bottom-color: #ccc;
+  }
+
+  .linha-clicavel:hover td {
+    background: none;
+  }
+
+  .selo,
+  .etiqueta {
+    border: 1px solid #999;
+    background: none !important;
+    color: #000 !important;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
   }
 }

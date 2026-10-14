@@ -85,7 +85,8 @@ Plano detalhado em docs/06, seção 4.
 - [x] Componentes: cabeçalho de página, indicador, seção, selo, barra, esqueleto, tabela; folha de estilo nova (as telas antigas já herdam)
 - [x] Início: 4 indicadores, formas de pagamento, "Precisa da sua atenção", últimas vendas em tabela, caixa atual
 - [x] API do dashboard: vendas por hora, comparativo com o mesmo dia da semana anterior, mais vendidos (RN-RL-03/06/07); gráfico no Início
-- [ ] Vendas e Caixas em tabela com filtros (período, atendente, pagamento), exportar Excel e imprimir relatório
+- [x] Vendas e Caixas em tabela com filtro de período (atalhos Hoje, Ontem, 7 dias, 30 dias, Este mês) e situação, exportar Excel (CSV brasileiro) e imprimir; relatório de fechamento imprimível no detalhe do caixa
+- [ ] Filtro de vendas por atendente e por forma de pagamento (precisa de parâmetro novo na API)
 - [ ] Produtos e Usuários no mesmo padrão
 
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)

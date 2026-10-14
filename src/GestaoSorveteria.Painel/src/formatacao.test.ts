@@ -8,9 +8,11 @@ import {
   formatarHora,
   hojeNaLoja,
   iniciais,
+  inicioDoMes,
   nomeDaForma,
   primeiroNome,
   saudacao,
+  somarDias,
 } from './formatacao.ts'
 
 // Intl usa espaço não separável em alguns formatos.
@@ -76,5 +78,17 @@ describe('formatarVariacao', () => {
     expect(formatarVariacao(12.4)).toBe('+12,4%')
     expect(formatarVariacao(-25)).toBe('−25,0%')
     expect(formatarVariacao(0)).toBe('0,0%')
+  })
+})
+
+describe('datas dos filtros', () => {
+  it('soma dias atravessando o mês e o ano', () => {
+    expect(somarDias('2026-10-14', -6)).toBe('2026-10-08')
+    expect(somarDias('2026-03-01', -1)).toBe('2026-02-28')
+    expect(somarDias('2026-12-31', 1)).toBe('2027-01-01')
+  })
+
+  it('acha o primeiro dia do mês', () => {
+    expect(inicioDoMes('2026-10-14')).toBe('2026-10-01')
   })
 })
