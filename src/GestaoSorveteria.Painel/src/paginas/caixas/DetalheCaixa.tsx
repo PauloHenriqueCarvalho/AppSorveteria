@@ -4,6 +4,8 @@ import { CHAVE_CAIXAS, obterCaixa } from '../../api/caixas.ts'
 import Consulta from '../../componentes/Consulta.tsx'
 import { ConferenciaCaixa, ResultadoCaixa } from '../../componentes/ConferenciaCaixa.tsx'
 import { formatarDataHora, formatarHora, formatarMoeda, nomeDaForma } from '../../formatacao.ts'
+import { CabecalhoPagina } from '../../componentes/Ui.tsx'
+import { NOME_LOJA } from '../../marca.ts'
 import FechamentoForcado from './FechamentoForcado.tsx'
 
 export default function DetalheCaixa() {
@@ -12,21 +14,34 @@ export default function DetalheCaixa() {
 
   return (
     <>
-      <p>
-        <Link to="/caixas">← Caixas</Link>
-      </p>
       <Consulta consulta={caixa}>
         {({ resumo, movimentos, porFormaPagamento, observacao }) => (
           <>
+            <p className="so-impressao">{NOME_LOJA} · Relatório de fechamento de caixa</p>
+            <CabecalhoPagina
+              titulo={`Caixa de ${formatarDataHora(resumo.abertoEm)}`}
+              subtitulo={
+                <>
+                  Aberto por {resumo.abertoPorNome}
+                  {resumo.fechadoEm && ` · fechado às ${formatarHora(resumo.fechadoEm)} por ${resumo.fechadoPorNome}`}
+                </>
+              }
+              acoes={
+                <>
+                  <Link to="/caixas" className="botao botao-secundario">
+                    Voltar aos caixas
+                  </Link>
+                  <button type="button" className="botao botao-secundario" onClick={() => window.print()}>
+                    Imprimir relatório
+                  </button>
+                </>
+              }
+            />
             <section className="cartao">
-              <div className="cabecalho-pagina">
-                <h1>Caixa de {formatarDataHora(resumo.abertoEm)}</h1>
+              <div className="secao-cabecalho">
+                <h2>Conferência da gaveta</h2>
                 <ResultadoCaixa caixa={resumo} />
               </div>
-              <p className="suave">
-                Aberto por {resumo.abertoPorNome}
-                {resumo.fechadoEm && ` · fechado às ${formatarHora(resumo.fechadoEm)} por ${resumo.fechadoPorNome}`}
-              </p>
               <ConferenciaCaixa caixa={resumo} />
               {observacao && <p>Observação: {observacao}</p>}
             </section>

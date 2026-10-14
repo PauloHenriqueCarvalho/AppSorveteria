@@ -114,3 +114,15 @@ export function formatarVariacao(valor: number): string {
   const sinal = valor > 0 ? '+' : valor < 0 ? '−' : ''
   return `${sinal}${percentual.format(Math.abs(valor))}%`
 }
+
+/** Soma dias a um dia comercial: ("2026-10-14", −6) → "2026-10-08". */
+export function somarDias(dia: string, dias: number): string {
+  const data = new Date(`${dia}T12:00:00Z`)
+  data.setUTCDate(data.getUTCDate() + dias)
+  return data.toISOString().slice(0, 10)
+}
+
+/** Primeiro dia do mês: "2026-10-14" → "2026-10-01". */
+export function inicioDoMes(dia: string): string {
+  return `${dia.slice(0, 8)}01`
+}

@@ -4,25 +4,48 @@ import type { ComandaDetalheDto, ComandaResumoDto, PaginaDto, StatusComanda } fr
 export const CHAVE_COMANDAS = ['comandas'] as const
 
 export interface FiltroVendas {
-  /** Dia comercial "2026-09-30"; vazio = hoje (a API decide). */
+  /** Dia comercial "2026-09-30"; vazio = hoje (a API decide). Atalho para de = ate = dia. */
   dia?: string
+  /** Período (inclusive, máx. 93 dias). Tem prioridade sobre `dia`. */
+  de?: string
+  ate?: string
   status?: StatusComanda
   pagina?: number
+  /** 1 a 100 (a API recusa acima). */
+  tamanho?: number
 }
 
 export const VENDAS_POR_PAGINA = 30
+export const MAXIMO_POR_PAGINA = 100
 
-/** GET /api/comandas — vendas de um dia, mais recente primeiro. */
-export function listarComandas({ dia, status, pagina = 1 }: FiltroVendas): Promise<PaginaDto<ComandaResumoDto>> {
-  const parametros = new URLSearchParams({ pagina: String(pagina), tamanho: String(VENDAS_POR_PAGINA) })
-  if (dia) {
-    parametros.set('de', dia)
-    parametros.set('ate', dia)
+/** GET /api/comandas — vendas do período, mais recente primeiro. */
+export function listarComandas({ dia, de, ate, status, pagina = 1, tamanho = VENDAS_POR_PAGINA }: FiltroVendas): Promise<PaginaDto<ComandaResumoDto>> {
+  const parametros = new URLSearchParams({ pagina: String(pagina), tamanho: String(tamanho) })
+  const inicio = de ?? dia
+  const fim = ate ?? dia
+  if (inicio) {
+    parametros.set('de', inicio)
+  }
+  if (fim) {
+    parametros.set('ate', fim)
   }
   if (status) {
     parametros.set('status', status)
   }
   return requisicao<PaginaDto<ComandaResumoDto>>(`/api/comandas?${parametros}`)
+}
+
+/** Todas as vendas do período, página a página (para exportar). Para no limite de segurança de 5.000. */
+export async function listarTodasAsComandas(filtro: Omit<FiltroVendas, 'pagina' | 'tamanho'>): Promise<ComandaResumoDto[]> {
+  const todas: ComandaResumoDto[] = []
+  for (let pagina = 1; pagina <= 50; pagina++) {
+    const resultado = await listarComandas({ ...filtro, pagina, tamanho: MAXIMO_POR_PAGINA })
+    todas.push(...resultado.itens)
+    if (todas.length >= resultado.totalItens || resultado.itens.length === 0) {
+      break
+    }
+  }
+  return todas
 }
 
 /** GET /api/comandas/{id} */
