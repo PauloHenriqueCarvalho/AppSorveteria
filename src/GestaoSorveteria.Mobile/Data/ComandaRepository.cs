@@ -4,6 +4,9 @@ using Dominio = GestaoSorveteria.Domain.Comandas;
 
 namespace SorveteriaMaui.Data;
 
+/// <summary>Vendas de um caixa para a tela e para o fechamento (C3). Só comandas fechadas contam; abertas só são contadas.</summary>
+public sealed record ResumoVendasCaixa(decimal TotalDinheiro, decimal TotalVendido, int ComandasFechadas, int ComandasAbertas);
+
 /// <summary>
 /// Comandas no SQLite. Leitura para a tela devolve as linhas; para alterar, devolve a comanda do Domain
 /// (<see cref="Dominio.Comanda.Restaurar"/>) e grava tudo de volta numa transação só.
@@ -29,6 +32,112 @@ public sealed class ComandaRepository(BancoLocal banco)
     {
         var db = await banco.ConexaoAsync();
         return await db.Table<ItemComanda>().Where(i => i.ComandaId == comandaId).ToListAsync();
+    }
+
+    /// <summary>
+    /// RN-CX-05/06 / RN-PG-05: comandas abertas (impedem fechar), fechadas, total vendido e só o **dinheiro**
+    /// (campo <c>Valor</c>, o que abateu a comanda — o troco não fica na gaveta) para o esperado do caixa.
+    /// </summary>
+    public async Task<ResumoVendasCaixa> ResumoVendasNoCaixaAsync(Guid caixaId)
+    {
+        var db = await banco.ConexaoAsync();
+        var abertas = await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.Status == Dominio.StatusComanda.Aberta).CountAsync();
+        var fechadas = await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.Status == Dominio.StatusComanda.Fechada).ToListAsync();
+        var dinheiroCentavos = await db.ExecuteScalarAsync<long>(
+            "SELECT COALESCE(SUM(p.valor_centavos), 0) FROM pagamentos p " +
+            "JOIN comandas c ON c.id = p.comanda_id " +
+            "WHERE c.caixa_id = ? AND c.status = ? AND p.forma = ?",
+            caixaId, (int)Dominio.StatusComanda.Fechada, (int)Dominio.FormaPagamento.Dinheiro);
+
+        return new ResumoVendasCaixa(
+            Conversoes.ParaReais(dinheiroCentavos),
+            Conversoes.ParaReais(fechadas.Sum(c => c.TotalCentavos)),
+            fechadas.Count,
+            abertas);
+    }
+
+    // ---------------------------------------------------------------- fila de envio (C4)
+
+    public async Task<List<Pagamento>> ListarPagamentosAsync(Guid comandaId)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Pagamento>().Where(p => p.ComandaId == comandaId).ToListAsync();
+    }
+
+    /// <summary>Comandas fechadas/canceladas do caixa ainda não confirmadas pela API, mais antigas primeiro (até <paramref name="maximo"/>).</summary>
+    public async Task<List<Comanda>> ListarPendentesEnvioAsync(Guid caixaId, int maximo)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.PendenteEnvio == true)
+            .OrderBy(c => c.Numero)
+            .Take(maximo)
+            .ToListAsync();
+    }
+
+    public async Task<List<Guid>> ListarCaixasComPendenteEnvioAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        var linhas = await db.Table<Comanda>().Where(c => c.PendenteEnvio == true).ToListAsync();
+        return linhas.Select(c => c.CaixaId).Distinct().ToList();
+    }
+
+    public async Task<int> ContarPendentesEnvioAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>().Where(c => c.PendenteEnvio == true).CountAsync();
+    }
+
+    public async Task<int> ContarRejeitadasAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>().Where(c => c.RejeitadaMotivo != null).CountAsync();
+    }
+
+    /// <summary>C5 / RN-SY-03: comandas rejeitadas pelo servidor, de qualquer caixa, mais recentes primeiro.</summary>
+    public async Task<List<Comanda>> ListarRejeitadasAsync()
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>()
+            .Where(c => c.RejeitadaMotivo != null)
+            .OrderByDescending(c => c.CriadaEm)
+            .ToListAsync();
+    }
+
+    /// <summary>C5: comandas fechadas/canceladas do caixa, mais recentes primeiro, com a situação do envio.</summary>
+    public async Task<List<Comanda>> ListarEncerradasDoCaixaAsync(Guid caixaId)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Comanda>()
+            .Where(c => c.CaixaId == caixaId && c.Status != Dominio.StatusComanda.Aberta)
+            .OrderByDescending(c => c.Numero)
+            .ToListAsync();
+    }
+
+    /// <summary>aceita / ja_recebida: sai da fila. Nada mais muda na comanda (RN-CM-07).</summary>
+    public async Task MarcarEnviadaAsync(Guid id)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync(
+            "UPDATE comandas SET pendente_envio = 0, enviada_em = ?, rejeitada_motivo = NULL, ultimo_erro_envio = NULL WHERE id = ?",
+            DateTime.UtcNow, id);
+    }
+
+    /// <summary>rejeitada: sai da fila, mas o motivo fica visível para o atendente (RN-SY-03). A venda continua gravada.</summary>
+    public async Task MarcarRejeitadaAsync(Guid id, string motivo)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync("UPDATE comandas SET pendente_envio = 0, rejeitada_motivo = ? WHERE id = ?", motivo, id);
+    }
+
+    /// <summary>Falha de rede/servidor: continua pendente, só anota.</summary>
+    public async Task RegistrarFalhaEnvioAsync(Guid id, string erro)
+    {
+        var db = await banco.ConexaoAsync();
+        await db.ExecuteAsync(
+            "UPDATE comandas SET tentativas_envio = tentativas_envio + 1, ultimo_erro_envio = ? WHERE id = ?", erro, id);
     }
 
     /// <summary>RN-CM-02 / B8: sequencial dentro do caixa, contando também as fechadas.</summary>
@@ -78,6 +187,12 @@ public sealed class ComandaRepository(BancoLocal banco)
             if (existente is not null && existente.Status != Dominio.StatusComanda.Aberta)
             {
                 throw new DomainException("Esta comanda já foi fechada ou cancelada.");
+            }
+
+            // RN-CX-03 dentro da transação: o caixa pode ter sido fechado entre a conferência do serviço e a gravação.
+            if (existente is null && tx.Find<Caixa>(comanda.CaixaId)?.EstaAberto != true)
+            {
+                throw new DomainException("O caixa foi fechado. Abra o caixa na aba Caixa antes de vender (RN-CX-03).");
             }
             var linha = new Comanda
             {

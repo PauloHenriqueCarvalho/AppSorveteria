@@ -6,7 +6,7 @@
 
 ```
 Fase 1 — Sistema básico ............ Sprint 0 · 1 · 2 · 3 · 4   (5 semanas)
-Fase 2 — Estoque inteligente ....... Sprint 5 · 6 · 7           (+3 semanas)
+Fase 2 — Estoque e pedidos ......... Sprint 5 · 6 · 7           (+3 semanas)
 Fase 3 — Análise e relatórios ...... Sprint 8 · 9               (+2 semanas)
 Fase 4 — Expansões ................. a combinar
 ```
@@ -55,10 +55,10 @@ Plano detalhado em docs/06, seção 4.
 - [x] **Etapa B — vendas:** pagamento com troco correto e dividido (#23), venda rápida (#15), cancelar comanda (#24), busca (#28), delivery (#29), toast em vez de alerta (#26)
 - [ ] **Etapa C — caixa, login e sincronização** (sequência C1–C5 em docs/08, Sessão B):
   - [x] C1 — Login com PIN + cliente HTTP (token em `SecureStorage`, URL da API em configuração) — PR aberto para teste no tablet
-  - [ ] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16)
-  - [ ] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio`
-  - [ ] C4 — `SyncService` + indicador "X vendas aguardando envio"
-  - [ ] C5 — Histórico do turno com status de envio
+  - [x] C2 — Catálogo vindo da API (`GET /api/produtos?desde=`, cache no SQLite; resolve B16) — PR aberto para teste no tablet
+  - [x] C3 — Caixa de verdade (abrir, sangria/suprimento, fechar com conferência); remove o `CaixaProvisorio` — PR aberto para teste no tablet
+  - [x] C4 — `SyncService` + indicador "X vendas aguardando envio" (o ciclo de 1 min também atualiza o catálogo) — PR aberto para teste no tablet
+  - [x] C5 — Histórico do turno com status de envio (aba **Turno**) — PR aberto para teste no tablet
 - [ ] Teste no emulador (API em `10.0.2.2`) e no celular real com a internet desligada
 
 **Pronto quando:** venda completa no celular real sem internet, sincronizada ao religar, com o caixa batendo.
@@ -80,6 +80,15 @@ Plano detalhado em docs/06, seção 4.
 
 **Pronto quando:** a dona vê, do celular dela, o que foi vendido hoje e se o caixa bateu. ✅ (falta só publicar no Cloudflare — Sprint 4)
 
+### Painel profissional (cara de ERP, ADR 020) — 14/10/2026
+- [x] Estrutura: menu lateral agrupado, barra superior com trilha e data, gaveta + barra de atalhos no celular, marca Verão Tropical, login com a marca
+- [x] Componentes: cabeçalho de página, indicador, seção, selo, barra, esqueleto, tabela; folha de estilo nova (as telas antigas já herdam)
+- [x] Início: 4 indicadores, formas de pagamento, "Precisa da sua atenção", últimas vendas em tabela, caixa atual
+- [x] API do dashboard: vendas por hora, comparativo com o mesmo dia da semana anterior, mais vendidos (RN-RL-03/06/07); gráfico no Início
+- [x] Vendas e Caixas em tabela com filtro de período (atalhos Hoje, Ontem, 7 dias, 30 dias, Este mês) e situação, exportar Excel (CSV brasileiro) e imprimir; relatório de fechamento imprimível no detalhe do caixa
+- [ ] Filtro de vendas por atendente e por forma de pagamento (precisa de parâmetro novo na API)
+- [ ] Produtos e Usuários no mesmo padrão
+
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)
 
 Detalhes em docs/07.
@@ -93,24 +102,35 @@ Detalhes em docs/07.
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
+- [ ] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, pode adiantar da Fase 2
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
 
-## Fase 2 — Estoque inteligente
+## Fase 2 — Estoque, avisos e pedidos ao fornecedor
 
-### Sprint 5 — Insumos e ficha técnica
-- [ ] Entidades `Insumo`, `FichaTecnica`, `MovimentoEstoque` + migração
-- [ ] Painel: cadastro de insumos (unidade, mínimo), ficha técnica por produto, entrada de reposição (atualiza custo médio)
+Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa por **contagem semanal**, potes com **sabor na venda** (teste), botão **"Está acabando"** com prioridade, **urgente na hora e resumo do dia** pelo WhatsApp da dona, **fornecedores separados** e **pedido impresso** para a fábrica.
 
-### Sprint 6 — Baixa automática e alertas
-- [ ] Ao fechar comanda: baixa por ficha técnica (RN-ES-02); estorno devolve (RN-ES-03)
-- [ ] Ajuste/perda com motivo; histórico de movimentos por insumo
-- [ ] Alertas de mínimo no dashboard e lista "repor hoje"
+### Sprint 5 — Catálogo, contagem e avisos
+- [ ] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso` + testes (RN-ES-01…07, RN-AV-01…05) + migração
+- [ ] API: catálogo (importar CSV), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
+- [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
+- [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
+- [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, catálogo com fornecedor/alvo/mínimo, cadastro de insumos e fornecedores, WhatsApp da dona
 
-### Sprint 7 — Previsão de ruptura
-- [ ] Consumo médio diário (14 dias) e dias restantes (RN-ES-07); lista de compras sugerida (quanto comprar para X dias)
-- [ ] Teste com dados reais de 2 semanas; ajuste de mínimos com a dona
+**Pronto quando:** o atendente avisa "acabou Coco preto" e a dona recebe no WhatsApp na hora; no fim do dia chega o resumo; a contagem semanal substitui a planilha.
+
+### Sprint 6 — Pedido, impressão e entrega
+- [ ] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes
+- [ ] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou — RN-PF-02…04), +/−, enviar, cancelar, folha, receber, histórico
+- [ ] Painel: pedido por fornecedor com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças) com mensagem para o fornecedor; histórico
+
+**Pronto quando:** a dona imprime o pedido da semana para os pais, confere a entrega pela folha preenchida em menos de 2 minutos e o que faltou volta no pedido seguinte.
+
+### Sprint 7 — Potes automáticos (teste)
+- [ ] Produto de venda ligado a grupo (RN-PR-06); grade de sabores **só nos potes**; `ItemEstoqueId` opcional no sync; baixa e estorno no servidor (RN-ES-08/09)
+- [ ] Aviso automático de mínimo e zerado (RN-AV-04); conferência do saldo na contagem semanal
+- [ ] Avaliar com a dona depois de 2 semanas: se as diferenças dos potes forem grandes, o grupo volta para `Contagem`
 
 ## Fase 3 — Análise e relatórios
 
@@ -119,11 +139,11 @@ Detalhes em docs/07.
 - [ ] Ranking de produtos (quantidade e valor), por categoria
 
 ### Sprint 9 — Lucro e exportação
-- [ ] Custo estimado por produto (RN-PR-07), margem por produto e por período
+- [ ] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque), margem por produto, por sabor e por período
 - [ ] Exportação CSV/Excel por período; relatório de fechamentos de caixa
 
 ## Fase 4 — Expansões (a combinar)
-Fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.
+Ficha técnica de insumos (se a dona quiser controlar insumo além do produto pronto) · fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.
 
 ## Regras de trabalho (mantidas do roadmap original)
 

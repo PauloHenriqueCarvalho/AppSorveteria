@@ -44,6 +44,8 @@ Sem isso, o caixa "não bate" no fim do dia.
 
 **Internet caiu?** Continue vendendo normalmente. O tablet guarda tudo e envia quando a internet voltar. No alto da tela aparece "X vendas aguardando envio" até tudo subir. Deixe o Wi‑Fi ligado ao fim do turno.
 
+**Ver as vendas do turno:** aba **Turno**. Mostra cada venda paga ou cancelada, com a hora, o valor e se já foi enviada para o painel. Toque numa venda para ver os itens e o pagamento. Venda marcada em laranja foi **recusada pelo sistema**: ela continua guardada no tablet; mostre a mensagem para a dona.
+
 ## Para a dona (no celular ou no computador)
 
 Abra o **endereço do painel** (no alto desta página) e entre com o usuário **admin** e a sua senha. A primeira abertura do dia pode levar **até 1 minuto** ("Conectando ao servidor…"): é normal, o servidor estava dormindo.
@@ -66,6 +68,7 @@ Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produt
 | O painel demora para abrir | Espere 1 minuto. Se passar de 2, confira a internet do celular |
 | Venda com valor errado já finalizada | Dona: painel → Vendas → Estornar (com motivo). Atendente: lança a venda certa de novo |
 | Atendente esqueceu de fechar o caixa | Dona: painel → Caixas → **Fechar pelo painel** (com motivo). O valor contado fica 0 e a diferença aparece para conferir no dia seguinte |
+| O tablet não deixa abrir o caixa: "já existe outro caixa aberto" | O sistema ainda vê um caixa antigo aberto. Se o tablet disser que o fechamento anterior não chegou, espere 1 minuto com internet e tente de novo. Se continuar, a dona fecha o caixa antigo pelo painel → Caixas → **Fechar pelo painel** (com motivo) e o tablet abre o novo |
 | Esqueci o PIN | Dona: painel → Usuários → Redefinir PIN |
 | O app pede para atualizar | Toque no link, baixe e instale por cima. As vendas guardadas continuam lá |
 | Caixa não bateu | Painel → Caixas mostra a diferença. Confira retiradas sem registro e trocos. Não dá para "consertar" o caixa fechado: registre um reforço ou retirada com motivo no caixa seguinte |

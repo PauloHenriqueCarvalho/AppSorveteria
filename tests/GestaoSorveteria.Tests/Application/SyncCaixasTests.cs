@@ -200,6 +200,20 @@ public class SyncCaixasTests
     }
 
     [Fact]
+    public async Task ReceberCaixas_OutroCaixaAberto_MotivoComHoraDeBrasiliaECaminhoPeloPainel()
+    {
+        await Enviar(Caixa());
+
+        var resposta = await Enviar(Caixa());
+
+        // 11:00 UTC = 08:00 em Brasília; a mensagem aparece no tablet e diz como destravar (RN-CX-09).
+        var motivo = resposta.Resultados[0].Motivo!;
+        Assert.Contains("17/09/2026 às 08:00", motivo);
+        Assert.DoesNotContain("UTC", motivo);
+        Assert.Contains("painel", motivo);
+    }
+
+    [Fact]
     public async Task ReceberCaixas_AberturaDiferenteDaRecebida_Rejeita()
     {
         var id = Guid.NewGuid();

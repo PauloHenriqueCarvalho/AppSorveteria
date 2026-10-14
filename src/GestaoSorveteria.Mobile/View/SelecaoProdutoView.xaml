@@ -56,6 +56,16 @@
             </CollectionView>
         </VerticalStackLayout>
 
+        <!-- C2: sem catálogo baixado, orienta em vez de mostrar lista vazia -->
+        <Label Grid.Row="1"
+               IsVisible="{Binding SemProdutos}"
+               Margin="20"
+               FontSize="16"
+               TextColor="#555"
+               HorizontalTextAlignment="Center"
+               VerticalOptions="Start"
+               Text="Nenhum produto neste aparelho. Na aba Produtos, toque em Atualizar (precisa de internet). O self-service continua disponível." />
+
         <CollectionView Grid.Row="1" ItemsSource="{Binding Produtos}" Margin="15,10,15,10">
             <CollectionView.ItemTemplate>
                 <DataTemplate>

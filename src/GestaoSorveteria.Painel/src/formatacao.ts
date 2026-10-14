@@ -79,3 +79,50 @@ const STATUS: Record<string, string> = {
 export function nomeDoStatus(status: string): string {
   return STATUS[status] ?? status
 }
+
+const diaExtenso = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' })
+
+/** Dia comercial "2026-10-14" → "terça-feira, 14 de outubro" (sem depender do fuso do aparelho). */
+export function formatarDiaPorExtenso(dia: string): string {
+  return diaExtenso.format(new Date(`${dia}T12:00:00Z`))
+}
+
+/** Primeiro nome para a saudação ("Dona Laura Silva" → "Laura"; "Laura" → "Laura"). */
+export function primeiroNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter((p) => !/^(dona|seu|sr\.?|sra\.?)$/i.test(p))
+  return partes[0] ?? nome
+}
+
+/** Iniciais para o avatar ("Dona Laura" → "DL"). */
+export function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  return ((partes[0]?.[0] ?? '') + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase()
+}
+
+const horaDoDia = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO_LOJA, hour: 'numeric', hourCycle: 'h23' })
+
+/** "Bom dia" / "Boa tarde" / "Boa noite" pelo relógio da loja. */
+export function saudacao(agora: Date = new Date()): string {
+  const h = Number(horaDoDia.format(agora))
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
+}
+
+const percentual = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+/** 12.4 → "+12,4%"; −3 → "−3,0%" (variação já calculada pela API). */
+export function formatarVariacao(valor: number): string {
+  const sinal = valor > 0 ? '+' : valor < 0 ? '−' : ''
+  return `${sinal}${percentual.format(Math.abs(valor))}%`
+}
+
+/** Soma dias a um dia comercial: ("2026-10-14", −6) → "2026-10-08". */
+export function somarDias(dia: string, dias: number): string {
+  const data = new Date(`${dia}T12:00:00Z`)
+  data.setUTCDate(data.getUTCDate() + dias)
+  return data.toISOString().slice(0, 10)
+}
+
+/** Primeiro dia do mês: "2026-10-14" → "2026-10-01". */
+export function inicioDoMes(dia: string): string {
+  return `${dia.slice(0, 8)}01`
+}

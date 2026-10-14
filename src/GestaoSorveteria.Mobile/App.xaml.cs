@@ -14,7 +14,14 @@ namespace SorveteriaMaui
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(_servicos.GetRequiredService<AppShell>());
+            var janela = new Window(_servicos.GetRequiredService<AppShell>());
+            // Tablet fica ligado o turno inteiro: ao voltar do segundo plano, o catálogo pode atualizar de novo (C2)
+            janela.Resumed += (_, _) =>
+            {
+                _servicos.GetRequiredService<Services.Api.CatalogoService>().PermitirNovaAtualizacaoAoAbrir();
+                _servicos.GetRequiredService<Services.Api.SyncService>().Disparar(); // C4: ao voltar, tenta enviar o que ficou
+            };
+            return janela;
         }
     }
 }

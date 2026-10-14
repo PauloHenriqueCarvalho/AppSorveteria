@@ -215,17 +215,81 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 
 Índices além dos citados: `comandas(caixa_id)`, `comandas(status)`, `comandas(fechada_em)`, `itens_comanda(comanda_id)`, `pagamentos(comanda_id)`, `movimentos_caixa(caixa_id)`.
 
-## 5. Extensão — Fase 2 (estoque) e Fase 3 (custos)
+## 5. Extensão — Fase 2 (estoque, avisos e pedidos ao fornecedor)
+
+Desenho em docs/10 (revisto em 14/10); regras RN-ES / RN-AV / RN-PF / RN-RC em docs/02, seção 6. Mesmas convenções da Fase 1 (uuid gerado no cliente/domínio, `numeric(12,2)` para dinheiro, `timestamptz`, enums como texto, nada apagado).
 
 ```
-insumos            (id, nome, unidade, quantidade_atual, quantidade_minima, custo_medio, ativo)
-fichas_tecnicas    (id, produto_id, insumo_id, quantidade)            -- único (produto_id, insumo_id)
-movimentos_estoque (id, insumo_id, tipo, quantidade, custo_total?, comanda_id?, usuario_id, em, observacao)
-                    tipo: Entrada | BaixaVenda | EstornoVenda | Ajuste | Perda
-produtos           + custo_manual numeric(12,2) null                   -- Fase 3, para produto sem ficha técnica
+configuracoes_loja  (id, whatsapp_dona varchar(20), nome_loja)          -- 1 linha
+
+fornecedores        (id, nome, whatsapp?, dias_pedido varchar(30) -- "Seg",
+                     prazo_entrega_dias int, aceita_meia_caixa bool,
+                     envio varchar(20) -- Impresso | WhatsApp | Ambos, mostrar_precos bool, ativo)
+
+grupos_estoque      (id, nome, modo_controle varchar(20) -- Contagem | SaldoPelaVenda | SoAviso, ordem)
+
+itens_estoque       (id, grupo_id FK, fornecedor_id FK, nome varchar(80),
+                     unidade_compra varchar(10) -- Caixa | Balde | Unidade | Pacote,
+                     unidades_por_embalagem int ≥ 1, custo_embalagem numeric(12,2),
+                     estoque_alvo_embalagens numeric(6,1)?, minimo_unidades int?, ordem, ativo,
+                     saldo_unidades int?            -- só SaldoPelaVenda; cache do Σ movimentos
+                    )                                -- único (grupo_id, lower(nome))
+
+movimentos_estoque  (id, item_estoque_id FK, tipo varchar(20), quantidade_unidades int,
+                     comanda_id?, item_comanda_id?, pedido_id?, contagem_id?, usuario_id, em, motivo?)
+                     tipo: Entrada | BaixaVenda | EstornoVenda | AjusteContagem
+                     -- só para grupos SaldoPelaVenda; único (item_comanda_id, tipo)
+
+contagens           (id, usuario_id, iniciada_em, concluida_em?, origem varchar(10) -- App | Painel)
+itens_contagem      (id, contagem_id FK, item_estoque_id FK, contado_unidades int?,  -- null = não contado
+                     saldo_sistema_unidades int?)  -- potes: para mostrar a diferença
+
+avisos              (id, item_estoque_id?, texto_livre varchar(120)?, quantidade_atual int,
+                     prioridade varchar(10) -- Urgente | Alta | Media, observacao?,
+                     criado_por_usuario_id? -- null = Sistema, criado_em,
+                     atualizado_em, status varchar(10) -- Aberto | Fechado,
+                     fechado_em?, fechado_por?, motivo_fechamento?, pedido_id?,
+                     whatsapp_aberto_em?)          -- urgente: quando o link foi aberto (RN-AV-08)
+                     -- índice único parcial: 1 Aberto por item_estoque_id
+
+pedidos_fornecedor  (id, fornecedor_id FK, numero int, status varchar(15), criado_em, enviado_em?,
+                     recebido_em?, cancelado_em?, motivo_cancelamento?, total_pedido numeric(12,2),
+                     total_recebido numeric(12,2)?, percentual_atendido numeric(5,2)?, usuario_id)
+                     -- índice único parcial: 1 Rascunho por fornecedor
+
+itens_pedido_fornecedor (id, pedido_id FK, item_estoque_id FK, sugerido_embalagens numeric(6,1),
+                     pedido_embalagens numeric(6,1), recebido_embalagens numeric(6,1)?,
+                     custo_embalagem numeric(12,2), alterado_pela_dona bool, origem varchar(20)
+                     -- Sugestao | Aviso | FaltouAnterior, pedir_de_novo bool, nao_pedido bool)
+
+produtos            + grupo_estoque_id uuid null, + unidades_por_venda int default 1
+                    + custo_manual numeric(12,2) null    -- Fase 3
+itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-ES-09)
 ```
 
-`quantidade_atual` é sempre o saldo dos movimentos (recalculável); a coluna existe só para leitura rápida e alertas.
+**Sincronização (local-first):**
+- Comanda: `ItemComandaSyncDto` ganha `ItemEstoqueId` **opcional** (só potes). App antigo continua aceito; a baixa sai no servidor ao gravar a comanda fechada, na mesma transação.
+- Novo `POST /api/sync/estoque`: lote de **contagens** e **avisos** criados/atualizados no tablet, idempotente pelo `Id` (`aceita` / `ja_recebida` / `rejeitada`).
+- O app baixa grupos, itens (sabores e insumos) e avisos abertos junto com o catálogo: `GET /api/estoque/itens?desde=`, `GET /api/avisos?abertos=true`.
+- O WhatsApp sai do aparelho (link `wa.me`), não do servidor. `GET /api/avisos/resumo-do-dia?data=` devolve o texto pronto para o app e o painel.
+
+**Endpoints (Admin, painel):**
+
+| Método | Rota | Uso |
+|---|---|---|
+| GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja |
+| GET/POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` | catálogo; `POST /api/estoque/itens/importar` recebe o CSV |
+| GET/POST | `/api/estoque/contagens` | contagem pelo painel; histórico e saída semanal por item |
+| GET/POST/PUT | `/api/avisos` | listar, criar, "ainda falta", fechar com motivo |
+| POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
+| PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
+| POST | `/api/pedidos-fornecedor/{id}/enviar` | confirma; devolve texto do WhatsApp |
+| GET | `/api/pedidos-fornecedor/{id}/folha` | dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
+| POST | `/api/pedidos-fornecedor/{id}/receber` | conferência; diferenças e texto para o fornecedor |
+| POST | `/api/pedidos-fornecedor/{id}/cancelar` | com motivo |
+| GET | `/api/fornecedores/{id}/historico` | % atendido, itens que mais faltam |
+
+**Montagem automática do rascunho:** o painel chama `montar` ao abrir no dia do pedido (idempotente); um `BackgroundService` faz o mesmo quando a API estiver acordada. Não depende de agendador pago.
 
 ## 6. API — plano de endpoints (Sprint 1)
 
@@ -259,7 +323,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
-| GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte) | `ResumoDiaDto` |
+| GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte; vendas por hora, mesmo dia da semana anterior e mais vendidos desde 14/10 — RN-RL-03/06/07) | `ResumoDiaDto` |
 | GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09) — **pronto** (corpo `{ "motivo": "..." }`; não altera o caixa) | `ComandaDetalheDto` |
