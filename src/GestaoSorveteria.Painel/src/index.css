@@ -1691,6 +1691,46 @@ a.lista-item:hover {
   text-align: center;
 }
 
+.so-estreito {
+  display: none;
+}
+
+/* Campo da contagem com − e + (meia caixa por toque). */
+.contador-campo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.contador-campo .botao {
+  min-height: 38px;
+  min-width: 38px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+.contador-campo input {
+  width: 4.5rem;
+  min-height: 38px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+  font-weight: 700;
+  text-align: center;
+}
+
+.contador-campo input:focus {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: 1px;
+}
+
+.tabela-contagem td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
 /* Linha de botões que não estica (estado vazio, importação). */
 .acoes-inicio {
   justify-content: flex-start;
@@ -1860,6 +1900,11 @@ code {
   /* Tabelas no celular: só as colunas essenciais. */
   .so-largo {
     display: none;
+  }
+
+  /* O que a coluna escondida mostrava, embaixo do nome (ex.: contagem anterior). */
+  .so-estreito {
+    display: inline;
   }
 }
 

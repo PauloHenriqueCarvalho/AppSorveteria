@@ -15,6 +15,7 @@ const CAMINHOS = {
   calendario: 'M4 5h16v16H4zM4 10h16M9 3v4M15 3v4',
   avisos: 'M6 9a6 6 0 1 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9M10 20.5h4',
   configuracao: 'M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1M15 5v4M9 10v4M17 15v4',
+  contagem: 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M8 11l2 2 4-4M8 17h8',
   estoque: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9',
   fornecedor: 'M2 6h12v10H2zM14 10h4l4 4v2h-8M6.5 19.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17.5 19.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
 } as const

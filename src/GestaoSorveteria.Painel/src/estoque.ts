@@ -153,3 +153,24 @@ export function quando(isoUtc: string, agora: Date = new Date()): string {
   }
   return `${diaMesDaLoja.format(data)} ${hora}`
 }
+
+/** Nome da embalagem para a quantidade: 1 ou meia → "caixa"; mais → "caixas" ("unid." não muda). */
+export function nomeDaEmbalagem(unidade: UnidadeCompra, quantidade: number): string {
+  const singular = { Caixa: 'caixa', Balde: 'balde', Unidade: 'unid.', Pacote: 'pacote' }[unidade]
+  return quantidade <= 1 || unidade === 'Unidade' ? singular : `${singular}s`
+}
+
+/** Para títulos e rótulos sem quantidade: "caixas", "baldes", "unid.", "pacotes". */
+export function embalagemNoPlural(unidade: UnidadeCompra): string {
+  return nomeDaEmbalagem(unidade, 2)
+}
+
+/** 2.5 → "2,5"; null → "—". */
+export function formatarEmbalagens(valor: number | null): string {
+  return valor === null ? '—' : String(valor).replace('.', ',')
+}
+
+/** O valor respeita o passo (meia caixa só em caixa)? Evita mandar "1,5 balde" para a API. */
+export function respeitaPasso(valor: number, passo: number): boolean {
+  return Math.abs(valor / passo - Math.round(valor / passo)) < 1e-9
+}

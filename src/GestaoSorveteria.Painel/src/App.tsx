@@ -13,6 +13,8 @@ import ListaAvisos from './paginas/avisos/ListaAvisos.tsx'
 import NovoAviso from './paginas/avisos/NovoAviso.tsx'
 import ResumoDoDia from './paginas/avisos/ResumoDoDia.tsx'
 import Configuracoes from './paginas/configuracoes/Configuracoes.tsx'
+import EditarContagem from './paginas/contagens/EditarContagem.tsx'
+import ListaContagens from './paginas/contagens/ListaContagens.tsx'
 import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
 import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
 import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
@@ -60,6 +62,9 @@ const router = createBrowserRouter([
           { path: 'avisos/novo', element: <NovoAviso /> },
           { path: 'avisos/resumo', element: <ResumoDoDia /> },
           { path: 'avisos/:id', element: <DetalheAviso /> },
+          { path: 'contagens', element: <ListaContagens /> },
+          { path: 'contagens/nova', element: <EditarContagem /> },
+          { path: 'contagens/:id', element: <EditarContagem /> },
           { path: 'estoque', element: <CatalogoEstoque /> },
           { path: 'estoque/importar', element: <ImportarCatalogo /> },
           { path: 'estoque/itens/novo', element: <EditarItemEstoque /> },

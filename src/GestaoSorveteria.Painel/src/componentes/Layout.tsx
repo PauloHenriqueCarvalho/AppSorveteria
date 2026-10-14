@@ -31,6 +31,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     titulo: 'Estoque e compras',
     itens: [
       { para: '/avisos', texto: 'Avisos', icone: 'avisos', noCelular: true, contaAvisos: true },
+      { para: '/contagens', texto: 'Contagem', icone: 'contagem' },
       { para: '/estoque', texto: 'Catálogo', icone: 'estoque' },
       { para: '/fornecedores', texto: 'Fornecedores', icone: 'fornecedor' },
     ],
