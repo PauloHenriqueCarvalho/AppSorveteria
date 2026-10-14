@@ -59,9 +59,24 @@ public sealed class CatalogoEstoqueService
     {
         var grupos = await _estoque.ListarGruposAsync(cancellationToken);
         var itens = await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken);
+        var fornecedores = await _estoque.ListarFornecedoresAsync(cancellationToken);
+
+        // RN-ES-05: véspera do dia de pedido de quem fornece algum item ativo que entra na contagem.
+        var gruposContados = grupos.Where(g => g.EntraNaContagem).Select(g => g.Id).ToHashSet();
+        var fornecedoresContados = itens.Where(i => i.Ativo && gruposContados.Contains(i.GrupoId)).Select(i => i.FornecedorId).ToHashSet();
+        var diasDeContagem = fornecedores
+            .Where(f => f.Ativo && fornecedoresContados.Contains(f.Id))
+            .SelectMany(f => f.DiasPedido)
+            .Select(d => (DayOfWeek)(((int)d + 6) % 7))
+            .Distinct()
+            .Order()
+            .Select(d => d.ToString())
+            .ToList();
+
         return new CatalogoEstoqueAppResponse(
             grupos.Select(g => g.ToDto()).ToList(),
-            itens.Select(i => new ItemEstoqueAppDto(i.Id, i.GrupoId, i.Nome, i.Unidade.ToString(), i.UnidadesPorEmbalagem, i.Ordem, i.Ativo)).ToList());
+            itens.Select(i => new ItemEstoqueAppDto(i.Id, i.GrupoId, i.Nome, i.Unidade.ToString(), i.UnidadesPorEmbalagem, i.Ordem, i.Ativo)).ToList(),
+            diasDeContagem);
     }
 
     // ---------- Fornecedores (RN-PF-01) ----------

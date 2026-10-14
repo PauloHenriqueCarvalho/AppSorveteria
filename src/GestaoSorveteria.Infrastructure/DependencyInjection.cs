@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IComandaRepository, ComandaRepository>();
         services.AddScoped<IEstoqueRepository, EstoqueRepository>();
         services.AddScoped<IAvisoRepository, AvisoRepository>();
+        services.AddScoped<IContagemRepository, ContagemRepository>();
         services.AddScoped<IConfiguracaoLojaRepository, ConfiguracaoLojaRepository>();
 
         services.AddSingleton<IClock, SystemClock>();
