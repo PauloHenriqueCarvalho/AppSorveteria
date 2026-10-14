@@ -117,6 +117,19 @@ public sealed class Produto : Entity
         AtualizadoEm = agora;
     }
 
+    /// <summary>
+    /// O modo do grupo de estoque ligado mudou (ex.: potes voltaram para contagem): marca o produto como alterado para o app
+    /// baixar de novo e saber se pede sabor (RN-PR-06).
+    /// </summary>
+    public void GrupoDeEstoqueMudou(DateTime agoraUtc)
+    {
+        var agora = Guard.Utc(agoraUtc, "a data");
+        if (GrupoEstoqueId is not null)
+        {
+            AtualizadoEm = agora;
+        }
+    }
+
     public static string NormalizarNome(string? nome) => (nome ?? string.Empty).Trim().ToLowerInvariant();
 
     private void Aplicar(string nome, string categoria, decimal preco, bool permiteValorLivre, int ordem)

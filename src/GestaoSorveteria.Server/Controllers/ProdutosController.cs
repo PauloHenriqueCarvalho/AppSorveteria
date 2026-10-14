@@ -67,6 +67,20 @@ public sealed class ProdutosController : ControllerBase
     public async Task<ActionResult<ProdutoDto>> Atualizar(Guid id, SalvarProdutoRequest request, CancellationToken cancellationToken) =>
         Ok(await _produtos.AtualizarAsync(id, request, cancellationToken));
 
+    /// <summary>
+    /// RN-PR-06: liga o produto a um grupo de estoque (grupo nulo = desliga). Grupo de potes faz o app pedir o sabor e a
+    /// venda baixar o saldo (RN-ES-09).
+    /// </summary>
+    [HttpPut("{id:guid}/estoque")]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProdutoDto>> LigarAoEstoque(Guid id, LigarProdutoEstoqueRequest request, CancellationToken cancellationToken) =>
+        Ok(await _produtos.LigarAoEstoqueAsync(id, request, cancellationToken));
+
     [HttpPost("{id:guid}/ativar")]
     [Authorize(Policy = Politicas.Admin)]
     [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]

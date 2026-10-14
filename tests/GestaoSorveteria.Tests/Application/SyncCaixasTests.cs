@@ -27,7 +27,10 @@ public class SyncCaixasTests
         _usuarios.Usuarios.AddRange([atendente, dona]);
         _atendente = atendente.Id;
         _dona = dona.Id;
-        _service = new SyncService(_caixas, _comandas, _usuarios, new ProdutoRepositoryFake(), _uow, new ClockFake());
+        var clock = new ClockFake();
+        var estoque = new EstoqueRepositoryFake();
+        _service = new SyncService(
+            _caixas, _comandas, _usuarios, new ProdutoRepositoryFake(), estoque, SaldosFake.Novo(clock, estoque), _uow, clock);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

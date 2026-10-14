@@ -1,9 +1,11 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 
 namespace GestaoSorveteria.Application.Sync;
@@ -20,6 +22,8 @@ public sealed class SyncService
     private readonly IComandaRepository _comandas;
     private readonly IUsuarioRepository _usuarios;
     private readonly IProdutoRepository _produtos;
+    private readonly IEstoqueRepository _estoque;
+    private readonly SaldoEstoqueService _saldos;
     private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
 
@@ -28,6 +32,8 @@ public sealed class SyncService
         IComandaRepository comandas,
         IUsuarioRepository usuarios,
         IProdutoRepository produtos,
+        IEstoqueRepository estoque,
+        SaldoEstoqueService saldos,
         IUnitOfWork uow,
         IClock clock)
     {
@@ -35,6 +41,8 @@ public sealed class SyncService
         _comandas = comandas;
         _usuarios = usuarios;
         _produtos = produtos;
+        _estoque = estoque;
+        _saldos = saldos;
         _uow = uow;
         _clock = clock;
     }
@@ -58,7 +66,7 @@ public sealed class SyncService
     public Task<SyncResponse> ReceberComandasAsync(SyncComandasRequest request, CancellationToken cancellationToken = default)
     {
         var usuariosConhecidos = new HashSet<Guid>();
-        var produtosConhecidos = new HashSet<Guid>();
+        var produtosConhecidos = new Dictionary<Guid, Produto>();
         return ProcessarLoteAsync(
             request.Comandas,
             "Comanda",
@@ -108,7 +116,7 @@ public sealed class SyncService
     private async Task<string> ReceberComandaAsync(
         ComandaSyncDto dto,
         HashSet<Guid> usuariosConhecidos,
-        HashSet<Guid> produtosConhecidos,
+        Dictionary<Guid, Produto> produtosConhecidos,
         CancellationToken cancellationToken)
     {
         Guard(dto.Id == Guid.Empty, "Comanda sem Id.");
@@ -143,6 +151,15 @@ public sealed class SyncService
             await ExigirProdutoAsync(produtoId, produtosConhecidos, cancellationToken);
         }
 
+        // RN-ES-09: o sabor só fica se existir e for do grupo do produto. Sabor errado (catálogo velho no tablet) não pode
+        // rejeitar a venda — o dinheiro vale mais que o estoque — nem estourar a chave estrangeira e travar a fila: a venda
+        // entra sem sabor (e sem baixa) e a contagem semanal corrige o saldo.
+        var sabores = new Dictionary<Guid, Guid?>();
+        foreach (var item in itens.Where(i => i.ItemEstoqueId is not null))
+        {
+            sabores[item.Id] = await SaborValidoAsync(item, produtosConhecidos, cancellationToken);
+        }
+
         var comanda = Comanda.Remontar(
             caixa!,
             dto.Id,
@@ -153,8 +170,8 @@ public sealed class SyncService
             dto.CriadaEm,
             _clock.UtcNow,
             dto.Observacao,
-            // Sabor dos potes (RN-ES-09) chega com o contrato da Sprint 7; até lá a venda vem sem sabor.
-            itens.Select(i => new DadosItemRecebido(i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal, null)).ToList(),
+            itens.Select(i => new DadosItemRecebido(
+                i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal, sabores.GetValueOrDefault(i.Id))).ToList(),
             dto.Total,
             pagamentos.Select(p => new DadosPagamento(
                 TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco)).ToList(),
@@ -163,7 +180,19 @@ public sealed class SyncService
             dto.MotivoCancelamento);
 
         await _comandas.AdicionarAsync(comanda, cancellationToken);
+        await _saldos.BaixarVendaAsync(comanda, produtosConhecidos, cancellationToken);
         return StatusSync.Aceita;
+    }
+
+    private async Task<Guid?> SaborValidoAsync(ItemComandaSyncDto item, Dictionary<Guid, Produto> produtos, CancellationToken cancellationToken)
+    {
+        if (item.ProdutoId is not { } produtoId || !produtos.TryGetValue(produtoId, out var produto) || produto.GrupoEstoqueId is null)
+        {
+            return null;
+        }
+
+        var sabor = await _estoque.ObterItemAsync(item.ItemEstoqueId!.Value, cancellationToken);
+        return sabor is not null && sabor.GrupoId == produto.GrupoEstoqueId ? sabor.Id : null;
     }
 
     /// <summary>
@@ -327,16 +356,17 @@ public sealed class SyncService
     /// </summary>
     private static bool MesmoInstante(DateTime a, DateTime b) => Math.Abs((a - b).Ticks) < TimeSpan.TicksPerMicrosecond;
 
-    private async Task ExigirProdutoAsync(Guid produtoId, HashSet<Guid> conhecidos, CancellationToken cancellationToken)
+    private async Task ExigirProdutoAsync(Guid produtoId, Dictionary<Guid, Produto> conhecidos, CancellationToken cancellationToken)
     {
-        if (conhecidos.Contains(produtoId))
+        if (conhecidos.ContainsKey(produtoId))
         {
             return;
         }
 
         // RN-SY-06: produto desativado ou com outro preço vale (o item guarda o preço da venda); inexistente, não.
-        Guard(await _produtos.ObterPorIdAsync(produtoId, cancellationToken) is null, $"Produto não encontrado no servidor: {produtoId}.");
-        conhecidos.Add(produtoId);
+        var produto = await _produtos.ObterPorIdAsync(produtoId, cancellationToken);
+        Guard(produto is null, $"Produto não encontrado no servidor: {produtoId}.");
+        conhecidos[produtoId] = produto!;
     }
 
     /// <summary>RN-TD-04: quem fez precisa existir (desativado vale: o histórico dele permanece, RN-US-07).</summary>

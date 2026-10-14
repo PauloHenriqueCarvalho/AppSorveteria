@@ -17,11 +17,21 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class EstoqueController : ControllerBase
 {
     private readonly CatalogoEstoqueService _catalogo;
+    private readonly SaldoEstoqueService _saldos;
 
-    public EstoqueController(CatalogoEstoqueService catalogo)
+    public EstoqueController(CatalogoEstoqueService catalogo, SaldoEstoqueService saldos)
     {
         _catalogo = catalogo;
+        _saldos = saldos;
     }
+
+    /// <summary>RN-ES-08: saldo de cada pote (grupos <c>SaldoPelaVenda</c>) — última contagem + entregas − vendas depois dela.</summary>
+    [HttpGet("saldos")]
+    [ProducesResponseType(typeof(IReadOnlyList<SaldoPoteDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<SaldoPoteDto>>> Saldos(CancellationToken cancellationToken) =>
+        Ok(await _saldos.ListarAsync(cancellationToken));
 
     /// <summary>Fornecedores, grupos (na ordem da planilha) e itens, inclusive os desativados.</summary>
     [HttpGet("catalogo")]

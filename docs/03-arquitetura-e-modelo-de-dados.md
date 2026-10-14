@@ -297,6 +297,7 @@ itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-E
 | GET | `/api/estoque/catalogo` | fornecedores, grupos e itens (com custo) para o painel |
 | POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` (+ `/{id}/ativar`, `/{id}/desativar`) | catálogo (RN-ES-01/02/11, RN-PF-01/09) |
 | POST | `/api/estoque/itens/importar` | CSV da planilha; `simular: true` devolve a prévia sem gravar (RN-ES-10) |
+| GET | `/api/estoque/saldos` | saldo de cada pote (grupos `SaldoPelaVenda`): última contagem + entregas − vendas depois dela, mínimo, vendidos na semana (RN-ES-08) |
 | GET/POST | `/api/estoque/contagens`, `/api/estoque/contagens/nova`, `/{id}` | contagem pelo painel (rascunho e concluir), histórico; a contagem anterior vem como referência (só Admin) |
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
 | PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
@@ -321,6 +322,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
 | POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
 | POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
+| PUT | `/api/produtos/{id}/estoque` | Admin | liga o produto a um grupo de estoque (`grupoEstoqueId` nulo = desliga) e quantas unidades saem por venda (RN-PR-06). Grupo de potes → `pedeSabor` no produto: o app mostra a grade de sabores e manda `itemEstoqueId` na linha da venda (RN-ES-09) |
 | GET | `/api/usuarios`, `/api/usuarios/{id}` | Admin | todos os usuários, inclusive desativados (`UsuarioDto`) |
 | POST | `/api/usuarios` | Admin | cria atendente (PIN) ou Admin (senha) — `CriarUsuarioRequest` (`perfil` = `Atendente`/`Admin`); login repetido → 400 (RN-US-02); senha fora da política → 400 (RN-US-03); 201 |
 | POST | `/api/usuarios/{id}/redefinir-senha` | Admin | `RedefinirSenhaRequest { novaSenha }`; sem pedir a antiga (RN-US-08); vale a política do perfil do usuário |

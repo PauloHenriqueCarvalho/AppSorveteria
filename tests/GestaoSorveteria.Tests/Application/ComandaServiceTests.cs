@@ -19,6 +19,7 @@ public class ComandaServiceTests
     private readonly UsuarioRepositoryFake _usuarios = new();
     private readonly UnitOfWorkFake _uow = new();
     private readonly ClockFake _clock = new() { UtcNow = Venda.AddHours(2) };
+    private readonly MovimentoEstoqueRepositoryFake _movimentos = new();
     private readonly ComandaService _service;
     private readonly Usuario _dona = Cenario.Admin();
     private readonly Caixa _caixa;
@@ -27,7 +28,7 @@ public class ComandaServiceTests
     {
         _usuarios.Usuarios.Add(_dona);
         var consulta = new ComandaConsultaService(_comandas, _usuarios, _clock);
-        _service = new ComandaService(_comandas, _usuarios, _uow, _clock, consulta);
+        _service = new ComandaService(_comandas, _usuarios, _uow, _clock, consulta, SaldosFake.Novo(_clock, movimentos: _movimentos));
         _caixa = Caixa.Abrir(_dona.Id, 100m, Venda.AddHours(-1));
         _caixas.Caixas.Add(_caixa);
     }
@@ -54,6 +55,20 @@ public class ComandaServiceTests
         Assert.Equal(_clock.UtcNow, detalhe.EstornadaEm);
         Assert.Equal(Venda, detalhe.FechadaEm);
         Assert.Equal(1, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Estornar_VendaDePote_DevolveOPoteAoSaldo()
+    {
+        var venda = VendaEmDinheiro();
+        var baixa = GestaoSorveteria.Domain.Estoque.MovimentoEstoque.BaixaVenda(
+            Guid.NewGuid(), 1, venda.Id, venda.Itens.Single().Id, Venda, Venda);
+        _movimentos.Movimentos.Add(baixa);
+
+        await _service.EstornarAsync(venda.Id, new EstornarComandaRequest("Sabor errado"), _dona.Id, TestContext.Current.CancellationToken);
+
+        var estorno = Assert.Single(_movimentos.Movimentos, m => m.Tipo == GestaoSorveteria.Domain.Estoque.TipoMovimentoEstoque.EstornoVenda);
+        Assert.Equal(baixa.ItemComandaId, estorno.ItemComandaId);
     }
 
     [Fact]

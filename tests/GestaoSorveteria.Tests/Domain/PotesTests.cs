@@ -231,6 +231,24 @@ public class PotesTests
         Assert.Throws<DomainException>(() => contagem.Registrar(_chocolate, _pote1L, 1m, contadoEmUtc: Agora.AddMinutes(-1)));
     }
 
+    [Fact]
+    public void AtualizarPeloSaldo_AvisoDePessoa_SoSobeAPrioridade()
+    {
+        var daAna = Aviso.DoItem(_flocos.Id, 3, PrioridadeAviso.Media, "restam 3", Cenario.Atendente, Agora);
+
+        daAna.AtualizarPeloSaldo(0, PrioridadeAviso.Urgente, Agora.AddHours(1));
+        daAna.AtualizarPeloSaldo(2, PrioridadeAviso.Alta, Agora.AddHours(2));
+
+        Assert.Equal(PrioridadeAviso.Urgente, daAna.Prioridade);
+        Assert.Equal(3, daAna.QuantidadeAtual);
+        Assert.Equal(Agora, daAna.AtualizadoEm);
+
+        var doSistema = Aviso.DoItem(_flocos.Id, 2, PrioridadeAviso.Alta, null, null, Agora);
+        doSistema.AtualizarPeloSaldo(0, PrioridadeAviso.Urgente, Agora.AddHours(1));
+        Assert.Equal(0, doSistema.QuantidadeAtual);
+        Assert.Equal(Agora.AddHours(1), doSistema.AtualizadoEm);
+    }
+
     [Theory]
     [InlineData(0, 2, PrioridadeAviso.Urgente)]
     [InlineData(-1, null, PrioridadeAviso.Urgente)]

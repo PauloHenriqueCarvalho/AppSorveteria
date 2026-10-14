@@ -2,6 +2,7 @@ using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 
@@ -18,12 +19,14 @@ public sealed class ProdutoService
     public static readonly TimeSpan MargemSeguranca = TimeSpan.FromMinutes(5);
 
     private readonly IProdutoRepository _produtos;
+    private readonly IEstoqueRepository _estoque;
     private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
 
-    public ProdutoService(IProdutoRepository produtos, IUnitOfWork uow, IClock clock)
+    public ProdutoService(IProdutoRepository produtos, IEstoqueRepository estoque, IUnitOfWork uow, IClock clock)
     {
         _produtos = produtos;
+        _estoque = estoque;
         _uow = uow;
         _clock = clock;
     }
@@ -41,11 +44,12 @@ public sealed class ProdutoService
             ? await _produtos.ListarAsync(somenteAtivos: false, cancellationToken)
             : await _produtos.ListarAlteradosDesdeAsync(ParaUtc(desdeUtc.Value) - MargemSeguranca, cancellationToken);
 
-        return new CatalogoProdutosResponse(geradoEm, produtos.Select(p => p.ToDto()).ToList());
+        var grupos = await GruposAsync(cancellationToken);
+        return new CatalogoProdutosResponse(geradoEm, produtos.Select(p => p.ToDto(grupos)).ToList());
     }
 
     public async Task<ProdutoDto> ObterAsync(Guid id, CancellationToken cancellationToken = default) =>
-        (await CarregarAsync(id, cancellationToken)).ToDto();
+        (await CarregarAsync(id, cancellationToken)).ToDto(await GruposAsync(cancellationToken));
 
     /// <summary>Cadastro pelo painel (RN-PR-01: nome único sem diferenciar maiúsculas).</summary>
     public async Task<ProdutoDto> CriarAsync(SalvarProdutoRequest request, CancellationToken cancellationToken = default)
@@ -56,7 +60,7 @@ public sealed class ProdutoService
         await _produtos.AdicionarAsync(produto, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 
-        return produto.ToDto();
+        return produto.ToDto(await GruposAsync(cancellationToken));
     }
 
     /// <summary>Edição pelo painel. Mudar o preço não mexe nas vendas passadas: o item guarda o preço praticado (RN-PR-04).</summary>
@@ -68,7 +72,7 @@ public sealed class ProdutoService
         produto.Atualizar(request.Nome, request.Categoria, request.Preco, request.PermiteValorLivre, request.Ordem, _clock.UtcNow);
         await _uow.SaveChangesAsync(cancellationToken);
 
-        return produto.ToDto();
+        return produto.ToDto(await GruposAsync(cancellationToken));
     }
 
     public async Task<ProdutoDto> AtivarAsync(Guid id, CancellationToken cancellationToken = default)
@@ -76,7 +80,7 @@ public sealed class ProdutoService
         var produto = await CarregarAsync(id, cancellationToken);
         produto.Ativar(_clock.UtcNow);
         await _uow.SaveChangesAsync(cancellationToken);
-        return produto.ToDto();
+        return produto.ToDto(await GruposAsync(cancellationToken));
     }
 
     /// <summary>RN-PR-03: produto nunca é apagado; desativar é a única forma de tirá-lo do app.</summary>
@@ -85,8 +89,31 @@ public sealed class ProdutoService
         var produto = await CarregarAsync(id, cancellationToken);
         produto.Desativar(_clock.UtcNow);
         await _uow.SaveChangesAsync(cancellationToken);
-        return produto.ToDto();
+        return produto.ToDto(await GruposAsync(cancellationToken));
     }
+
+    /// <summary>
+    /// RN-PR-06: liga o produto a um grupo de estoque (ou desliga, com grupo nulo). Grupo de potes (<c>SaldoPelaVenda</c>) faz
+    /// o app pedir o sabor e a venda baixar o saldo; grupo de insumos (<c>SoAviso</c>) não tem saldo e não liga.
+    /// </summary>
+    public async Task<ProdutoDto> LigarAoEstoqueAsync(Guid id, LigarProdutoEstoqueRequest request, CancellationToken cancellationToken = default)
+    {
+        var produto = await CarregarAsync(id, cancellationToken);
+        if (request.GrupoEstoqueId is { } grupoId)
+        {
+            var grupo = await _estoque.ObterGrupoAsync(grupoId, cancellationToken)
+                ?? throw new DomainException("Grupo de estoque não encontrado.");
+            Exigir.Que(grupo.ModoControle != ModoControle.SoAviso,
+                $"{grupo.Nome} é de insumos (só aviso), sem saldo: não dá para ligar produto de venda a ele.");
+        }
+
+        produto.LigarAoEstoque(request.GrupoEstoqueId, request.UnidadesPorVenda, _clock.UtcNow);
+        await _uow.SaveChangesAsync(cancellationToken);
+        return produto.ToDto(await GruposAsync(cancellationToken));
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, GrupoEstoque>> GruposAsync(CancellationToken cancellationToken) =>
+        (await _estoque.ListarGruposAsync(cancellationToken)).ToDictionary(g => g.Id);
 
     private async Task<Produto> CarregarAsync(Guid id, CancellationToken cancellationToken) =>
         await _produtos.ObterPorIdAsync(id, cancellationToken)

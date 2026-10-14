@@ -2,7 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GestaoSorveteria.Contracts.Produtos;
 
-/// <summary>Produto como o app e o painel enxergam. Inativo vem junto para o app esconder o botão (RN-PR-03).</summary>
+/// <summary>
+/// Produto como o app e o painel enxergam. Inativo vem junto para o app esconder o botão (RN-PR-03).
+/// <paramref name="GrupoEstoqueId"/>/<paramref name="UnidadesPorVenda"/>: RN-PR-06. <paramref name="PedeSabor"/>: o grupo é de
+/// potes (<c>SaldoPelaVenda</c>) — o app mostra a grade de sabores e manda o sabor na venda (RN-ES-09).
+/// </summary>
 public sealed record ProdutoDto(
     Guid Id,
     string Nome,
@@ -11,7 +15,10 @@ public sealed record ProdutoDto(
     bool PermiteValorLivre,
     bool Ativo,
     int Ordem,
-    DateTime AtualizadoEmUtc);
+    DateTime AtualizadoEmUtc,
+    Guid? GrupoEstoqueId = null,
+    int UnidadesPorVenda = 1,
+    bool PedeSabor = false);
 
 /// <summary>
 /// GET /api/produtos?desde=. O app guarda <see cref="GeradoEmUtc"/> e manda de volta em <c>desde</c>
@@ -35,3 +42,12 @@ public sealed record SalvarProdutoRequest(
     bool PermiteValorLivre,
     [Range(0, int.MaxValue, ErrorMessage = "A ordem não pode ser negativa.")]
     int Ordem);
+
+/// <summary>
+/// PUT /api/produtos/{id}/estoque (Admin) — RN-PR-06: liga o produto a um grupo de estoque (ou desliga, com grupo nulo).
+/// Separado do cadastro para quem edita nome e preço não desligar o produto sem querer.
+/// </summary>
+public sealed record LigarProdutoEstoqueRequest(
+    Guid? GrupoEstoqueId,
+    [Range(1, 50, ErrorMessage = "Unidades por venda vai de 1 a 50.")]
+    int UnidadesPorVenda = 1);
