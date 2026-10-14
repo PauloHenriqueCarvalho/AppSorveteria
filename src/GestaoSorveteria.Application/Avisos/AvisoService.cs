@@ -178,8 +178,8 @@ public sealed class AvisoService
         var vendas = await _comandas.ListarFechadasAsync(inicioUtc, fimUtc, cancellationToken);
         var total = Moeda.Arredondar(vendas.Where(c => c.Status == StatusComanda.Fechada).Sum(c => c.Total));
 
-        // RN-ES-08: potes da contagem do dia que ficaram mais de 1 longe do sistema.
-        var diferencas = await _saldos.DiferencasDasContagensAsync(inicioUtc, fimUtc, cancellationToken);
+        // RN-ES-08: potes da última contagem (de ontem ou de hoje) que ficaram mais de 1 longe do sistema.
+        var diferencas = await _saldos.DiferencasDaUltimaContagemAsync(DiaComercial.IntervaloUtc(data.AddDays(-1)).InicioUtc, fimUtc, cancellationToken);
 
         var configuracao = await ConfiguracaoAsync(cancellationToken);
         var texto = MensagensWhatsApp.ResumoDoDia(

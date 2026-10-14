@@ -47,6 +47,7 @@ public static class MensagensWhatsApp
     /// 🔴 Urgente (1): Picolé ao leite Coco preto — acabou
     /// 🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1
     /// 🟡 Média (1): Massa Pistache — 1
+    /// 📋 Potes na contagem de domingo 18/10 (1): Pote 1L Flocos: sistema 6, contado 3
     /// Vendas do dia: R$ 1.284,50
     /// </summary>
     public static string ResumoDoDia(
@@ -56,7 +57,7 @@ public static class MensagensWhatsApp
         IReadOnlyList<LinhaAviso> altas,
         IReadOnlyList<LinhaAviso> medias,
         decimal? totalVendido,
-        IReadOnlyList<LinhaDiferencaContagem>? diferencasDaContagem = null)
+        DiferencasDaContagem? contagem = null)
     {
         var texto = new StringBuilder()
             .Append("Resumo de ").Append(DiasDaSemana[(int)dia.DayOfWeek]).Append(' ')
@@ -71,10 +72,12 @@ public static class MensagensWhatsApp
         Secao(texto, "🟠 Alta", altas);
         Secao(texto, "🟡 Média", medias);
 
-        if (diferencasDaContagem is { Count: > 0 })
+        if (contagem is { Linhas.Count: > 0 })
         {
-            texto.Append("\n📋 Contagem dos potes (").Append(diferencasDaContagem.Count).Append("): ")
-                .AppendJoin(" · ", diferencasDaContagem.Select(d => $"{d.Descricao.Trim()} sistema {d.Sistema}, contado {d.Contado}"));
+            texto.Append("\n📋 Potes na contagem de ").Append(DiasDaSemana[(int)contagem.Dia.DayOfWeek]).Append(' ')
+                .Append(contagem.Dia.ToString("dd/MM", CultureInfo.InvariantCulture))
+                .Append(" (").Append(contagem.Linhas.Count).Append("): ")
+                .AppendJoin(" · ", contagem.Linhas.Select(d => $"{d.Descricao.Trim()}: sistema {d.Sistema}, contado {d.Contado}"));
         }
 
         if (totalVendido is { } total)
@@ -85,8 +88,11 @@ public static class MensagensWhatsApp
         return texto.ToString();
     }
 
-    /// <summary>RN-ES-08: pote em que o contado ficou mais de 1 longe do saldo do sistema ("Pote 1L Flocos sistema 6, contado 3").</summary>
+    /// <summary>RN-ES-08: pote em que o contado ficou mais de 1 longe do saldo do sistema ("Pote 1L Flocos: sistema 6, contado 3").</summary>
     public sealed record LinhaDiferencaContagem(string Descricao, int Sistema, int Contado);
+
+    /// <summary>RN-AV-07: as diferenças da última contagem (do dia da contagem) que vão no resumo.</summary>
+    public sealed record DiferencasDaContagem(DateOnly Dia, IReadOnlyList<LinhaDiferencaContagem> Linhas);
 
     /// <summary>Uma linha do pedido para o texto do fornecedor.</summary>
     public sealed record LinhaPedido(string Grupo, string Item, decimal Embalagens, UnidadeCompra Unidade);

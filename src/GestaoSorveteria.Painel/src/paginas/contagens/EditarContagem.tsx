@@ -140,8 +140,8 @@ function Planilha({ contagem, nova }: { contagem: ContagemDto; nova: boolean }) 
                             <>
                               {' '}
                               <Selo tom="atencao">
-                                {l.contadoUnidades > l.saldoSistemaUnidades ? '+' : '−'}
-                                {Math.abs(l.contadoUnidades - l.saldoSistemaUnidades)} do sistema
+                                {Math.abs(l.contadoUnidades - l.saldoSistemaUnidades)}{' '}
+                                {l.contadoUnidades > l.saldoSistemaUnidades ? 'a mais' : 'a menos'} que o sistema
                               </Selo>
                             </>
                           )}
@@ -153,7 +153,8 @@ function Planilha({ contagem, nova }: { contagem: ContagemDto; nova: boolean }) 
                               · antes {formatarEmbalagens(l.anteriorEmbalagens)}
                             </span>
                           )}
-                          {l.saldoSistemaUnidades !== null && <> · sistema {l.saldoSistemaUnidades}</>}
+                          {/* RN-ES-06: o número do sistema só aparece depois de contar, para não contar "pelo sistema". */}
+                          {l.saldoSistemaUnidades !== null && (concluida || l.contadoUnidades !== null) && <> · sistema {l.saldoSistemaUnidades}</>}
                         </span>
                       </td>
                       <td className="numero so-largo suave">

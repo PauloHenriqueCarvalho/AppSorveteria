@@ -174,7 +174,7 @@ function Formulario({ produto }: { produto?: ProdutoDto }) {
         </button>
       </form>
 
-      {produto && <LigarAoEstoque key={`${produto.id}-${produto.atualizadoEmUtc}`} produto={produto} />}
+      {produto && <LigarAoEstoque key={produto.id} produto={produto} />}
 
       {produto && (
         <div className="cartao formulario">
@@ -211,7 +211,9 @@ function LigarAoEstoque({ produto }: { produto: ProdutoDto }) {
   const [salvo, setSalvo] = useState(false)
 
   const ligar = useMutation({
-    mutationFn: () => ligarProdutoAoEstoque(produto.id, { grupoEstoqueId: grupoId || null, unidadesPorVenda: Number(unidades) }),
+    mutationFn: () =>
+      // Desligado volta para 1: o número só vale com grupo.
+      ligarProdutoAoEstoque(produto.id, { grupoEstoqueId: grupoId || null, unidadesPorVenda: grupoId ? Number(unidades) : 1 }),
     onSuccess: (atualizado) => {
       queryClient.setQueryData([...CHAVE_PRODUTOS, atualizado.id], atualizado)
       void queryClient.invalidateQueries({ queryKey: CHAVE_PRODUTOS, exact: true })

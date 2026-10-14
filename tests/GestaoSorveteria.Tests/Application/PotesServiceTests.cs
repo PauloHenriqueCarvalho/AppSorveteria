@@ -1,3 +1,4 @@
+using GestaoSorveteria.Application.Avisos;
 using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Sync;
@@ -84,16 +85,18 @@ public class PotesServiceTests
     private async Task AbrirCaixa() =>
         await _sync.ReceberCaixasAsync(new SyncCaixasRequest([new CaixaSyncDto(_caixaId, _ana.Id, Abertura, 100m, [])]), Ct);
 
-    private ComandaSyncDto VendaDe(Produto produto, int quantidade, ItemEstoque? sabor, string status = "Fechada")
+    private ComandaSyncDto VendaDe(Produto produto, int quantidade, ItemEstoque? sabor, string status = "Fechada", DateTime? fechadaEm = null)
     {
+        var fechada = fechadaEm ?? Venda.AddMinutes(1);
+        var aberta = fechada.AddMinutes(-1);
         var total = quantidade * produto.Preco;
         var item = new ItemComandaSyncDto(
             Guid.NewGuid(), produto.Id, $"{produto.Nome} · {sabor?.Nome}", quantidade, produto.Preco, total, sabor?.Id);
         return status == "Fechada"
-            ? new ComandaSyncDto(Guid.NewGuid(), _caixaId, _ana.Id, ++_numero, "Balcao", "Fechada", total, Venda, [item],
-                [new PagamentoSyncDto(Guid.NewGuid(), "Pix", total, total, 0m)], FechadaEm: Venda.AddMinutes(1))
-            : new ComandaSyncDto(Guid.NewGuid(), _caixaId, _ana.Id, ++_numero, "Balcao", "Cancelada", total, Venda, [item], [],
-                CanceladaEm: Venda.AddMinutes(1));
+            ? new ComandaSyncDto(Guid.NewGuid(), _caixaId, _ana.Id, ++_numero, "Balcao", "Fechada", total, aberta, [item],
+                [new PagamentoSyncDto(Guid.NewGuid(), "Pix", total, total, 0m)], FechadaEm: fechada)
+            : new ComandaSyncDto(Guid.NewGuid(), _caixaId, _ana.Id, ++_numero, "Balcao", "Cancelada", total, aberta, [item], [],
+                CanceladaEm: fechada);
     }
 
     private async Task<string> Enviar(ComandaSyncDto venda) =>
@@ -255,27 +258,82 @@ public class PotesServiceTests
         Assert.Equal(2, flocos.MinimoUnidades);
     }
 
+    private Contagem ContarPotes(DateTime concluidaEm, params (ItemEstoque Item, int Unidades, DateTime? Em)[] linhas)
+    {
+        var contagem = Contagem.Iniciar(_ana.Id, concluidaEm.AddHours(-2), OrigemContagem.App);
+        foreach (var (item, unidades, em) in linhas)
+        {
+            contagem.Registrar(item, _estoque.Grupos.Single(g => g.Id == item.GrupoId), unidades, contadoEmUtc: em);
+        }
+
+        contagem.Concluir(concluidaEm);
+        _contagens.Contagens.Add(contagem);
+        return contagem;
+    }
+
     [Fact]
-    public async Task DiferencasDasContagens_PoteLongeDoSistema_EntraNoResumoComOSaldoEsperado()
+    public async Task DiferencasDaUltimaContagem_PoteLongeDoSistema_MostraOSaldoEsperadoEODia()
     {
         await AbrirCaixa();
         await Enviar(VendaDe(_pote, 1, _flocos)); // saldo de Flocos: 5 − 1 = 4
-        // Contagem de hoje à noite: Flocos 1 (sistema 4), Chocolate 1 (sistema 1).
-        var hoje = Contagem.Iniciar(_ana.Id, Abertura.AddHours(10), OrigemContagem.App);
-        hoje.Registrar(_flocos, _pote1L, 1m, contadoEmUtc: Abertura.AddHours(10).AddMinutes(5));
-        hoje.Registrar(_chocolate, _pote1L, 1m);
-        hoje.Concluir(Abertura.AddHours(10).AddMinutes(20));
-        _contagens.Contagens.Add(hoje);
+        // Contagem de hoje (segunda 19/10): Flocos 1 (sistema 4), Chocolate 1 (sistema 1).
+        ContarPotes(Abertura.AddHours(10).AddMinutes(20), (_flocos, 1, Abertura.AddHours(10).AddMinutes(5)), (_chocolate, 1, null));
         _clock.UtcNow = Abertura.AddHours(11);
 
-        var diferencas = await _saldos.DiferencasDasContagensAsync(Abertura.AddHours(-12), Abertura.AddHours(12), Ct);
+        var diferencas = await _saldos.DiferencasDaUltimaContagemAsync(Abertura.AddHours(-12), Abertura.AddHours(12), Ct);
 
-        var flocos = Assert.Single(diferencas);
+        Assert.NotNull(diferencas);
+        Assert.Equal(new DateOnly(2026, 10, 19), diferencas.Dia);
+        var flocos = Assert.Single(diferencas.Linhas);
         Assert.Equal("Pote 1L Flocos", flocos.Descricao);
         Assert.Equal(4, flocos.Sistema);
         Assert.Equal(1, flocos.Contado);
         // Depois da contagem, ela é a nova base.
         Assert.Equal(1, await SaldoDe(_flocos));
+    }
+
+    [Fact]
+    public async Task DiferencasDaUltimaContagem_PrimeiraContagemDoPote_NaoAcusaDiferenca()
+    {
+        // Morango nunca foi contado: o sistema ainda não sabe quanto tem, então não há com o que comparar.
+        var morango = ItemEstoque.Criar(_pote1L.Id, _fabrica.Id, "Morango", UnidadeCompra.Unidade, 1, 14m, 3);
+        _estoque.Itens.Add(morango);
+        ContarPotes(Abertura.AddHours(10), (morango, 7, null), (_flocos, 5, null));
+
+        Assert.Null(await _saldos.DiferencasDaUltimaContagemAsync(Abertura.AddHours(-12), Abertura.AddHours(12), Ct));
+    }
+
+    [Fact]
+    public async Task DiferencasDaUltimaContagem_VendaNaHoraDeContarEntraEAVendaDepoisNao()
+    {
+        await AbrirCaixa();
+        var contouFlocos = Abertura.AddHours(2);
+        await Enviar(VendaDe(_pote, 1, _flocos, fechadaEm: contouFlocos));             // mesma hora: já tinha saído
+        await Enviar(VendaDe(_pote, 1, _flocos, fechadaEm: contouFlocos.AddMinutes(10))); // depois de contar: não muda o esperado
+        ContarPotes(Abertura.AddHours(3), (_flocos, 1, contouFlocos), (_chocolate, 1, null));
+
+        var diferencas = await _saldos.DiferencasDaUltimaContagemAsync(Abertura, Abertura.AddHours(12), Ct);
+
+        var flocos = Assert.Single(diferencas!.Linhas);
+        Assert.Equal(4, flocos.Sistema);
+        Assert.Equal(0, await SaldoDe(_flocos)); // 1 contado − a venda de depois
+    }
+
+    [Fact]
+    public async Task ResumoDoDia_ContagemDosPotesDeOntemANoite_EntraComODiaDaContagem()
+    {
+        await AbrirCaixa();
+        await Enviar(VendaDe(_pote, 1, _flocos)); // saldo de Flocos: 4
+        // Segunda 19/10 às 22h em Brasília (terça 01h UTC) contou os potes; terça de manhã contou só os picolés.
+        ContarPotes(Abertura.AddHours(13), (_flocos, 1, null), (_chocolate, 1, null));
+        ContarPotes(Abertura.AddHours(24), (_limao, 2, null));
+        _clock.UtcNow = Abertura.AddHours(25); // terça 20/10, 10h
+        var avisos = new AvisoService(
+            _avisos, _estoque, _usuarios, new ConfiguracaoLojaRepositoryFake(), _comandas, _saldos, _uow, _clock);
+
+        var resumo = await avisos.ResumoDoDiaAsync(null, Ct);
+
+        Assert.Contains("\n📋 Potes na contagem de segunda 19/10 (1): Pote 1L Flocos: sistema 4, contado 1", resumo.Texto);
     }
 
     [Fact]

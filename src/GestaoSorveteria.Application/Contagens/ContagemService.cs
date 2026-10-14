@@ -239,7 +239,8 @@ public sealed class ContagemService
     private async Task<ContagemDto> MontarAsync(Contagem contagem, CancellationToken cancellationToken)
     {
         var catalogo = await CatalogoAsync(cancellationToken);
-        var anteriores = await _contagens.UltimaContagemPorItemAsync(contagem.ConcluidaEm ?? contagem.IniciadaEm, cancellationToken);
+        // Referência e saldo esperado com o mesmo corte: as contagens concluídas antes desta (aberta: até agora).
+        var anteriores = await _contagens.UltimaContagemPorItemAsync(contagem.ConcluidaEm ?? _clock.UtcNow, cancellationToken);
         var nomes = await NomesDosUsuariosAsync(cancellationToken);
         var registradas = contagem.Itens.ToDictionary(i => i.ItemEstoqueId);
         // Potes: o saldo que o sistema esperava, para conferir (RN-ES-08) — calculado agora, não guardado.
@@ -248,7 +249,7 @@ public sealed class ContagemService
                 && (i.Ativo || registradas.ContainsKey(i.Id)))
             .Select(i => i.Id)
             .ToList();
-        var esperados = await _saldos.SaldoEsperadoNaContagemAsync(contagem, potes, cancellationToken);
+        var esperados = await _saldos.SaldoEsperadoNaContagemAsync(contagem, potes, anteriores, cancellationToken);
 
         // Linhas: todo item ativo que entra na contagem + os que já estão na contagem (mesmo que desativados depois).
         var linhas = catalogo.Itens.Values

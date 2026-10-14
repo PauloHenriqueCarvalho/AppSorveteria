@@ -173,7 +173,7 @@ public class ContagemServiceTests
     }
 
     [Fact]
-    public async Task Obter_PoteComSaldoPelaVenda_MostraOSaldoQueOSistemaEsperava()
+    public async Task Modelo_PoteComSaldoPelaVenda_MostraOSaldoQueOSistemaEsperava()
     {
         var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);
         var morango = ItemEstoque.Criar(potes.Id, _limao.FornecedorId, "Morango", UnidadeCompra.Unidade, 1, 14m, 1);
@@ -188,6 +188,20 @@ public class ContagemServiceTests
 
         Assert.Equal(6, nova.Linhas.Single(l => l.ItemEstoqueId == morango.Id).SaldoSistemaUnidades);
         Assert.Null(nova.Linhas.Single(l => l.ItemEstoqueId == _limao.Id).SaldoSistemaUnidades); // picolé vai pela contagem
+    }
+
+    [Fact]
+    public async Task Modelo_PoteNuncaContado_NaoTemSaldoDoSistema()
+    {
+        var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);
+        var morango = ItemEstoque.Criar(potes.Id, _limao.FornecedorId, "Morango", UnidadeCompra.Unidade, 1, 14m, 1);
+        _estoque.Grupos.Add(potes);
+        _estoque.Itens.Add(morango);
+
+        var nova = await _service.ModeloAsync(_ana.Id, Ct);
+
+        // RN-ES-08: o saldo só vale depois da primeira contagem; sem ela, nada de "sistema 0".
+        Assert.Null(nova.Linhas.Single(l => l.ItemEstoqueId == morango.Id).SaldoSistemaUnidades);
     }
 
     [Fact]
