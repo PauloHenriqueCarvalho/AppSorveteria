@@ -62,17 +62,25 @@ public sealed record CatalogoEstoqueResponse(
     IReadOnlyList<GrupoEstoqueDto> Grupos,
     IReadOnlyList<ItemEstoqueDto> Itens);
 
-/// <summary>POST /api/estoque/itens/importar — conteúdo do CSV no formato de docs/fase2/catalogo-inicial.csv.</summary>
-public sealed record ImportarCatalogoRequest(string Conteudo);
+/// <summary>
+/// POST /api/estoque/itens/importar — conteúdo do CSV no formato de docs/fase2/catalogo-inicial.csv (RN-ES-10).
+/// <paramref name="Simular"/> = true devolve o mesmo resumo sem gravar nada: o painel mostra a prévia e a dona confirma.
+/// </summary>
+public sealed record ImportarCatalogoRequest(string Conteudo, bool Simular = false);
 
-/// <summary>Resultado por linha: o que foi criado, atualizado e o que ficou de fora (com o motivo). Reimportar não duplica.</summary>
+/// <summary>
+/// O que a importação criou (ou criaria, na simulação). Item que já está no catálogo é mantido como está;
+/// se a planilha traz outro custo, embalagem ou fornecedor, a diferença aparece em <paramref name="Avisos"/>.
+/// Linha com problema fica de fora e aparece em <paramref name="Erros"/>; as outras entram.
+/// </summary>
 public sealed record ImportarCatalogoResponse(
-    int FornecedoresCriados,
-    int GruposCriados,
-    int ItensCriados,
-    int ItensAtualizados,
-    int ItensSemMudanca,
-    IReadOnlyList<ErroImportacaoDto> Erros);
+    bool Simulacao,
+    IReadOnlyList<string> FornecedoresNovos,
+    IReadOnlyList<string> GruposNovos,
+    int ItensNovos,
+    int ItensJaCadastrados,
+    IReadOnlyList<LinhaImportacaoDto> Avisos,
+    IReadOnlyList<LinhaImportacaoDto> Erros);
 
-/// <summary><paramref name="Linha"/> conta a partir de 1, com o cabeçalho na linha 1 (como no Excel).</summary>
-public sealed record ErroImportacaoDto(int Linha, string Motivo);
+/// <summary><paramref name="Linha"/> é a que o Excel mostra, com o cabeçalho na linha 1.</summary>
+public sealed record LinhaImportacaoDto(int Linha, string Mensagem);

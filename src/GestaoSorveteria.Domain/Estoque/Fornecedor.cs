@@ -68,22 +68,24 @@ public sealed class Fornecedor : Entity
         FormaEnvioPedido envio,
         bool mostrarPrecos)
     {
-        Nome = Guard.Texto(nome, "o nome do fornecedor", 2, 80);
-        NomeNormalizado = Nome.ToLowerInvariant();
-        WhatsApp = NormalizarWhatsApp(whatsApp);
+        // Valida tudo antes de mudar qualquer campo: um erro não deixa o fornecedor alterado pela metade.
+        var nomeValido = NomeEstoque.Limpar(Guard.Texto(nome, "o nome do fornecedor", 2, 80));
+        var whatsAppValido = NormalizarWhatsApp(whatsApp);
 
         var dias = diasPedido.Distinct().Order().ToList();
         Guard.Contra(dias.Count == 0, "Escolha pelo menos um dia da semana para o pedido.");
         Guard.Contra(dias.Any(d => !Enum.IsDefined(d)), "Dia da semana inválido.");
-        _diasPedido = dias;
-
         Guard.Contra(prazoEntregaDias < 0 || prazoEntregaDias > PrazoMaximoDias,
             $"O prazo de entrega deve ser de 0 a {PrazoMaximoDias} dias.");
-        PrazoEntregaDias = prazoEntregaDias;
-
         Guard.Contra(!Enum.IsDefined(envio), "Forma de envio do pedido inválida.");
-        Guard.Contra(envio is FormaEnvioPedido.WhatsApp or FormaEnvioPedido.Ambos && WhatsApp is null,
+        Guard.Contra(envio is FormaEnvioPedido.WhatsApp or FormaEnvioPedido.Ambos && whatsAppValido is null,
             "Para mandar o pedido pelo WhatsApp, informe o número do fornecedor.");
+
+        Nome = nomeValido;
+        NomeNormalizado = NomeEstoque.Normalizar(nomeValido);
+        WhatsApp = whatsAppValido;
+        _diasPedido = dias;
+        PrazoEntregaDias = prazoEntregaDias;
         Envio = envio;
         AceitaMeiaCaixa = aceitaMeiaCaixa;
         MostrarPrecos = mostrarPrecos;

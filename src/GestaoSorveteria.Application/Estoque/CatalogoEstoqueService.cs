@@ -16,8 +16,11 @@ public sealed class CatalogoEstoqueService
     /// <summary>Docs/10 §3, dúvida 1: fábrica pede uma vez por semana e entrega em 2 dias. A dona ajusta no painel.</summary>
     public const int PrazoPadraoDias = 2;
 
-    /// <summary>Docs/10 §3, dúvida 7: mínimo de 2 unidades para cada pote.</summary>
+    /// <summary>Docs/10 §3, dúvida 7: mínimo de 2 unidades para cada pote (na importação e no item novo sem mínimo informado).</summary>
     public const int MinimoPadraoPotes = 2;
+
+    /// <summary>Dia de pedido do fornecedor que nasce pela importação, até a dona escolher o dela (docs/10 §3, dúvida 1).</summary>
+    public const DayOfWeek DiaPedidoPadrao = DayOfWeek.Monday;
 
     public const int LinhasMaximasImportacao = 2000;
 
@@ -157,7 +160,7 @@ public sealed class CatalogoEstoqueService
             request.CustoEmbalagem,
             request.Ordem,
             request.EstoqueAlvoEmbalagens,
-            request.MinimoUnidades);
+            request.MinimoUnidades ?? (EhGrupoDePotes(grupo) ? MinimoPadraoPotes : null));
 
         await _estoque.AdicionarItemAsync(item, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
@@ -192,20 +195,20 @@ public sealed class CatalogoEstoqueService
     public Task<ItemEstoqueDto> DesativarItemAsync(Guid id, CancellationToken cancellationToken = default) =>
         AlterarSituacaoDoItemAsync(id, ativo: false, cancellationToken);
 
-    // ---------- Importação da planilha (docs/fase2/catalogo-inicial.csv) ----------
+    // ---------- Importação da planilha (docs/fase2/catalogo-inicial.csv, RN-ES-10) ----------
 
     /// <summary>
-    /// Importa o catálogo no formato de <c>docs/fase2/catalogo-inicial.csv</c>. Pode ser repetida sem duplicar nada:
-    /// grupo e fornecedor são achados pelo nome; item, por grupo + sabor (RN-ES-01). Item que já existe recebe unidade,
-    /// embalagem, custo e fornecedor da planilha e mantém o que a dona ajustou no painel (ordem, alvo, mínimo, ativo).
-    /// Grupo novo: "Pote…" vira <see cref="ModoControle.SaldoPelaVenda"/> (teste dos potes), o resto <see cref="ModoControle.Contagem"/>.
-    /// Linha com problema fica de fora com o motivo; as outras entram.
+    /// RN-ES-10. Importa o catálogo no formato de <c>docs/fase2/catalogo-inicial.csv</c> criando só o que falta:
+    /// fornecedor e grupo são achados pelo nome, item por grupo + sabor (RN-ES-01). O que já está no catálogo nunca é alterado
+    /// (o painel é quem manda depois da primeira carga); a diferença vira aviso na linha. Reimportar não duplica.
+    /// Fornecedor novo nasce com os padrões de docs/10 §3; grupo novo nasce em <see cref="ModoControle.Contagem"/>
+    /// (os potes passam para saldo pela venda quando a venda com sabor chegar, Sprint 7). Linha com problema fica de fora
+    /// com o motivo e não deixa nada criado pela metade. Com <see cref="ImportarCatalogoRequest.Simular"/>, nada é gravado.
     /// </summary>
     public async Task<ImportarCatalogoResponse> ImportarAsync(ImportarCatalogoRequest request, CancellationToken cancellationToken = default)
     {
         var linhas = LeitorCsv.Ler(request.Conteudo);
-        var cabecalho = linhas[0];
-        var coluna = MapearColunas(cabecalho);
+        var coluna = MapearColunas(linhas[0]);
         var dados = linhas.Skip(1).ToList();
         Exigir.Que(dados.Count > 0, "O arquivo só tem o cabeçalho; nenhum item para importar.");
         Exigir.Que(dados.Count <= LinhasMaximasImportacao,
@@ -215,15 +218,18 @@ public sealed class CatalogoEstoqueService
         var grupos = (await _estoque.ListarGruposAsync(cancellationToken)).ToDictionary(g => g.NomeNormalizado);
         var itens = (await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken))
             .ToDictionary(i => (i.GrupoId, i.NomeNormalizado));
+        var fornecedorPorId = fornecedores.Values.ToDictionary(f => f.Id);
 
         var proximaOrdemGrupo = grupos.Count == 0 ? 1 : grupos.Values.Max(g => g.Ordem) + 1;
-        var proximaOrdemItem = itens.Values
-            .GroupBy(i => i.GrupoId)
-            .ToDictionary(g => g.Key, g => g.Max(i => i.Ordem) + 1);
-        var vistosNoArquivo = new Dictionary<(string Grupo, string Item), int>();
+        var proximaOrdemItem = itens.Values.GroupBy(i => i.GrupoId).ToDictionary(g => g.Key, g => g.Max(i => i.Ordem) + 1);
+        var linhaDoItem = new Dictionary<(string Grupo, string Item), int>();
 
-        int fornecedoresCriados = 0, gruposCriados = 0, criados = 0, atualizados = 0, semMudanca = 0;
-        var erros = new List<ErroImportacaoDto>();
+        var fornecedoresNovos = new List<Fornecedor>();
+        var gruposNovos = new List<GrupoEstoque>();
+        var itensNovos = new List<ItemEstoque>();
+        var jaCadastrados = 0;
+        var avisos = new List<LinhaImportacaoDto>();
+        var erros = new List<LinhaImportacaoDto>();
 
         foreach (var linha in dados)
         {
@@ -236,96 +242,148 @@ public sealed class CatalogoEstoqueService
                 var porEmbalagem = LerInteiro(Campo(linha, coluna, "unidades_por_embalagem"), "Unidades por embalagem");
                 var custo = LerDinheiro(Campo(linha, coluna, "custo_embalagem"));
 
-                var chaveArquivo = (categoria.ToLowerInvariant(), sabor.ToLowerInvariant());
-                if (vistosNoArquivo.TryGetValue(chaveArquivo, out var primeira))
+                var chave = (NomeEstoque.Normalizar(categoria), NomeEstoque.Normalizar(sabor));
+                if (linhaDoItem.TryGetValue(chave, out var primeira))
                 {
                     throw new DomainException($"{sabor} ({categoria}) repete a linha {primeira}.");
                 }
 
-                // Valida o item antes de criar fornecedor ou grupo: linha errada não deixa cadastro pela metade.
-                ItemEstoque.Criar(Guid.NewGuid(), Guid.NewGuid(), sabor, unidade, porEmbalagem, custo, 0);
-                vistosNoArquivo[chaveArquivo] = linha.Numero;
+                grupos.TryGetValue(chave.Item1, out var grupo);
+                fornecedores.TryGetValue(NomeEstoque.Normalizar(nomeFornecedor), out var fornecedor);
 
-                if (!fornecedores.TryGetValue(nomeFornecedor.ToLowerInvariant(), out var fornecedor))
+                if (grupo is not null && itens.TryGetValue((grupo.Id, chave.Item2), out var existente))
                 {
-                    fornecedor = FornecedorPadrao(nomeFornecedor);
-                    await _estoque.AdicionarFornecedorAsync(fornecedor, cancellationToken);
-                    fornecedores[fornecedor.NomeNormalizado] = fornecedor;
-                    fornecedoresCriados++;
-                }
-                else if (!fornecedor.Ativo)
-                {
-                    throw new DomainException($"{fornecedor.Nome} está desativado. Ative o fornecedor no painel e importe de novo.");
-                }
-
-                if (!grupos.TryGetValue(categoria.ToLowerInvariant(), out var grupo))
-                {
-                    grupo = GrupoEstoque.Criar(categoria, ModoPadrao(categoria), proximaOrdemGrupo++);
-                    await _estoque.AdicionarGrupoAsync(grupo, cancellationToken);
-                    grupos[grupo.NomeNormalizado] = grupo;
-                    gruposCriados++;
-                }
-
-                if (itens.TryGetValue((grupo.Id, sabor.ToLowerInvariant()), out var existente))
-                {
-                    var mudou = existente.Nome != sabor || existente.FornecedorId != fornecedor.Id || existente.Unidade != unidade
-                        || existente.UnidadesPorEmbalagem != porEmbalagem || existente.CustoEmbalagem != custo;
-                    if (mudou)
+                    // Já cadastrado: o catálogo manda. Só avisa o que a planilha traz de diferente.
+                    var diferencas = Diferencas(existente, unidade, porEmbalagem, custo, nomeFornecedor, fornecedorPorId);
+                    if (diferencas.Count > 0)
                     {
-                        existente.Atualizar(fornecedor.Id, sabor, unidade, porEmbalagem, custo, existente.Ordem,
-                            existente.EstoqueAlvoEmbalagens, existente.MinimoUnidades);
-                        atualizados++;
-                    }
-                    else
-                    {
-                        semMudanca++;
+                        avisos.Add(new LinhaImportacaoDto(linha.Numero,
+                            $"{existente.Nome} ({grupo.Nome}) já está no catálogo e foi mantido. Na planilha: {string.Join("; ", diferencas)}."));
                     }
 
+                    jaCadastrados++;
+                    linhaDoItem[chave] = linha.Numero;
                     continue;
                 }
 
-                var ordem = proximaOrdemItem.GetValueOrDefault(grupo.Id, 1);
-                proximaOrdemItem[grupo.Id] = ordem + 1;
+                Exigir.Que(fornecedor is null || fornecedor.Ativo,
+                    $"{fornecedor?.Nome} está desativado. Ative o fornecedor no painel ou troque o fornecedor na planilha.");
+
+                // Monta fornecedor, grupo e item sem registrar nada; só registra se a linha inteira for válida.
+                var fornecedorNovo = fornecedor is null ? FornecedorPadrao(nomeFornecedor) : null;
+                var grupoNovo = grupo is null ? GrupoEstoque.Criar(categoria, ModoControle.Contagem, proximaOrdemGrupo) : null;
+                var grupoDaLinha = grupo ?? grupoNovo!;
+                var ordem = proximaOrdemItem.GetValueOrDefault(grupoDaLinha.Id, 1);
                 var item = ItemEstoque.Criar(
-                    grupo.Id,
-                    fornecedor.Id,
+                    grupoDaLinha.Id,
+                    (fornecedor ?? fornecedorNovo!).Id,
                     sabor,
                     unidade,
                     porEmbalagem,
                     custo,
                     ordem,
-                    minimoUnidades: grupo.ModoControle == ModoControle.SaldoPelaVenda ? MinimoPadraoPotes : null);
-                await _estoque.AdicionarItemAsync(item, cancellationToken);
-                itens[(grupo.Id, item.NomeNormalizado)] = item;
-                criados++;
+                    minimoUnidades: EhGrupoDePotes(grupoDaLinha) ? MinimoPadraoPotes : null);
+
+                if (fornecedorNovo is not null)
+                {
+                    fornecedoresNovos.Add(fornecedorNovo);
+                    fornecedores[fornecedorNovo.NomeNormalizado] = fornecedorNovo;
+                    fornecedorPorId[fornecedorNovo.Id] = fornecedorNovo;
+                }
+
+                if (grupoNovo is not null)
+                {
+                    gruposNovos.Add(grupoNovo);
+                    grupos[grupoNovo.NomeNormalizado] = grupoNovo;
+                    proximaOrdemGrupo++;
+                }
+
+                proximaOrdemItem[grupoDaLinha.Id] = ordem + 1;
+                itensNovos.Add(item);
+                itens[(grupoDaLinha.Id, item.NomeNormalizado)] = item;
+                linhaDoItem[chave] = linha.Numero;
             }
             catch (DomainException ex)
             {
-                erros.Add(new ErroImportacaoDto(linha.Numero, ex.Message));
+                erros.Add(new LinhaImportacaoDto(linha.Numero, ex.Message));
             }
         }
 
-        if (fornecedoresCriados + gruposCriados + criados + atualizados > 0)
+        if (!request.Simular && itensNovos.Count > 0)
         {
+            foreach (var fornecedor in fornecedoresNovos)
+            {
+                await _estoque.AdicionarFornecedorAsync(fornecedor, cancellationToken);
+            }
+
+            foreach (var grupo in gruposNovos)
+            {
+                await _estoque.AdicionarGrupoAsync(grupo, cancellationToken);
+            }
+
+            foreach (var item in itensNovos)
+            {
+                await _estoque.AdicionarItemAsync(item, cancellationToken);
+            }
+
             await _uow.SaveChangesAsync(cancellationToken);
         }
 
-        return new ImportarCatalogoResponse(fornecedoresCriados, gruposCriados, criados, atualizados, semMudanca, erros);
+        return new ImportarCatalogoResponse(
+            request.Simular,
+            fornecedoresNovos.Select(f => f.Nome).ToList(),
+            gruposNovos.Select(g => g.Nome).ToList(),
+            itensNovos.Count,
+            jaCadastrados,
+            avisos,
+            erros);
     }
+
+    /// <summary>O que a planilha traz diferente do item já cadastrado, em texto para a dona.</summary>
+    private static List<string> Diferencas(
+        ItemEstoque item, UnidadeCompra unidade, int porEmbalagem, decimal custo, string nomeFornecedor,
+        Dictionary<Guid, Fornecedor> fornecedorPorId)
+    {
+        var diferencas = new List<string>();
+        if (item.Unidade != unidade || item.UnidadesPorEmbalagem != porEmbalagem)
+        {
+            diferencas.Add($"embalagem {Embalagem(unidade, porEmbalagem)} (catálogo: {Embalagem(item.Unidade, item.UnidadesPorEmbalagem)})");
+        }
+
+        if (item.CustoEmbalagem != custo)
+        {
+            diferencas.Add($"custo R$ {custo:N2} (catálogo: R$ {item.CustoEmbalagem:N2})");
+        }
+
+        var atual = fornecedorPorId.GetValueOrDefault(item.FornecedorId);
+        if (atual is not null && atual.NomeNormalizado != NomeEstoque.Normalizar(nomeFornecedor))
+        {
+            diferencas.Add($"fornecedor {nomeFornecedor} (catálogo: {atual.Nome})");
+        }
+
+        return diferencas;
+    }
+
+    private static string Embalagem(UnidadeCompra unidade, int porEmbalagem) =>
+        porEmbalagem == 1 ? unidade.ToString().ToLowerInvariant() : $"{unidade.ToString().ToLowerInvariant()} com {porEmbalagem}";
 
     /// <summary>Fornecedor que aparece pela primeira vez na planilha. Padrões de docs/10 §3; a dona confere no painel.</summary>
     private static Fornecedor FornecedorPadrao(string nome) =>
         Fornecedor.Criar(
             nome,
             whatsApp: null,
-            diasPedido: [DayOfWeek.Monday],
+            diasPedido: [DiaPedidoPadrao],
             prazoEntregaDias: PrazoPadraoDias,
             aceitaMeiaCaixa: false,
             envio: FormaEnvioPedido.Impresso,
             mostrarPrecos: true);
 
-    private static ModoControle ModoPadrao(string categoria) =>
-        categoria.StartsWith("pote", StringComparison.OrdinalIgnoreCase) ? ModoControle.SaldoPelaVenda : ModoControle.Contagem;
+    /// <summary>
+    /// Potes ganham o mínimo padrão (docs/10 §3, dúvida 7). Enquanto a venda com sabor não chega (Sprint 7) os potes ficam na
+    /// contagem, então o grupo é reconhecido também pelo nome ("Pote 1L", "Pote de açaí").
+    /// </summary>
+    private static bool EhGrupoDePotes(GrupoEstoque grupo) =>
+        grupo.ModoControle == ModoControle.SaldoPelaVenda || grupo.NomeNormalizado.StartsWith("pote", StringComparison.Ordinal);
 
     private static Dictionary<string, int> MapearColunas(LeitorCsv.Linha cabecalho)
     {
@@ -344,19 +402,12 @@ public sealed class CatalogoEstoqueService
     private static string Campo(LeitorCsv.Linha linha, Dictionary<string, int> coluna, string nome) =>
         coluna[nome] < linha.Campos.Count ? linha.Campos[coluna[nome]] : string.Empty;
 
-    private static int LerInteiro(string texto, string campo)
-    {
-        var valor = LeitorCsv.LerDecimal(texto);
-        if (valor is null || valor != decimal.Truncate(valor.Value) || valor < int.MinValue || valor > int.MaxValue)
-        {
-            throw new DomainException($"{campo} deve ser um número inteiro (veio \"{texto}\").");
-        }
-
-        return (int)valor.Value;
-    }
+    private static int LerInteiro(string texto, string campo) =>
+        LeitorCsv.LerInteiro(texto) ?? throw new DomainException($"{campo} deve ser um número inteiro, sem ponto nem vírgula (veio \"{texto}\").");
 
     private static decimal LerDinheiro(string texto) =>
-        LeitorCsv.LerDecimal(texto) ?? throw new DomainException($"Custo da embalagem inválido: \"{texto}\". Use, por exemplo, 25,20.");
+        LeitorCsv.LerDecimal(texto)
+        ?? throw new DomainException($"Custo da embalagem inválido: \"{texto}\". Use vírgula nos centavos, ex.: 25,20 ou 1.200,00.");
 
     private static List<DayOfWeek> LerDias(IReadOnlyList<string>? dias) =>
         (dias ?? []).Select(d => TextoEnum.Converter<DayOfWeek>(d, "Dia da semana")).ToList();
@@ -364,8 +415,12 @@ public sealed class CatalogoEstoqueService
     private async Task<ItemEstoqueDto> AlterarSituacaoDoItemAsync(Guid id, bool ativo, CancellationToken cancellationToken)
     {
         var item = await CarregarItemAsync(id, cancellationToken);
+        var fornecedor = await _estoque.ObterFornecedorAsync(item.FornecedorId, cancellationToken);
         if (ativo)
         {
+            // Mesmo motivo do DesativarFornecedorAsync: item ativo de fornecedor desativado sumiria do pedido sem aviso.
+            Exigir.Que(fornecedor is null || fornecedor.Ativo,
+                $"{fornecedor?.Nome} está desativado. Ative o fornecedor ou troque o fornecedor do item antes.");
             item.Ativar();
         }
         else
@@ -374,9 +429,7 @@ public sealed class CatalogoEstoqueService
         }
 
         await _uow.SaveChangesAsync(cancellationToken);
-        return item.ToDto(
-            await _estoque.ObterGrupoAsync(item.GrupoId, cancellationToken),
-            await _estoque.ObterFornecedorAsync(item.FornecedorId, cancellationToken));
+        return item.ToDto(await _estoque.ObterGrupoAsync(item.GrupoId, cancellationToken), fornecedor);
     }
 
     private async Task<Fornecedor> CarregarFornecedorAsync(Guid id, CancellationToken cancellationToken) =>
@@ -403,14 +456,14 @@ public sealed class CatalogoEstoqueService
 
     private async Task GarantirNomeDeFornecedorLivreAsync(string? nome, Guid? ignorarId, CancellationToken cancellationToken)
     {
-        var normalizado = (nome ?? string.Empty).Trim().ToLowerInvariant();
+        var normalizado = NomeEstoque.Normalizar(nome);
         var fornecedores = await _estoque.ListarFornecedoresAsync(cancellationToken);
         Exigir.Que(!fornecedores.Any(f => f.NomeNormalizado == normalizado && f.Id != ignorarId), "Já existe um fornecedor com esse nome.");
     }
 
     private async Task GarantirNomeDeGrupoLivreAsync(string? nome, Guid? ignorarId, CancellationToken cancellationToken)
     {
-        var normalizado = (nome ?? string.Empty).Trim().ToLowerInvariant();
+        var normalizado = NomeEstoque.Normalizar(nome);
         var grupos = await _estoque.ListarGruposAsync(cancellationToken);
         Exigir.Que(!grupos.Any(g => g.NomeNormalizado == normalizado && g.Id != ignorarId), "Já existe um grupo com esse nome.");
     }
@@ -418,7 +471,7 @@ public sealed class CatalogoEstoqueService
     private async Task GarantirNomeDeItemLivreAsync(GrupoEstoque grupo, string? nome, Guid? ignorarId, CancellationToken cancellationToken)
     {
         // RN-ES-01. O índice único (grupo_id, nome_normalizado) segura a corrida (vira 409); aqui é a mensagem amigável.
-        var normalizado = (nome ?? string.Empty).Trim().ToLowerInvariant();
+        var normalizado = NomeEstoque.Normalizar(nome);
         if (await _estoque.ExisteItemComNomeAsync(grupo.Id, normalizado, ignorarId, cancellationToken))
         {
             throw new DomainException($"Já existe {nome?.Trim()} em {grupo.Nome}.");

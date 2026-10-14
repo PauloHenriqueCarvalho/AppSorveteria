@@ -49,24 +49,24 @@ public class CatalogoEstoqueServiceTests
     private static SalvarFornecedorRequest FornecedorRequest(string nome = "Descartáveis Silva", params string[] dias) =>
         new(nome, "(11) 98765-4321", dias.Length == 0 ? ["Thursday"] : dias, 3, false, "WhatsApp", false);
 
-    // ---------- Importação da planilha ----------
+    // ---------- Importação da planilha (RN-ES-10) ----------
 
     [Fact]
-    public async Task Importar_CatalogoDaPlanilha_CriaOs123ItensNos11GruposComOsModosCertos()
+    public async Task Importar_CatalogoDaPlanilha_CriaOs123ItensNos11Grupos()
     {
         var resultado = await _service.ImportarAsync(new ImportarCatalogoRequest(LerCatalogoInicial()), Ct);
 
         Assert.Empty(resultado.Erros);
-        Assert.Equal(1, resultado.FornecedoresCriados);
-        Assert.Equal(11, resultado.GruposCriados);
-        Assert.Equal(123, resultado.ItensCriados);
+        Assert.Empty(resultado.Avisos);
+        Assert.False(resultado.Simulacao);
+        Assert.Equal(new[] { "Fornecedor principal" }, resultado.FornecedoresNovos.ToArray());
+        Assert.Equal(11, resultado.GruposNovos.Count);
+        Assert.Equal(123, resultado.ItensNovos);
+        Assert.Equal(123, _estoque.Itens.Count);
         Assert.Equal(1, _uow.Confirmacoes);
 
-        // RN-ES-02: potes em teste de saldo pela venda; o resto na contagem semanal.
-        Assert.Equal(ModoControle.Contagem, _estoque.Grupos.Single(g => g.Nome == "Picolé de fruta").ModoControle);
-        Assert.Equal(ModoControle.Contagem, _estoque.Grupos.Single(g => g.Nome == "Massa (balde)").ModoControle);
-        Assert.Equal(ModoControle.SaldoPelaVenda, _estoque.Grupos.Single(g => g.Nome == "Pote 1L").ModoControle);
-        Assert.Equal(ModoControle.SaldoPelaVenda, _estoque.Grupos.Single(g => g.Nome == "Pote de açaí").ModoControle);
+        // Potes começam na contagem: a venda com sabor (saldo pela venda) só chega na Sprint 7.
+        Assert.All(_estoque.Grupos, g => Assert.Equal(ModoControle.Contagem, g.ModoControle));
 
         // Ordem da planilha: o primeiro grupo e o primeiro sabor dela vêm primeiro.
         var primeiroGrupo = _estoque.Grupos.OrderBy(g => g.Ordem).First();
@@ -74,14 +74,14 @@ public class CatalogoEstoqueServiceTests
         Assert.Equal("Limão", _estoque.Itens.Where(i => i.GrupoId == primeiroGrupo.Id).OrderBy(i => i.Ordem).First().Nome);
 
         // Docs/10 §3: mínimo de 2 nos potes; picolé sem mínimo. Fábrica sem meia caixa, pedido impresso.
-        Assert.All(_estoque.Itens.Where(i => i.GrupoId == _estoque.Grupos.Single(g => g.Nome == "Pote 1L").Id),
-            i => Assert.Equal(2, i.MinimoUnidades));
+        var potes1L = _estoque.Grupos.Single(g => g.Nome == "Pote 1L");
+        Assert.All(_estoque.Itens.Where(i => i.GrupoId == potes1L.Id), i => Assert.Equal(2, i.MinimoUnidades));
         Assert.All(_estoque.Itens.Where(i => i.GrupoId == primeiroGrupo.Id), i => Assert.Null(i.MinimoUnidades));
         var fabrica = Assert.Single(_estoque.Fornecedores);
-        Assert.Equal("Fornecedor principal", fabrica.Nome);
         Assert.False(fabrica.AceitaMeiaCaixa);
         Assert.Equal(FormaEnvioPedido.Impresso, fabrica.Envio);
         Assert.Equal(CatalogoEstoqueService.PrazoPadraoDias, fabrica.PrazoEntregaDias);
+        Assert.True(fabrica.PedeEm(CatalogoEstoqueService.DiaPedidoPadrao));
 
         var limao = _estoque.Itens.Single(i => i.GrupoId == primeiroGrupo.Id && i.Nome == "Limão");
         Assert.Equal(UnidadeCompra.Caixa, limao.Unidade);
@@ -97,47 +97,124 @@ public class CatalogoEstoqueServiceTests
 
         var segunda = await _service.ImportarAsync(conteudo, Ct);
 
-        Assert.Equal(0, segunda.FornecedoresCriados);
-        Assert.Equal(0, segunda.GruposCriados);
-        Assert.Equal(0, segunda.ItensCriados);
-        Assert.Equal(0, segunda.ItensAtualizados);
-        Assert.Equal(123, segunda.ItensSemMudanca);
+        Assert.Empty(segunda.FornecedoresNovos);
+        Assert.Empty(segunda.GruposNovos);
+        Assert.Equal(0, segunda.ItensNovos);
+        Assert.Equal(123, segunda.ItensJaCadastrados);
+        Assert.Empty(segunda.Avisos);
         Assert.Equal(123, _estoque.Itens.Count);
-        Assert.Equal(1, _uow.Confirmacoes); // nada mudou: nem abre transação
+        Assert.Equal(1, _uow.Confirmacoes); // nada novo: nem abre transação
     }
 
     [Fact]
-    public async Task Importar_CustoMudouNaPlanilha_AtualizaEMantemOQueADonaAjustouNoPainel()
+    public async Task Importar_Simulando_MostraOQueSeriaCriadoSemGravar()
+    {
+        var resultado = await _service.ImportarAsync(new ImportarCatalogoRequest(LerCatalogoInicial(), Simular: true), Ct);
+
+        Assert.True(resultado.Simulacao);
+        Assert.Equal(123, resultado.ItensNovos);
+        Assert.Equal(11, resultado.GruposNovos.Count);
+        Assert.Empty(_estoque.Itens);
+        Assert.Empty(_estoque.Grupos);
+        Assert.Empty(_estoque.Fornecedores);
+        Assert.Equal(0, _uow.Confirmacoes);
+    }
+
+    [Fact]
+    public async Task Importar_ItemJaCadastradoComOutroCusto_MantemOCatalogoEAvisaADiferenca()
     {
         await _service.ImportarAsync(Csv(Cabecalho, "Picolé de fruta,Limão,Caixa,28,25.20,Fábrica,,"), Ct);
         var limao = Assert.Single(_estoque.Itens);
-        limao.Atualizar(limao.FornecedorId, limao.Nome, limao.Unidade, 28, 25.20m, ordem: 7, estoqueAlvoEmbalagens: 3m, minimoUnidades: 10);
+        limao.Atualizar(limao.FornecedorId, "Limão", UnidadeCompra.Caixa, 28, 26.40m, ordem: 7, estoqueAlvoEmbalagens: 3m, minimoUnidades: 10);
         limao.Desativar();
 
-        var resultado = await _service.ImportarAsync(Csv(Cabecalho, "picolé de FRUTA,limão,Caixa,28,26.40,Fábrica,,"), Ct);
+        var resultado = await _service.ImportarAsync(Csv(Cabecalho, "picolé de FRUTA,limão,Caixa,24,25.20,Fábrica,,"), Ct);
 
-        Assert.Equal(1, resultado.ItensAtualizados);
-        Assert.Equal(0, resultado.GruposCriados);
+        Assert.Equal(1, resultado.ItensJaCadastrados);
+        Assert.Equal(0, resultado.ItensNovos);
+        var aviso = Assert.Single(resultado.Avisos);
+        Assert.Equal(2, aviso.Linha);
+        Assert.Contains("mantido", aviso.Mensagem);
+        Assert.Contains("custo", aviso.Mensagem);
+        Assert.Contains("caixa com 24", aviso.Mensagem);
+        // O que a dona ajustou no painel fica como está (RN-RC-05: o custo corrigido pela nota não volta).
+        Assert.Equal("Limão", limao.Nome);
         Assert.Equal(26.40m, limao.CustoEmbalagem);
-        Assert.Equal("limão", limao.Nome);
+        Assert.Equal(28, limao.UnidadesPorEmbalagem);
         Assert.Equal(7, limao.Ordem);
         Assert.Equal(3m, limao.EstoqueAlvoEmbalagens);
         Assert.Equal(10, limao.MinimoUnidades);
-        Assert.False(limao.Ativo); // reimportar não reativa o que a dona desativou
+        Assert.False(limao.Ativo);
+    }
+
+    [Fact]
+    public async Task Importar_FornecedorRenomeadoNoPainel_NaoCriaOutroNemTrocaOsItens()
+    {
+        var conteudo = new ImportarCatalogoRequest(LerCatalogoInicial());
+        await _service.ImportarAsync(conteudo, Ct);
+        var fabrica = Assert.Single(_estoque.Fornecedores);
+        fabrica.Atualizar("Fábrica dos pais", null, [DayOfWeek.Tuesday], 2, false, FormaEnvioPedido.Impresso, true);
+
+        var resultado = await _service.ImportarAsync(conteudo, Ct);
+
+        Assert.Empty(resultado.FornecedoresNovos);
+        Assert.Single(_estoque.Fornecedores);
+        Assert.All(_estoque.Itens, i => Assert.Equal(fabrica.Id, i.FornecedorId));
+        Assert.Equal(123, resultado.Avisos.Count);
+        Assert.Contains("Fábrica dos pais", resultado.Avisos[0].Mensagem);
+    }
+
+    [Fact]
+    public async Task Importar_GrupoRenomeadoNoPainel_APreviaMostraOGrupoQueSeriaCriado()
+    {
+        await _service.ImportarAsync(Csv(Cabecalho, "Massa (balde),Flocos,Balde,1,89.90,Fábrica,,"), Ct);
+        _estoque.Grupos.Single().Renomear("Massas");
+
+        var previa = await _service.ImportarAsync(Csv(Cabecalho, "Massa (balde),Flocos,Balde,1,89.90,Fábrica,,") with { Simular = true }, Ct);
+
+        Assert.Equal(new[] { "Massa (balde)" }, previa.GruposNovos.ToArray());
+        Assert.Single(_estoque.Grupos);
+        Assert.Single(_estoque.Itens);
     }
 
     [Fact]
     public async Task Importar_ArquivoSalvoNoExcelBrasileiro_LePontoEVirgulaEVirgulaDecimal()
     {
         var resultado = await _service.ImportarAsync(new ImportarCatalogoRequest(
-            "﻿categoria;sabor;unidade_compra;unidades_por_embalagem;custo_embalagem;fornecedor;origem_na_planilha\r\n" +
+            "\uFEFFcategoria;sabor;unidade_compra;unidades_por_embalagem;custo_embalagem;fornecedor;origem_na_planilha\r\n" +
             "Picolé ao leite;Chocolate;caixa;28;R$ 1.025,20;Fábrica;\"PICOLÉS!B2; custo\"\r\n" +
-            "Massa (balde);Flocos;Balde;1;89,9;Fábrica;\r\n"), Ct);
+            "Massa (balde);Flocos;Balde;1;89,9;Fábrica;\r\n" +
+            "Massa (balde);Napolitano;Balde;1;R$ 1.200;Fábrica;\r\n"), Ct);
 
         Assert.Empty(resultado.Erros);
-        Assert.Equal(2, resultado.ItensCriados);
+        Assert.Equal(3, resultado.ItensNovos);
         Assert.Equal(1025.20m, _estoque.Itens.Single(i => i.Nome == "Chocolate").CustoEmbalagem);
         Assert.Equal(89.90m, _estoque.Itens.Single(i => i.Nome == "Flocos").CustoEmbalagem);
+        Assert.Equal(1200m, _estoque.Itens.Single(i => i.Nome == "Napolitano").CustoEmbalagem);
+    }
+
+    [Theory]
+    [InlineData("25.20", "25.20")]
+    [InlineData("25,2", "25.20")]
+    [InlineData("1.200", "1200")]
+    [InlineData("R$ 1.200,00", "1200")]
+    [InlineData("1.234.567,89", "1234567.89")]
+    [InlineData("30", "30")]
+    public void LerDecimal_FormatosAceitos_LeOValorCerto(string texto, string esperado)
+    {
+        Assert.Equal(decimal.Parse(esperado, System.Globalization.CultureInfo.InvariantCulture), LeitorCsv.LerDecimal(texto));
+    }
+
+    [Theory]
+    [InlineData("1,000.00")]
+    [InlineData("12.5.3")]
+    [InlineData("1.2345")]
+    [InlineData("-5")]
+    [InlineData("abc")]
+    [InlineData("")]
+    public void LerDecimal_ValorAmbiguoOuInvalido_DevolveNulo(string texto)
+    {
+        Assert.Null(LeitorCsv.LerDecimal(texto));
     }
 
     [Fact]
@@ -147,24 +224,37 @@ public class CatalogoEstoqueServiceTests
             Cabecalho,
             "Picolé de fruta,Limão,Caixa,28,25.20,Fábrica,,",
             "Grupo fantasma,Uva,Saco,1,10.00,Fornecedor fantasma,,",
-            "Picolé de fruta,Morango,Caixa,vinte,25.20,Fábrica,,",
+            "Picolé de fruta,Morango,Caixa,1.000,25.20,Fábrica,,",
             "Picolé de fruta,LIMÃO,Caixa,28,25.20,Fábrica,,",
-            "Picolé de fruta,Maracujá,Caixa,28,abc,Fábrica,,",
-            "Picolé de fruta,Coco,Balde,28,25.20,Fábrica,,",
+            "Picolé de fruta,Maracujá,Caixa,28,\"1,000.00\",Fábrica,,",
+            "Picolé de fruta,Coco,Balde,28,25.20,Fornecedor fantasma,,",
             "Picolé de fruta,Uva,Caixa,28,25.20,Fábrica,,"), Ct);
 
-        Assert.Equal(2, resultado.ItensCriados);
+        Assert.Equal(2, resultado.ItensNovos);
         Assert.Equal(new[] { 3, 4, 5, 6, 7 }, resultado.Erros.Select(e => e.Linha).ToArray());
-        Assert.Contains("Unidade de compra", resultado.Erros[0].Motivo);
-        Assert.Contains("inteiro", resultado.Erros[1].Motivo);
-        Assert.Contains("repete a linha 2", resultado.Erros[2].Motivo);
-        Assert.Contains("Custo da embalagem", resultado.Erros[3].Motivo);
-        Assert.Contains("caixa e pacote", resultado.Erros[4].Motivo);
+        Assert.Contains("Unidade de compra", resultado.Erros[0].Mensagem);
+        Assert.Contains("inteiro", resultado.Erros[1].Mensagem);
+        Assert.Contains("repete a linha 2", resultado.Erros[2].Mensagem);
+        Assert.Contains("Custo da embalagem", resultado.Erros[3].Mensagem);
+        Assert.Contains("caixa e pacote", resultado.Erros[4].Mensagem);
 
         // A linha errada não deixa grupo nem fornecedor criado pela metade.
         Assert.DoesNotContain(_estoque.Grupos, g => g.Nome == "Grupo fantasma");
         Assert.DoesNotContain(_estoque.Fornecedores, f => f.Nome == "Fornecedor fantasma");
+        Assert.Empty(resultado.FornecedoresNovos.Where(f => f == "Fornecedor fantasma"));
         Assert.Equal(new[] { "Limão", "Uva" }, _estoque.Itens.Select(i => i.Nome).ToArray());
+    }
+
+    [Fact]
+    public async Task Importar_RepeteUmaLinhaRecusada_ImportaARepeticao()
+    {
+        var resultado = await _service.ImportarAsync(Csv(
+            Cabecalho,
+            "Picolé de fruta,Limão,Caixa,28,abc,Fábrica,,",
+            "Picolé de fruta,Limão,Caixa,28,25.20,Fábrica,,"), Ct);
+
+        Assert.Equal(2, Assert.Single(resultado.Erros).Linha);
+        Assert.Equal(1, resultado.ItensNovos);
     }
 
     [Fact]
@@ -174,10 +264,48 @@ public class CatalogoEstoqueServiceTests
             Cabecalho,
             "Picolé de fruta,Limão,Caixa,28,25.20,Fábrica,\"observação",
             "em duas linhas\",",
+            "",
             "Picolé de fruta,Uva,Saco,28,25.20,Fábrica,,"), Ct);
 
-        Assert.Equal(1, resultado.ItensCriados);
-        Assert.Equal(4, Assert.Single(resultado.Erros).Linha);
+        Assert.Equal(1, resultado.ItensNovos);
+        Assert.Equal(4, Assert.Single(resultado.Erros).Linha); // cabeçalho 1, Limão 2, linha em branco 3
+    }
+
+    [Fact]
+    public async Task Importar_AspasNoMeioDoNome_SaoUmCaractereComum()
+    {
+        var resultado = await _service.ImportarAsync(Csv(
+            Cabecalho,
+            "Copos,Copo 5\" grande,Pacote,50,12.00,Descartáveis,,",
+            "Copos,Copo 6,Pacote,50,13.00,Descartáveis,,",
+            "Copos,Copo 7\" largo,Pacote,50,14.00,Descartáveis,,"), Ct);
+
+        Assert.Empty(resultado.Erros);
+        Assert.Equal(new[] { "Copo 5\" grande", "Copo 6", "Copo 7\" largo" }, _estoque.Itens.Select(i => i.Nome).ToArray());
+    }
+
+    [Fact]
+    public async Task Importar_ArquivoQueNaoEUtf8_PedeParaSalvarComoCsvUtf8()
+    {
+        var erro = await Assert.ThrowsAsync<DomainException>(() =>
+            _service.ImportarAsync(Csv(Cabecalho, "Picol\uFFFD de fruta,Lim\uFFFDo,Caixa,28,25.20,F\uFFFDbrica,,"), Ct));
+
+        Assert.Contains("UTF-8", erro.Message);
+        Assert.Empty(_estoque.Itens);
+    }
+
+    [Fact]
+    public async Task Importar_AcentosDecompostos_ReconheceOMesmoNome()
+    {
+        await _service.ImportarAsync(Csv(Cabecalho, "Picolé de fruta,Limão,Caixa,28,25.20,Fábrica,,"), Ct);
+
+        // "e" + acento agudo combinado (como alguns programas salvam) em vez de "é".
+        var resultado = await _service.ImportarAsync(
+            Csv(Cabecalho, "Picole\u0301 de fruta,Lima\u0303o,Caixa,28,25.20,Fa\u0301brica,,"), Ct);
+
+        Assert.Equal(1, resultado.ItensJaCadastrados);
+        Assert.Empty(resultado.GruposNovos);
+        Assert.Single(_estoque.Itens);
     }
 
     [Fact]
@@ -191,10 +319,13 @@ public class CatalogoEstoqueServiceTests
         Assert.Equal(0, _uow.Confirmacoes);
     }
 
-    [Fact]
-    public async Task Importar_SoCabecalho_Lanca()
+    [Theory]
+    [InlineData("categoria,sabor,unidade_compra,unidades_por_embalagem,custo_embalagem,fornecedor\n\n")]
+    [InlineData(",,,\n,,,")]
+    [InlineData("   ")]
+    public async Task Importar_SemItens_Lanca(string conteudo)
     {
-        await Assert.ThrowsAsync<DomainException>(() => _service.ImportarAsync(Csv(Cabecalho, "", ""), Ct));
+        await Assert.ThrowsAsync<DomainException>(() => _service.ImportarAsync(new ImportarCatalogoRequest(conteudo), Ct));
     }
 
     [Fact]
@@ -204,20 +335,21 @@ public class CatalogoEstoqueServiceTests
 
         var resultado = await _service.ImportarAsync(Csv(Cabecalho, "Picolé de fruta,Limão,Caixa,28,25.20,fábrica,,"), Ct);
 
-        Assert.Contains("desativado", Assert.Single(resultado.Erros).Motivo);
+        Assert.Contains("desativado", Assert.Single(resultado.Erros).Mensagem);
         Assert.Empty(_estoque.Itens);
+        Assert.Empty(_estoque.Grupos);
     }
 
     [Fact]
     public async Task Importar_GrupoQueJaExiste_MantemOModoQueADonaEscolheu()
     {
-        // A dona voltou os potes para a contagem (RN-ES-02); reimportar não desfaz.
-        Grupo("Pote 1L", ModoControle.Contagem);
+        Grupo("Pote 1L", ModoControle.SaldoPelaVenda);
 
-        await _service.ImportarAsync(Csv(Cabecalho, "Pote 1L,Flocos,Unidade,1,18.00,Fábrica,,"), Ct);
+        var resultado = await _service.ImportarAsync(Csv(Cabecalho, "Pote 1L,Flocos,Unidade,1,18.00,Fábrica,,"), Ct);
 
-        Assert.Equal(ModoControle.Contagem, Assert.Single(_estoque.Grupos).ModoControle);
-        Assert.Null(Assert.Single(_estoque.Itens).MinimoUnidades); // mínimo padrão é só para grupo de saldo pela venda
+        Assert.Empty(resultado.GruposNovos);
+        Assert.Equal(ModoControle.SaldoPelaVenda, Assert.Single(_estoque.Grupos).ModoControle);
+        Assert.Equal(CatalogoEstoqueService.MinimoPadraoPotes, Assert.Single(_estoque.Itens).MinimoUnidades);
     }
 
     // ---------- Itens ----------
@@ -304,7 +436,7 @@ public class CatalogoEstoqueServiceTests
     }
 
     [Fact]
-    public async Task DesativarItem_MarcaInativoSemApagar()
+    public async Task DesativarItem_ItemAtivo_MarcaInativoSemApagar()
     {
         var criado = await _service.CriarItemAsync(Item(Grupo("Picolé de fruta"), Fabrica()), Ct);
 
@@ -313,6 +445,35 @@ public class CatalogoEstoqueServiceTests
         Assert.False(dto.Ativo);
         Assert.Equal("Picolé de fruta", dto.GrupoNome);
         Assert.Single(_estoque.Itens);
+    }
+
+    [Fact]
+    public async Task AtivarItem_FornecedorDesativado_Lanca()
+    {
+        var fabrica = Fabrica();
+        var item = await _service.CriarItemAsync(Item(Grupo("Picolé de fruta"), fabrica), Ct);
+        await _service.DesativarItemAsync(item.Id, Ct);
+        fabrica.Desativar();
+
+        var erro = await Assert.ThrowsAsync<DomainException>(() => _service.AtivarItemAsync(item.Id, Ct));
+
+        Assert.Contains("desativado", erro.Message);
+        Assert.False(Assert.Single(_estoque.Itens).Ativo);
+    }
+
+    [Fact]
+    public async Task CriarItem_GrupoDePotesSemMinimo_UsaOMinimoPadrao()
+    {
+        var fabrica = Fabrica();
+        var request = Item(Grupo("Pote 2L"), fabrica, "Flocos") with { Unidade = "Unidade", UnidadesPorEmbalagem = 1 };
+
+        var dto = await _service.CriarItemAsync(request, Ct);
+        var comMinimo = await _service.CriarItemAsync(request with { Nome = "Ninho", MinimoUnidades = 5 }, Ct);
+        var picole = await _service.CriarItemAsync(Item(Grupo("Picolé de fruta", ordem: 2), fabrica), Ct);
+
+        Assert.Equal(CatalogoEstoqueService.MinimoPadraoPotes, dto.MinimoUnidades);
+        Assert.Equal(5, comMinimo.MinimoUnidades);
+        Assert.Null(picole.MinimoUnidades);
     }
 
     // ---------- Fornecedores ----------
@@ -370,7 +531,7 @@ public class CatalogoEstoqueServiceTests
     // ---------- Grupos ----------
 
     [Fact]
-    public async Task AtualizarGrupo_PotesVoltamParaContagem()
+    public async Task AtualizarGrupo_PotesDeSaldoParaContagem_TrocaOModo()
     {
         var potes = Grupo("Pote 1L", ModoControle.SaldoPelaVenda);
 
@@ -399,7 +560,7 @@ public class CatalogoEstoqueServiceTests
     // ---------- Catálogo ----------
 
     [Fact]
-    public async Task ObterCatalogo_ItensVemComNomeDoGrupoEDoFornecedorNaOrdemDaPlanilha()
+    public async Task ObterCatalogo_CatalogoImportado_TrazNomesDoGrupoEDoFornecedorNaOrdemDaPlanilha()
     {
         await _service.ImportarAsync(Csv(
             Cabecalho,

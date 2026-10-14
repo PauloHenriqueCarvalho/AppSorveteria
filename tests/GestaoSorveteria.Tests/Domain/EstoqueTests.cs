@@ -105,6 +105,47 @@ public class EstoqueTests
         Assert.Equal(("Morango", "morango", 8m, 2), (pote.Nome, pote.NomeNormalizado, pote.EstoqueAlvoEmbalagens!.Value, pote.MinimoUnidades!.Value));
     }
 
+    [Fact]
+    public void ItemEstoque_AtualizarComAlvoQueNaoServeParaANovaUnidade_NaoMudaNada()
+    {
+        var fabrica = Fabrica();
+        var item = ItemEstoque.Criar(Picoles().Id, fabrica.Id, "Skimo", UnidadeCompra.Caixa, 24, 30m, 1, estoqueAlvoEmbalagens: 2.5m);
+
+        // 2,5 caixas viraria 2,5 unidades: o erro não pode deixar unidade, custo e fornecedor já trocados.
+        Assert.Throws<DomainException>(() =>
+            item.Atualizar(Guid.NewGuid(), "Skimo novo", UnidadeCompra.Unidade, 1, 2.50m, 9, 2.5m, null));
+
+        Assert.Equal("Skimo", item.Nome);
+        Assert.Equal(UnidadeCompra.Caixa, item.Unidade);
+        Assert.Equal(24, item.UnidadesPorEmbalagem);
+        Assert.Equal(30m, item.CustoEmbalagem);
+        Assert.Equal(fabrica.Id, item.FornecedorId);
+        Assert.Equal(1, item.Ordem);
+    }
+
+    [Fact]
+    public void Fornecedor_AtualizarComErro_NaoMudaNada()
+    {
+        var fabrica = Fabrica();
+
+        Assert.Throws<DomainException>(() =>
+            fabrica.Atualizar("Fábrica dos pais", null, [DayOfWeek.Friday], 3, true, FormaEnvioPedido.WhatsApp, false));
+
+        Assert.Equal("Fábrica", fabrica.Nome);
+        Assert.Equal(new[] { DayOfWeek.Monday }, fabrica.DiasPedido);
+        Assert.Equal(2, fabrica.PrazoEntregaDias);
+    }
+
+    [Fact]
+    public void NomeEstoque_AcentoDecompostoEMaiusculas_ViraAMesmaChave()
+    {
+        var composto = GrupoEstoque.Criar("Picolé de fruta", ModoControle.Contagem, 1);
+        var decomposto = GrupoEstoque.Criar(" PICOLE\u0301 DE FRUTA ", ModoControle.Contagem, 2);
+
+        Assert.Equal(composto.NomeNormalizado, decomposto.NomeNormalizado);
+        Assert.Equal("PICOLÉ DE FRUTA", decomposto.Nome); // exibido na forma composta, sem espaços nas pontas
+    }
+
     // ------------------------------------------------------------ contagem (RN-ES-05/06/07/08)
 
     [Fact]
