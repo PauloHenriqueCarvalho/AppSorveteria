@@ -222,18 +222,20 @@ Desenho em docs/10 (revisto em 14/10); regras RN-ES / RN-AV / RN-PF / RN-RC em d
 ```
 configuracoes_loja  (id, whatsapp_dona varchar(20), nome_loja)          -- 1 linha
 
-fornecedores        (id, nome, whatsapp?, dias_pedido varchar(30) -- "Seg",
+fornecedores        (id, nome, nome_normalizado, whatsapp varchar(13)?, dias_pedido text[] -- {"Monday","Thursday"},
                      prazo_entrega_dias int, aceita_meia_caixa bool,
                      envio varchar(20) -- Impresso | WhatsApp | Ambos, mostrar_precos bool, ativo)
+                                                     -- único (nome_normalizado)
 
-grupos_estoque      (id, nome, modo_controle varchar(20) -- Contagem | SaldoPelaVenda | SoAviso, ordem)
+grupos_estoque      (id, nome, nome_normalizado, modo_controle varchar(20) -- Contagem | SaldoPelaVenda | SoAviso, ordem)
+                                                     -- único (nome_normalizado)
 
 itens_estoque       (id, grupo_id FK, fornecedor_id FK, nome varchar(80),
                      unidade_compra varchar(10) -- Caixa | Balde | Unidade | Pacote,
                      unidades_por_embalagem int ≥ 1, custo_embalagem numeric(12,2),
                      estoque_alvo_embalagens numeric(6,1)?, minimo_unidades int?, ordem, ativo,
                      saldo_unidades int?            -- só SaldoPelaVenda; cache do Σ movimentos
-                    )                                -- único (grupo_id, lower(nome))
+                    )                                -- único (grupo_id, nome_normalizado); saldo_unidades entra na Sprint 7
 
 movimentos_estoque  (id, item_estoque_id FK, tipo varchar(20), quantidade_unidades int,
                      comanda_id?, item_comanda_id?, pedido_id?, contagem_id?, usuario_id, em, motivo?)
@@ -242,7 +244,7 @@ movimentos_estoque  (id, item_estoque_id FK, tipo varchar(20), quantidade_unidad
 
 contagens           (id, usuario_id, iniciada_em, concluida_em?, origem varchar(10) -- App | Painel)
 itens_contagem      (id, contagem_id FK, item_estoque_id FK, contado_unidades int?,  -- null = não contado
-                     saldo_sistema_unidades int?)  -- potes: para mostrar a diferença
+                     saldo_sistema_unidades int?)  -- potes: para mostrar a diferença; único (contagem_id, item_estoque_id)
 
 avisos              (id, item_estoque_id?, texto_livre varchar(120)?, quantidade_atual int,
                      prioridade varchar(10) -- Urgente | Alta | Media, observacao?,
@@ -278,7 +280,9 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
 | Método | Rota | Uso |
 |---|---|---|
 | GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja |
-| GET/POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` | catálogo; `POST /api/estoque/itens/importar` recebe o CSV |
+| GET | `/api/estoque/catalogo` | fornecedores, grupos e itens (com custo) para o painel |
+| POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` (+ `/{id}/ativar`, `/{id}/desativar`) | catálogo (RN-ES-01/02/11, RN-PF-01/09) |
+| POST | `/api/estoque/itens/importar` | CSV da planilha; `simular: true` devolve a prévia sem gravar (RN-ES-10) |
 | GET/POST | `/api/estoque/contagens` | contagem pelo painel; histórico e saída semanal por item |
 | GET/POST/PUT | `/api/avisos` | listar, criar, "ainda falta", fechar com motivo |
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
