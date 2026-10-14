@@ -2,6 +2,9 @@ using GestaoSorveteria.Domain.Estoque;
 
 namespace GestaoSorveteria.Domain.Repositories;
 
+/// <summary>Quanto o item tinha na última contagem concluída e quando ela foi concluída.</summary>
+public readonly record struct UltimaContagemDoItem(int Unidades, DateTime ConcluidaEm);
+
 /// <summary>Contagens semanais (RN-ES-05/06), com as linhas.</summary>
 public interface IContagemRepository
 {
@@ -14,7 +17,7 @@ public interface IContagemRepository
     /// A última quantidade contada de cada item em contagens concluídas antes de <paramref name="antesDeUtc"/>
     /// (referência da contagem anterior, RN-ES-06). Item nunca contado não aparece.
     /// </summary>
-    Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default);
 
     Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default);
 }

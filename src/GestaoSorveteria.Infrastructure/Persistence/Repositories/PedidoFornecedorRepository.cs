@@ -21,12 +21,6 @@ internal sealed class PedidoFornecedorRepository : IPedidoFornecedorRepository
     public Task<PedidoFornecedor?> ObterRascunhoAsync(Guid fornecedorId, CancellationToken cancellationToken = default) =>
         ComItens.FirstOrDefaultAsync(p => p.FornecedorId == fornecedorId && p.Status == StatusPedido.Rascunho, cancellationToken);
 
-    public Task<PedidoFornecedor?> ObterUltimoRecebidoAsync(Guid fornecedorId, CancellationToken cancellationToken = default) =>
-        ComItens
-            .Where(p => p.FornecedorId == fornecedorId && p.Status == StatusPedido.Recebido)
-            .OrderByDescending(p => p.RecebidoEm)
-            .FirstOrDefaultAsync(cancellationToken);
-
     public async Task<IReadOnlyList<PedidoFornecedor>> ListarAsync(Guid? fornecedorId, DateTime desdeUtc, CancellationToken cancellationToken = default) =>
         await ComItens
             .Where(p => fornecedorId == null || p.FornecedorId == fornecedorId)

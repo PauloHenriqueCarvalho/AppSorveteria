@@ -36,12 +36,13 @@ public sealed class PedidoFornecedor : Entity
     public DateTime? RecebidoEm { get; private set; }
     public Guid? RecebidoPorUsuarioId { get; private set; }
     public DateTime? CanceladoEm { get; private set; }
+    public Guid? CanceladoPorUsuarioId { get; private set; }
     public string? MotivoCancelamento { get; private set; }
 
-    /// <summary>Σ pedido × custo, 2 casas (RN-PF-05). Recalculado a cada mudança enquanto rascunho.</summary>
+    /// <summary>Σ dos subtotais das linhas (pedido × custo, 2 casas cada — RN-PF-05): bate com a soma da folha.</summary>
     public decimal TotalPedido { get; private set; }
 
-    /// <summary>Σ recebido × custo, depois da conferência.</summary>
+    /// <summary>Σ dos subtotais recebidos (recebido × custo, 2 casas cada), depois da conferência.</summary>
     public decimal? TotalRecebido { get; private set; }
 
     /// <summary>RN-RC-03: Σ min(recebido, pedido) ÷ Σ pedido, em %, 2 casas.</summary>
@@ -156,14 +157,17 @@ public sealed class PedidoFornecedor : Entity
         Recalcular();
     }
 
-    /// <summary>RN-PF-08: cancela rascunho ou pedido enviado, com motivo. Recebido não é cancelado.</summary>
-    public void Cancelar(string motivo, DateTime agoraUtc)
+    /// <summary>RN-PF-08: cancela rascunho ou pedido enviado, com motivo e quem cancelou. Recebido não é cancelado.</summary>
+    public void Cancelar(string motivo, Guid usuarioId, DateTime agoraUtc)
     {
         Guard.Contra(Status is StatusPedido.Recebido or StatusPedido.Cancelado,
             Status == StatusPedido.Recebido ? "Pedido já recebido não pode ser cancelado." : "Este pedido já foi cancelado.");
-        MotivoCancelamento = Guard.Texto(motivo, "o motivo", 3, 200);
+        var motivoValido = Guard.Texto(motivo, "o motivo", 3, 200);
+        var quem = Guard.NaoVazio(usuarioId, "quem cancelou");
         var agora = Guard.Utc(agoraUtc, "a data");
         Guard.Contra(agora < CriadoEm, "O cancelamento não pode ser anterior à montagem do pedido.");
+        MotivoCancelamento = motivoValido;
+        CanceladoPorUsuarioId = quem;
         CanceladoEm = agora;
         AtualizadoEm = agora;
         Status = StatusPedido.Cancelado;
@@ -182,33 +186,39 @@ public sealed class PedidoFornecedor : Entity
         var agora = Guard.Utc(agoraUtc, "a data da entrega");
         Guard.Contra(EnviadoEm is { } enviado && agora < enviado, "A entrega não pode ser anterior ao envio do pedido.");
 
+        // Valida tudo antes de mudar qualquer linha: erro na conferência não deixa o pedido pela metade.
+        var listaDiferencas = diferencas.ToList();
+        var listaNaoPedidos = naoPedidos.ToList();
         var porItem = new Dictionary<Guid, LinhaRecebida>();
-        foreach (var diferenca in diferencas)
+        foreach (var diferenca in listaDiferencas)
         {
             Guard.Contra(!porItem.TryAdd(diferenca.ItemEstoqueId, diferenca), "O mesmo item apareceu duas vezes na conferência.");
-            Guard.Contra(Linha(diferenca.ItemEstoqueId) is null, "Item que não está no pedido: registre como \"não pedido\".");
+            var linhaDoPedido = Linha(diferenca.ItemEstoqueId) ?? throw new DomainException("Item que não está no pedido: registre como \"não pedido\".");
+            linhaDoPedido.ValidarRecebido(diferenca.RecebidoEmbalagens);
         }
 
-        foreach (var linha in _itens)
-        {
-            if (porItem.TryGetValue(linha.ItemEstoqueId, out var recebida))
-            {
-                linha.DefinirRecebido(recebida.RecebidoEmbalagens, recebida.PedirDeNovo);
-            }
-            else
-            {
-                linha.DefinirRecebido(linha.PedidoEmbalagens, pedirDeNovo: true);
-            }
-        }
-
-        foreach (var naoPedido in naoPedidos)
+        var novas = new List<ItemPedidoFornecedor>();
+        foreach (var naoPedido in listaNaoPedidos)
         {
             ExigirDoFornecedor(naoPedido.Item);
             Guard.Contra(Linha(naoPedido.Item.Id) is not null,
                 $"{naoPedido.Item.Nome} está no pedido: corrija a quantidade recebida na linha dele.");
+            Guard.Contra(novas.Any(n => n.ItemEstoqueId == naoPedido.Item.Id), "O mesmo item apareceu duas vezes na conferência.");
+            Guard.Contra(naoPedido.RecebidoEmbalagens <= 0, $"Não pedido sem quantidade: {naoPedido.Item.Nome}.");
             var linha = ItemPedidoFornecedor.Sugerido(Id, new LinhaSugerida(naoPedido.Item, naoPedido.Passo, 0, OrigemLinhaPedido.NaoPedido));
+            linha.ValidarRecebido(naoPedido.RecebidoEmbalagens);
+            novas.Add(linha);
+        }
+
+        foreach (var linha in _itens)
+        {
+            var recebida = porItem.GetValueOrDefault(linha.ItemEstoqueId);
+            linha.DefinirRecebido(recebida?.RecebidoEmbalagens ?? linha.PedidoEmbalagens, recebida?.PedirDeNovo ?? true);
+        }
+
+        foreach (var (linha, naoPedido) in novas.Zip(listaNaoPedidos))
+        {
             linha.DefinirRecebido(naoPedido.RecebidoEmbalagens, pedirDeNovo: false);
-            Guard.Contra(linha.RecebidoEmbalagens == 0, $"Não pedido com quantidade zero: {naoPedido.Item.Nome}.");
             _itens.Add(linha);
         }
 
@@ -218,7 +228,7 @@ public sealed class PedidoFornecedor : Entity
         AtualizadoEm = agora;
         Recalcular();
 
-        TotalRecebido = Moeda.Arredondar(_itens.Sum(i => (i.RecebidoEmbalagens ?? 0) * i.CustoEmbalagem));
+        TotalRecebido = _itens.Sum(i => i.SubtotalRecebido ?? 0);
         var pedidoEmbalagens = _itens.Sum(i => i.PedidoEmbalagens);
         var atendidas = _itens.Sum(i => Math.Min(i.RecebidoEmbalagens ?? 0, i.PedidoEmbalagens));
         PercentualAtendido = pedidoEmbalagens == 0 ? null : Math.Round(atendidas / pedidoEmbalagens * 100m, 2, MidpointRounding.AwayFromZero);
@@ -226,7 +236,7 @@ public sealed class PedidoFornecedor : Entity
 
     public ItemPedidoFornecedor? Linha(Guid itemEstoqueId) => _itens.FirstOrDefault(i => i.ItemEstoqueId == itemEstoqueId);
 
-    private void Recalcular() => TotalPedido = Moeda.Arredondar(_itens.Sum(i => i.PedidoEmbalagens * i.CustoEmbalagem));
+    private void Recalcular() => TotalPedido = _itens.Sum(i => i.Subtotal);
 
     private void ExigirRascunho() =>
         Guard.Contra(Status != StatusPedido.Rascunho, "O pedido já foi enviado e não muda mais. Para corrigir, cancele com o motivo e monte outro.");
@@ -241,8 +251,11 @@ public sealed class ItemPedidoFornecedor : Entity
     public Guid PedidoId { get; private set; }
     public Guid ItemEstoqueId { get; private set; }
 
-    /// <summary>0,5 (caixa, fornecedor aceita meia caixa) ou 1.</summary>
+    /// <summary>Passo do pedido: 0,5 (caixa, fornecedor aceita meia caixa) ou 1.</summary>
     public decimal Passo { get; private set; }
+
+    /// <summary>Passo da conferência: meia caixa sempre vale para caixa (RN-RC-01), mesmo que o pedido seja em caixas inteiras.</summary>
+    public decimal PassoRecebimento { get; private set; }
 
     public decimal SugeridoEmbalagens { get; private set; }
     public decimal PedidoEmbalagens { get; private set; }
@@ -260,6 +273,12 @@ public sealed class ItemPedidoFornecedor : Entity
     /// <summary>RN-RC-04: o que faltou volta no próximo pedido, salvo se a dona desmarcar.</summary>
     public bool PedirDeNovo { get; private set; } = true;
 
+    /// <summary>Pedido × custo, 2 casas (RN-PF-05). O total do pedido é a soma destes.</summary>
+    public decimal Subtotal => Moeda.Arredondar(PedidoEmbalagens * CustoEmbalagem);
+
+    /// <summary>Recebido × custo, 2 casas; nulo antes da conferência.</summary>
+    public decimal? SubtotalRecebido => RecebidoEmbalagens is { } recebido ? Moeda.Arredondar(recebido * CustoEmbalagem) : null;
+
     /// <summary>RN-RC-02. Nulo enquanto a entrega não foi conferida.</summary>
     public SituacaoRecebimento? Situacao => RecebidoEmbalagens is not { } recebido
         ? null
@@ -269,9 +288,7 @@ public sealed class ItemPedidoFornecedor : Entity
         : SituacaoRecebimento.Certo;
 
     /// <summary>RN-RC-02: (recebido − pedido) × custo; negativo = faltou.</summary>
-    public decimal? DiferencaValor => RecebidoEmbalagens is { } recebido
-        ? Moeda.Arredondar((recebido - PedidoEmbalagens) * CustoEmbalagem)
-        : null;
+    public decimal? DiferencaValor => SubtotalRecebido is { } recebido ? recebido - Subtotal : null;
 
     /// <summary>Embalagens que faltaram (0 se não faltou ou ainda não conferido).</summary>
     public decimal Faltou => RecebidoEmbalagens is { } recebido && recebido < PedidoEmbalagens ? PedidoEmbalagens - recebido : 0;
@@ -294,6 +311,7 @@ public sealed class ItemPedidoFornecedor : Entity
             PedidoId = pedidoId,
             ItemEstoqueId = linha.Item.Id,
             Passo = linha.Passo,
+            PassoRecebimento = linha.Item.PassoEmbalagens,
             CustoEmbalagem = linha.Item.CustoEmbalagem,
             Origem = linha.Origem,
             Observacao = Guard.TextoOpcional(linha.Observacao, "a observação", 200),
@@ -311,19 +329,24 @@ public sealed class ItemPedidoFornecedor : Entity
             if (!AlteradoPelaDona && Origem != OrigemLinhaPedido.AdicionadoPelaDona)
             {
                 PedidoEmbalagens = 0;
+                Origem = OrigemLinhaPedido.Sugestao;
+                Observacao = null;
             }
 
             return;
         }
 
+        Guard.Contra(linha.Passo is not (0.5m or 1m), "Passo do pedido inválido.");
+        // Passo, custo e marcações acompanham o catálogo e o fornecedor de agora; a quantidade que a dona mexeu fica.
+        Passo = linha.Passo;
+        PassoRecebimento = linha.Item.PassoEmbalagens;
+        CustoEmbalagem = linha.Item.CustoEmbalagem;
+        Origem = linha.Origem;
+        Observacao = Guard.TextoOpcional(linha.Observacao, "a observação", 200);
         SugeridoEmbalagens = Validar(linha.SugeridoEmbalagens, "A sugestão");
-        if (!AlteradoPelaDona)
-        {
-            PedidoEmbalagens = SugeridoEmbalagens;
-            Origem = linha.Origem;
-            Observacao = Guard.TextoOpcional(linha.Observacao, "a observação", 200);
-            CustoEmbalagem = linha.Item.CustoEmbalagem;
-        }
+        PedidoEmbalagens = AlteradoPelaDona
+            ? Math.Ceiling(PedidoEmbalagens / Passo) * Passo // fornecedor deixou de aceitar meia caixa: arredonda para cima
+            : SugeridoEmbalagens;
     }
 
     internal void DefinirPedido(decimal embalagens)
@@ -332,17 +355,21 @@ public sealed class ItemPedidoFornecedor : Entity
         AlteradoPelaDona = true;
     }
 
+    internal void ValidarRecebido(decimal embalagens) => Validar(embalagens, "A quantidade recebida", PassoRecebimento);
+
     internal void DefinirRecebido(decimal embalagens, bool pedirDeNovo)
     {
-        RecebidoEmbalagens = Validar(embalagens, "A quantidade recebida");
+        RecebidoEmbalagens = Validar(embalagens, "A quantidade recebida", PassoRecebimento);
         PedirDeNovo = pedirDeNovo;
     }
 
-    private decimal Validar(decimal embalagens, string campo)
+    private decimal Validar(decimal embalagens, string campo) => Validar(embalagens, campo, Passo);
+
+    private static decimal Validar(decimal embalagens, string campo, decimal passo)
     {
         Guard.Contra(embalagens < 0, $"{campo} não pode ser negativa.");
         Guard.Contra(embalagens > PedidoFornecedor.EmbalagensMaximo, $"{campo} passa do máximo aceito.");
-        Guard.Contra(embalagens % Passo != 0, Passo == 0.5m
+        Guard.Contra(embalagens % passo != 0, passo == 0.5m
             ? $"{campo} vai de meia em meia caixa (ex.: 2,5)."
             : $"{campo} deve ser um número inteiro de embalagens.");
         return embalagens;

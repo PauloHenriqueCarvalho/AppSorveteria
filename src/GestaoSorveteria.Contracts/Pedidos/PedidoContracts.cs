@@ -39,6 +39,7 @@ public sealed record PedidoDto(
     DateTime? RecebidoEm,
     string? RecebidoPorNome,
     DateTime? CanceladoEm,
+    string? CanceladoPorNome,
     string? MotivoCancelamento,
     DateOnly EntregaPrevista,
     decimal TotalPedido,

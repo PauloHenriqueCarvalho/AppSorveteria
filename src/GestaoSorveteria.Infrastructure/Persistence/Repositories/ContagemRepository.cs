@@ -26,7 +26,7 @@ internal sealed class ContagemRepository : IContagemRepository
             .OrderByDescending(c => c.IniciadaEm)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default)
     {
         var desde = antesDeUtc - JanelaDaAnterior;
         var linhas = await (
@@ -39,7 +39,11 @@ internal sealed class ContagemRepository : IContagemRepository
 
         return linhas
             .GroupBy(l => l.ItemEstoqueId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.ConcluidaEm).First().ContadoUnidades!.Value);
+            .ToDictionary(g => g.Key, g =>
+            {
+                var ultima = g.OrderByDescending(l => l.ConcluidaEm).First();
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value);
+            });
     }
 
     public async Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default) =>

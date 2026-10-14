@@ -22,6 +22,7 @@ internal sealed class PedidoFornecedorConfiguration : IEntityTypeConfiguration<P
         builder.Property(p => p.RecebidoEm);
         builder.Property(p => p.RecebidoPorUsuarioId);
         builder.Property(p => p.CanceladoEm);
+        builder.Property(p => p.CanceladoPorUsuarioId);
         builder.Property(p => p.MotivoCancelamento).HasMaxLength(200);
         builder.Property(p => p.TotalPedido).HasPrecision(12, 2).IsRequired();
         builder.Property(p => p.TotalRecebido).HasPrecision(12, 2);
@@ -43,6 +44,7 @@ internal sealed class PedidoFornecedorConfiguration : IEntityTypeConfiguration<P
         builder.HasOne<Fornecedor>().WithMany().HasForeignKey(p => p.FornecedorId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Usuario>().WithMany().HasForeignKey(p => p.CriadoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Usuario>().WithMany().HasForeignKey(p => p.RecebidoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Usuario>().WithMany().HasForeignKey(p => p.CanceladoPorUsuarioId).OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(p => p.Itens)
             .WithOne()
@@ -65,6 +67,7 @@ internal sealed class ItemPedidoFornecedorConfiguration : IEntityTypeConfigurati
         builder.Property(i => i.PedidoId).IsRequired();
         builder.Property(i => i.ItemEstoqueId).IsRequired();
         builder.Property(i => i.Passo).HasPrecision(3, 1).IsRequired();
+        builder.Property(i => i.PassoRecebimento).HasPrecision(3, 1).IsRequired();
         builder.Property(i => i.SugeridoEmbalagens).HasPrecision(6, 1).IsRequired();
         builder.Property(i => i.PedidoEmbalagens).HasPrecision(6, 1).IsRequired();
         builder.Property(i => i.RecebidoEmbalagens).HasPrecision(6, 1);
@@ -74,6 +77,8 @@ internal sealed class ItemPedidoFornecedorConfiguration : IEntityTypeConfigurati
         builder.Property(i => i.Observacao).HasMaxLength(200);
         builder.Property(i => i.PedirDeNovo).IsRequired();
 
+        builder.Ignore(i => i.Subtotal);
+        builder.Ignore(i => i.SubtotalRecebido);
         builder.Ignore(i => i.Situacao);
         builder.Ignore(i => i.DiferencaValor);
         builder.Ignore(i => i.Faltou);

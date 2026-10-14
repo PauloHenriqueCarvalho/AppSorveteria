@@ -10,9 +10,6 @@ public interface IPedidoFornecedorRepository
     /// <summary>RN-PF-04: o rascunho do fornecedor, se houver (o índice único garante no máximo um).</summary>
     Task<PedidoFornecedor?> ObterRascunhoAsync(Guid fornecedorId, CancellationToken cancellationToken = default);
 
-    /// <summary>Último pedido recebido do fornecedor (o que faltou nele volta no próximo, RN-RC-04).</summary>
-    Task<PedidoFornecedor?> ObterUltimoRecebidoAsync(Guid fornecedorId, CancellationToken cancellationToken = default);
-
     /// <summary>Pedidos criados desde <paramref name="desdeUtc"/> e todos os ainda não recebidos nem cancelados. Mais recentes primeiro.</summary>
     Task<IReadOnlyList<PedidoFornecedor>> ListarAsync(Guid? fornecedorId, DateTime desdeUtc, CancellationToken cancellationToken = default);
 

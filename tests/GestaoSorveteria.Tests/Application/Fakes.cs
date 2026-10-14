@@ -287,12 +287,16 @@ internal sealed class ContagemRepositoryFake : IContagemRepository
             .OrderByDescending(c => c.IniciadaEm)
             .ToList());
 
-    public Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyDictionary<Guid, int>>(Contagens
+    public Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, UltimaContagemDoItem>>(Contagens
             .Where(c => c.ConcluidaEm < antesDeUtc)
             .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades)))
             .GroupBy(x => x.ItemEstoqueId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ConcluidaEm).First().ContadoUnidades!.Value));
+            .ToDictionary(g => g.Key, g =>
+            {
+                var ultima = g.OrderByDescending(x => x.ConcluidaEm).First();
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value);
+            }));
 
     public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)
     {
@@ -311,10 +315,6 @@ internal sealed class PedidoFornecedorRepositoryFake : IPedidoFornecedorReposito
 
     public Task<PedidoFornecedor?> ObterRascunhoAsync(Guid fornecedorId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Pedidos.FirstOrDefault(p => p.FornecedorId == fornecedorId && p.Status == StatusPedido.Rascunho));
-
-    public Task<PedidoFornecedor?> ObterUltimoRecebidoAsync(Guid fornecedorId, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Pedidos.Where(p => p.FornecedorId == fornecedorId && p.Status == StatusPedido.Recebido)
-            .OrderByDescending(p => p.RecebidoEm).FirstOrDefault());
 
     public Task<IReadOnlyList<PedidoFornecedor>> ListarAsync(Guid? fornecedorId, DateTime desdeUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<PedidoFornecedor>>(Pedidos

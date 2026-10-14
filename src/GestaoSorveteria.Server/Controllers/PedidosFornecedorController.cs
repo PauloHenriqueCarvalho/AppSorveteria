@@ -27,22 +27,23 @@ public sealed class PedidosFornecedorController : ControllerBase
         Ok(await _pedidos.ListarAsync(fornecedorId, cancellationToken));
 
     /// <summary>
-    /// RN-PF-02…04: monta (ou remonta) o rascunho do fornecedor com a sugestão de agora. Idempotente: o painel chama ao abrir
-    /// no dia do pedido; o que a dona alterou à mão é mantido.
+    /// RN-PF-02…04: monta (ou remonta) o rascunho do fornecedor com a sugestão de agora; o que a dona alterou à mão é mantido.
+    /// Com <c>automatico=true</c> (o painel ao abrir no dia do pedido), se o pedido de hoje já foi enviado, devolve ele em vez
+    /// de começar outro.
     /// </summary>
     [HttpPost("montar")]
     [ProducesResponseType(typeof(PedidoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<PedidoDto>> Montar([FromQuery] Guid fornecedorId, CancellationToken cancellationToken)
+    public async Task<ActionResult<PedidoDto>> Montar([FromQuery] Guid fornecedorId, [FromQuery] bool automatico, CancellationToken cancellationToken)
     {
         if (!UsuarioLogado.TentarObterId(User, out var usuarioId))
         {
             return Unauthorized();
         }
 
-        return Ok(await _pedidos.MontarAsync(fornecedorId, usuarioId, cancellationToken));
+        return Ok(await _pedidos.MontarAsync(fornecedorId, usuarioId, automatico, cancellationToken));
     }
 
     /// <summary>O pedido completo: tela, folha impressa (RN-PF-07) e conferência.</summary>
@@ -74,8 +75,15 @@ public sealed class PedidosFornecedorController : ControllerBase
     [ProducesResponseType(typeof(PedidoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PedidoDto>> Cancelar(Guid id, CancelarPedidoRequest request, CancellationToken cancellationToken) =>
-        Ok(await _pedidos.CancelarAsync(id, request, cancellationToken));
+    public async Task<ActionResult<PedidoDto>> Cancelar(Guid id, CancelarPedidoRequest request, CancellationToken cancellationToken)
+    {
+        if (!UsuarioLogado.TentarObterId(User, out var usuarioId))
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await _pedidos.CancelarAsync(id, request, usuarioId, cancellationToken));
+    }
 
     /// <summary>
     /// RN-RC-01…05: conferência da entrega. Listas vazias = "chegou tudo certo". Fecha os avisos dos itens que chegaram e

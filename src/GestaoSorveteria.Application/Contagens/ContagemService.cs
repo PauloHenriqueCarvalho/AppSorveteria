@@ -227,7 +227,7 @@ public sealed class ContagemService
             .Select(x =>
             {
                 var registrada = registradas.GetValueOrDefault(x.Item.Id);
-                int? anterior = anteriores.TryGetValue(x.Item.Id, out var a) ? a : null;
+                int? anterior = anteriores.TryGetValue(x.Item.Id, out var a) ? a.Unidades : null;
                 return new LinhaContagemDto(
                     x.Item.Id,
                     x.Grupo.Id,

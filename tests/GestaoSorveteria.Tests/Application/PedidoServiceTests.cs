@@ -87,9 +87,9 @@ public class PedidoServiceTests
     private static LinhaPedidoDto Linha(PedidoDto pedido, ItemEstoque item) => pedido.Linhas.Single(l => l.ItemEstoqueId == item.Id);
 
     [Fact]
-    public async Task Montar_SugereComSaidaSemanalAlvoEAvisos()
+    public async Task Montar_ComContagensAlvoEAvisos_SugereCadaItem()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
 
         Assert.Equal("Rascunho", pedido.Status);
         Assert.Equal(1, pedido.Numero);
@@ -115,10 +115,10 @@ public class PedidoServiceTests
     [Fact]
     public async Task Montar_DeNovo_RemontaOMesmoRascunhoMantendoOQueADonaMudou()
     {
-        var primeiro = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var primeiro = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         await _service.AlterarItensAsync(primeiro.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_limao.Id, 4m)]), Ct);
 
-        var segundo = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var segundo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
 
         Assert.Equal(primeiro.Id, segundo.Id);
         Assert.Single(_pedidos.Pedidos);
@@ -130,7 +130,7 @@ public class PedidoServiceTests
     [Fact]
     public async Task AlterarItens_ItemForaDoPedido_AcrescentaEMeiaCaixaSemPermissaoLanca()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
 
         var alterado = await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_copo.Id, 2m)]), Ct);
 
@@ -142,7 +142,7 @@ public class PedidoServiceTests
     [Fact]
     public async Task Enviar_FornecedorComWhatsApp_DevolveAMensagemDoPedido()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
 
         var enviado = await _service.EnviarAsync(pedido.Id, Ct);
 
@@ -164,7 +164,7 @@ public class PedidoServiceTests
     public async Task Enviar_FornecedorSoImpresso_SemMensagem()
     {
         _fabrica.Atualizar("Fábrica", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, false);
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
 
         var enviado = await _service.EnviarAsync(pedido.Id, Ct);
 
@@ -175,7 +175,7 @@ public class PedidoServiceTests
     [Fact]
     public async Task Receber_ChegouTudoCerto_FechaOsAvisosDosItensQueChegaram()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         await _service.EnviarAsync(pedido.Id, Ct);
         _clock.UtcNow = Agora.AddDays(2);
 
@@ -191,7 +191,7 @@ public class PedidoServiceTests
     [Fact]
     public async Task Receber_ComFaltaETroca_MensagemParaOFornecedorEOQueFaltouVoltaNoProximo()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         await _service.EnviarAsync(pedido.Id, Ct);
         _clock.UtcNow = Agora.AddDays(2);
 
@@ -212,18 +212,152 @@ public class PedidoServiceTests
 
         // Na semana seguinte, a uva que faltou volta no pedido (RN-RC-04).
         _clock.UtcNow = Agora.AddDays(7);
-        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         Assert.Equal(2, proximo.Numero);
         var uva = Linha(proximo, _uva);
         Assert.Equal("FaltouAnterior", uva.Origem);
-        Assert.True(uva.SugeridoEmbalagens >= 2m);
-        Assert.Contains("pedido nº 1", uva.Observacao);
+        Assert.Equal(2m, uva.SugeridoEmbalagens);
+        Assert.Equal("Faltou 2 cx no pedido nº 1", uva.Observacao);
+    }
+
+    [Fact]
+    public async Task Montar_FaltouMaisQueAConta_PedeOQueFaltou()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_limao.Id, 3m)]), Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(2);
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest([new LinhaRecebidaRequest(_limao.Id, 0m)], null, null), _dona.Id, Ct);
+
+        _clock.UtcNow = Agora.AddDays(7);
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        // A conta daria 1 caixa (36 − 14); faltaram 3 da semana passada: vão as 3.
+        var limao = Linha(proximo, _limao);
+        Assert.Equal(3m, limao.SugeridoEmbalagens);
+        Assert.Equal("FaltouAnterior", limao.Origem);
+    }
+
+    [Fact]
+    public async Task Montar_FaltaJaPedidaDeNovo_NaoVoltaOutraVez()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(2);
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest([new LinhaRecebidaRequest(_uva.Id, 0m)], null, null), _dona.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(7);
+        var segundo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        Assert.Equal("FaltouAnterior", Linha(segundo, _uva).Origem);
+        await _service.EnviarAsync(segundo.Id, Ct);
+
+        // Pedido 2 ainda a caminho: a uva que faltou já está nele.
+        var terceiro = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        Assert.Equal("Sugestao", Linha(terceiro, _uva).Origem);
+        Assert.Equal(0m, Linha(terceiro, _uva).SugeridoEmbalagens); // alvo 2 caixas, 2 a caminho
+        Assert.Equal("A caminho: 2 cx no pedido nº 2", Linha(terceiro, _uva).Observacao);
+
+        // Pedido 2 chegou certo: a falta do pedido 1 não volta.
+        _clock.UtcNow = Agora.AddDays(9);
+        await _service.ReceberAsync(segundo.Id, new ReceberPedidoRequest(null, null, null), _dona.Id, Ct);
+        var remontado = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        Assert.Equal(terceiro.Id, remontado.Id);
+        Assert.Equal("Sugestao", Linha(remontado, _uva).Origem);
+        Assert.Null(Linha(remontado, _uva).Observacao);
+    }
+
+    [Fact]
+    public async Task Receber_FaltouComPedirDeNovoDesmarcado_NaoVoltaNoProximo()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(2);
+        await _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest([new LinhaRecebidaRequest(_uva.Id, 0m, PedirDeNovo: false)], null, null), _dona.Id, Ct);
+
+        _clock.UtcNow = Agora.AddDays(7);
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        Assert.Equal("Sugestao", Linha(proximo, _uva).Origem);
+        Assert.Null(Linha(proximo, _uva).Observacao);
+    }
+
+    [Fact]
+    public async Task Receber_ItemComAvisoVeioZero_AvisoFicaAbertoEVoltaComAFaltaNaObservacao()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(2);
+
+        var recebido = await _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest([new LinhaRecebidaRequest(_flocos.Id, 0m)], null, null), _dona.Id, Ct);
+
+        Assert.Equal(1, recebido.AvisosFechados); // só o guardanapo
+        Assert.True(_avisos.Avisos.Single(a => a.ItemEstoqueId == _flocos.Id).Aberto);
+
+        _clock.UtcNow = Agora.AddDays(7);
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        var flocos = Linha(proximo, _flocos);
+        Assert.Equal("Aviso", flocos.Origem);
+        Assert.Equal(1m, flocos.SugeridoEmbalagens);
+        Assert.Equal("Ana avisou (urgente): acabou · Faltou 1 balde no pedido nº 1", flocos.Observacao);
+    }
+
+    [Fact]
+    public async Task Montar_EntregaDepoisDaUltimaContagem_SomaNoEstoque()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_limao.Id, 2m)]), Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddHours(2);
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest(null, null, null), _dona.Id, Ct);
+
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        // 14 contados ontem + 56 que chegaram hoje = 70, mais que os 36 dos próximos 9 dias.
+        Assert.Equal(0m, Linha(proximo, _limao).SugeridoEmbalagens);
+    }
+
+    [Fact]
+    public async Task Montar_PedidoEnviadoAindaNaoChegou_ContaOQueEstaACaminhoENaoRepeteOAviso()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_limao.Id, 2m)]), Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+
+        var outro = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        Assert.NotEqual(pedido.Id, outro.Id);
+        var limao = Linha(outro, _limao);
+        Assert.Equal(0m, limao.SugeridoEmbalagens); // 14 contados + 56 a caminho
+        Assert.Equal("A caminho: 2 cx no pedido nº 1", limao.Observacao);
+        // Flocos e guardanapo já vêm no pedido 1, enviado depois dos avisos: não entram de novo.
+        Assert.Equal(0m, Linha(outro, _flocos).SugeridoEmbalagens);
+        Assert.Equal("Sugestao", Linha(outro, _flocos).Origem);
+        Assert.DoesNotContain(outro.Linhas, l => l.ItemEstoqueId == _guardanapo.Id);
+    }
+
+    [Fact]
+    public async Task Montar_AutomaticoComPedidoDeHojeJaEnviado_DevolveEleEmVezDeMontarOutro()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, automatico: true, Ct);
+        Assert.Equal("Rascunho", pedido.Status);
+        await _service.EnviarAsync(pedido.Id, Ct);
+
+        var deNovo = await _service.MontarAsync(_fabrica.Id, _dona.Id, automatico: true, Ct);
+
+        Assert.Equal(pedido.Id, deNovo.Id);
+        Assert.Equal("Enviado", deNovo.Status);
+        Assert.Single(_pedidos.Pedidos);
+
+        // Na mão (botão "Montar pedido"), a dona pode começar outro no mesmo dia.
+        var manual = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        Assert.Equal(2, manual.Numero);
     }
 
     [Fact]
     public async Task Receber_NovoCusto_VaiParaOCatalogoEOPedidoFicaComOAntigo()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         await _service.EnviarAsync(pedido.Id, Ct);
 
         var recebido = await _service.ReceberAsync(pedido.Id,
@@ -234,21 +368,48 @@ public class PedidoServiceTests
     }
 
     [Fact]
-    public async Task Cancelar_PedidoEnviado_ComMotivo()
+    public async Task Receber_NovoCustoDoSaborQueVeioSemPedir_EntraComOCustoNovo()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         await _service.EnviarAsync(pedido.Id, Ct);
 
-        var cancelado = await _service.CancelarAsync(pedido.Id, new CancelarPedidoRequest("A fábrica fechou esta semana"), Ct);
+        var recebido = await _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest(null, [new LinhaRecebidaRequest(_copo.Id, 1m)], [new NovoCustoRequest(_copo.Id, 13.50m)]), _dona.Id, Ct);
+
+        Assert.Equal(13.50m, Linha(recebido.Pedido, _copo).CustoEmbalagem);
+        Assert.Equal(13.50m, Linha(recebido.Pedido, _copo).DiferencaValor);
+    }
+
+    [Fact]
+    public async Task Receber_NovoCustoDeItemQueVeioZeroOuNaoVeio_Lanca()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+
+        await Assert.ThrowsAsync<DomainException>(() => _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest([new LinhaRecebidaRequest(_uva.Id, 0m)], null, [new NovoCustoRequest(_uva.Id, 30m)]), _dona.Id, Ct));
+        await Assert.ThrowsAsync<DomainException>(() => _service.ReceberAsync(pedido.Id,
+            new ReceberPedidoRequest(null, null, [new NovoCustoRequest(_copo.Id, 13m)]), _dona.Id, Ct));
+        Assert.Equal(StatusPedido.Enviado, _pedidos.Pedidos.Single().Status);
+    }
+
+    [Fact]
+    public async Task Cancelar_PedidoEnviado_GuardaMotivoEQuemCancelou()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+
+        var cancelado = await _service.CancelarAsync(pedido.Id, new CancelarPedidoRequest("A fábrica fechou esta semana"), _dona.Id, Ct);
 
         Assert.Equal("Cancelado", cancelado.Status);
+        Assert.Equal("Dona Laura", cancelado.CanceladoPorNome);
         Assert.Equal("A fábrica fechou esta semana", cancelado.MotivoCancelamento);
     }
 
     [Fact]
-    public async Task Historico_PercentualMedioEItensQueMaisFaltam()
+    public async Task Historico_UmPedidoComFalta_PercentualMedioEItensQueMaisFaltam()
     {
-        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, Ct);
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
         await _service.EnviarAsync(pedido.Id, Ct);
         await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest([new LinhaRecebidaRequest(_uva.Id, 1m)], null, null), _dona.Id, Ct);
 
@@ -264,6 +425,6 @@ public class PedidoServiceTests
     [Fact]
     public async Task Montar_FornecedorInexistente_LancaNaoEncontrado()
     {
-        await Assert.ThrowsAsync<EntidadeNaoEncontradaException>(() => _service.MontarAsync(Guid.NewGuid(), _dona.Id, Ct));
+        await Assert.ThrowsAsync<EntidadeNaoEncontradaException>(() => _service.MontarAsync(Guid.NewGuid(), _dona.Id, cancellationToken: Ct));
     }
 }

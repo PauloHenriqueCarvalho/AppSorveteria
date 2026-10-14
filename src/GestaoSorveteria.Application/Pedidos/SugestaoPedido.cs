@@ -25,7 +25,7 @@ public static class SugestaoPedido
         {
             var anterior = ordenadas[i - 1];
             var atual = ordenadas[i];
-            var dias = (decimal)(atual.Em - anterior.Em).TotalDays;
+            var dias = (decimal)(atual.Em - anterior.Em).Ticks / TimeSpan.TicksPerDay;
             if (dias < 1)
             {
                 continue; // duas contagens no mesmo dia: não dá para tirar consumo
@@ -53,12 +53,13 @@ public static class SugestaoPedido
     }
 
     /// <summary>
-    /// Unidades que faltam para cobrir os dias: média semanal × semanas − contado. Sem histórico: estoque alvo − contado
-    /// (alvo nulo = 0). Nunca negativo.
+    /// Unidades que faltam para cobrir os dias: média semanal × semanas − estoque. Sem histórico: estoque alvo − estoque
+    /// (alvo nulo = 0). Nunca negativo. <paramref name="estoqueUnidades"/> = última contagem + o que chegou depois dela + o que
+    /// está a caminho (pedido enviado e ainda não recebido).
     /// </summary>
-    public static decimal NecessidadeEmUnidades(decimal? saidaSemanal, int diasACobrir, int? contadoUnidades, int? alvoUnidades)
+    public static decimal NecessidadeEmUnidades(decimal? saidaSemanal, int diasACobrir, int? estoqueUnidades, int? alvoUnidades)
     {
-        var contado = contadoUnidades ?? 0;
+        var contado = estoqueUnidades ?? 0;
         var necessidade = saidaSemanal is { } media
             ? media * diasACobrir / 7m - contado
             : (alvoUnidades ?? 0) - contado;
@@ -73,7 +74,8 @@ public static class SugestaoPedido
             return 0;
         }
 
-        var embalagens = unidades / unidadesPorEmbalagem;
-        return Math.Ceiling(embalagens / passo) * passo;
+        // Arredonda a 6 casas antes do teto: dízimas da média (56,0000…03) não podem virar uma caixa a mais.
+        var embalagens = Math.Round(unidades / unidadesPorEmbalagem / passo, 6, MidpointRounding.AwayFromZero);
+        return Math.Ceiling(embalagens) * passo;
     }
 }

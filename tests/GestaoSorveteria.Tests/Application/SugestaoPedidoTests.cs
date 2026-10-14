@@ -47,7 +47,7 @@ public class SugestaoPedidoTests
     }
 
     [Fact]
-    public void DiasACobrir_PedidoToDaSegundaEntregaEmDoisDias_NoveDias()
+    public void DiasACobrir_PedidoTodaSegundaEntregaEmDoisDias_NoveDias()
     {
         Assert.Equal(9, SugestaoPedido.DiasACobrir(DayOfWeek.Monday, [DayOfWeek.Monday], 2));
         Assert.Equal(3, SugestaoPedido.DiasACobrir(DayOfWeek.Monday, [DayOfWeek.Monday, DayOfWeek.Thursday], 0));
@@ -73,5 +73,14 @@ public class SugestaoPedidoTests
     public void EmEmbalagens_ArredondaParaCimaNoPasso(double unidades, int porEmbalagem, double passo, double esperado)
     {
         Assert.Equal((decimal)esperado, SugestaoPedido.EmEmbalagens((decimal)unidades, porEmbalagem, (decimal)passo));
+    }
+
+    [Fact]
+    public void EmEmbalagens_DizimaDaMedia_NaoGanhaUmaCaixaAMais()
+    {
+        // 20 picolés em 3 dias = 46,666…/semana; × 9 dias ÷ 7 = 60,000…0001 em decimal. Duas caixas de 30, não três.
+        var necessidade = SugestaoPedido.NecessidadeEmUnidades(20m / 3m * 7m, 9, 0, null) + 0.0000000001m;
+
+        Assert.Equal(2m, SugestaoPedido.EmEmbalagens(necessidade, 30, 1m));
     }
 }

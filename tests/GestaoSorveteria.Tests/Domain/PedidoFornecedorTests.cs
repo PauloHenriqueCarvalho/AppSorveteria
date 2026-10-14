@@ -110,12 +110,98 @@ public class PedidoFornecedorTests
     public void Cancelar_ExigeMotivoERecebidoNaoCancela()
     {
         var pedido = Rascunho(new LinhaSugerida(_limao, 1m, 2m, OrigemLinhaPedido.Sugestao));
-        Assert.Throws<DomainException>(() => pedido.Cancelar("", Agora));
+        Assert.Throws<DomainException>(() => pedido.Cancelar("", Cenario.Dona, Agora));
+        Assert.Equal(StatusPedido.Rascunho, pedido.Status);
 
         pedido.Enviar(Agora);
         pedido.Receber([], [], Cenario.Dona, Agora.AddDays(2));
 
-        Assert.Throws<DomainException>(() => pedido.Cancelar("Errei", Agora.AddDays(2)));
+        Assert.Throws<DomainException>(() => pedido.Cancelar("Errei", Cenario.Dona, Agora.AddDays(2)));
+    }
+
+    [Fact]
+    public void Cancelar_Enviado_GuardaMotivoEQuemCancelou()
+    {
+        var pedido = Rascunho(new LinhaSugerida(_limao, 1m, 2m, OrigemLinhaPedido.Sugestao));
+        pedido.Enviar(Agora);
+
+        pedido.Cancelar("A fábrica fechou", Cenario.Dona, Agora.AddHours(1));
+
+        Assert.Equal(StatusPedido.Cancelado, pedido.Status);
+        Assert.Equal(Cenario.Dona, pedido.CanceladoPorUsuarioId);
+        Assert.Equal("A fábrica fechou", pedido.MotivoCancelamento);
+    }
+
+    [Fact]
+    public void Total_MeiaCaixaComCentavoQuebrado_EhASomaDosSubtotaisArredondados()
+    {
+        var morango = ItemEstoque.Criar(_picoles.Id, _fabrica.Id, "Morango", UnidadeCompra.Caixa, 28, 25.25m, 4);
+        var coco = ItemEstoque.Criar(_picoles.Id, _fabrica.Id, "Coco", UnidadeCompra.Caixa, 28, 25.25m, 5);
+        var pedido = Rascunho(
+            new LinhaSugerida(morango, 0.5m, 0.5m, OrigemLinhaPedido.Sugestao),
+            new LinhaSugerida(coco, 0.5m, 0.5m, OrigemLinhaPedido.Sugestao));
+
+        Assert.Equal(12.63m, pedido.Linha(morango.Id)!.Subtotal); // 12,625 → 12,63
+        Assert.Equal(25.26m, pedido.TotalPedido); // a folha mostra 12,63 + 12,63; o total bate com ela (não 25,25)
+
+        pedido.Enviar(Agora);
+        pedido.Receber([], [], Cenario.Dona, Agora.AddDays(1));
+        Assert.Equal(25.26m, pedido.TotalRecebido);
+    }
+
+    [Fact]
+    public void Remontar_CustoEPassoMudaram_LinhaAcompanhaOCatalogoEOFornecedor()
+    {
+        var pedido = Rascunho(
+            new LinhaSugerida(_limao, 0.5m, 2m, OrigemLinhaPedido.Sugestao),
+            new LinhaSugerida(_uva, 0.5m, 1m, OrigemLinhaPedido.Sugestao));
+        pedido.AlterarQuantidade(_uva.Id, 1.5m, Agora);
+        _limao.AlterarCusto(30m);
+
+        // A fábrica deixou de aceitar meia caixa (passo 1) e o limão subiu.
+        pedido.Remontar(
+            [new LinhaSugerida(_limao, 1m, 2m, OrigemLinhaPedido.Sugestao), new LinhaSugerida(_uva, 1m, 1m, OrigemLinhaPedido.Sugestao)],
+            Agora.AddMinutes(1));
+
+        Assert.Equal(30m, pedido.Linha(_limao.Id)!.CustoEmbalagem);
+        Assert.Equal(2m, pedido.Linha(_uva.Id)!.PedidoEmbalagens); // a dona tinha 1,5: arredonda para cima no passo novo
+        Assert.Equal(1m, pedido.Linha(_uva.Id)!.Passo);
+        Assert.Equal(110.40m, pedido.TotalPedido); // 2 × 30 + 2 × 25,20
+    }
+
+    [Fact]
+    public void Receber_MeiaCaixaComPedidoEmCaixaInteira_AceitaMasBaldeNao()
+    {
+        var pedido = Rascunho(
+            new LinhaSugerida(_limao, 1m, 3m, OrigemLinhaPedido.Sugestao),
+            new LinhaSugerida(_flocos, 1m, 1m, OrigemLinhaPedido.Sugestao));
+        pedido.Enviar(Agora);
+
+        Assert.Throws<DomainException>(() =>
+            pedido.Receber([new LinhaRecebida(_flocos.Id, 0.5m)], [], Cenario.Dona, Agora.AddDays(1)));
+
+        pedido.Receber([new LinhaRecebida(_limao.Id, 2.5m)], [], Cenario.Dona, Agora.AddDays(1));
+        Assert.Equal(2.5m, pedido.Linha(_limao.Id)!.RecebidoEmbalagens);
+        Assert.Equal(0.5m, pedido.Linha(_limao.Id)!.Faltou);
+    }
+
+    [Fact]
+    public void Receber_ErroEmUmaLinha_NaoMudaNenhumaOutra()
+    {
+        var pedido = Rascunho(
+            new LinhaSugerida(_limao, 1m, 3m, OrigemLinhaPedido.Sugestao),
+            new LinhaSugerida(_uva, 1m, 2m, OrigemLinhaPedido.Sugestao));
+        pedido.Enviar(Agora);
+
+        Assert.Throws<DomainException>(() => pedido.Receber(
+            [new LinhaRecebida(_limao.Id, 1m), new LinhaRecebida(_uva.Id, -1m)],
+            [new LinhaNaoPedida(_flocos, 1m, 1m)],
+            Cenario.Dona, Agora.AddDays(1)));
+
+        Assert.Equal(StatusPedido.Enviado, pedido.Status);
+        Assert.Null(pedido.Linha(_limao.Id)!.RecebidoEmbalagens);
+        Assert.Null(pedido.Linha(_flocos.Id));
+        Assert.Equal(2, pedido.Itens.Count);
     }
 
     [Fact]
