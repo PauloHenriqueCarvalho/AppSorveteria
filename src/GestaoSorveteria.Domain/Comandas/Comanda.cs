@@ -1,5 +1,6 @@
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 
 namespace GestaoSorveteria.Domain.Comandas;
@@ -176,7 +177,7 @@ public sealed class Comanda : Entity
             criadaEmUtc,
             recebidaEmUtc,
             observacao,
-            listaItens.Select(d => new DadosItem(d.Id, d.ProdutoId, d.Descricao, d.Quantidade, d.PrecoUnitario)),
+            listaItens.Select(d => new DadosItem(d.Id, d.ProdutoId, d.Descricao, d.Quantidade, d.PrecoUnitario, d.ItemEstoqueId)),
             listaPagamentos,
             fechadaEmUtc,
             canceladaEmUtc,
@@ -188,13 +189,21 @@ public sealed class Comanda : Entity
 
     /// <summary>
     /// RN-CM-03/04: produto cadastrado. Para produto com valor livre, <paramref name="valorInformado"/> é obrigatório.
-    /// Mesmo produto (mesmo preço) soma na linha existente.
+    /// Mesmo produto (mesmo preço e mesmo sabor) soma na linha existente.
+    /// <paramref name="sabor"/>: RN-ES-09, pote ligado a grupo com saldo — o sabor precisa ser do grupo do produto e entra na
+    /// descrição ("Pote 1L · Flocos"). Quem decide se o produto pede sabor é quem conhece o modo do grupo (o app).
     /// </summary>
-    public ItemComanda AdicionarProduto(Produto produto, int quantidade, decimal? valorInformado = null, Guid? itemId = null)
+    public ItemComanda AdicionarProduto(Produto produto, int quantidade, decimal? valorInformado = null, Guid? itemId = null, ItemEstoque? sabor = null)
     {
         ExigirAberta();
         Guard.Contra(produto is null, "Informe o produto.");
         Guard.Contra(!produto!.Ativo, $"O produto \"{produto.Nome}\" está desativado.");
+        if (sabor is not null)
+        {
+            Guard.Contra(produto.GrupoEstoqueId is null || sabor.GrupoId != produto.GrupoEstoqueId,
+                $"{sabor.Nome} não é sabor de \"{produto.Nome}\".");
+            Guard.Contra(!sabor.Ativo, $"O sabor {sabor.Nome} está desativado.");
+        }
 
         decimal preco;
         if (produto.PermiteValorLivre)
@@ -220,7 +229,7 @@ public sealed class Comanda : Entity
 
         if (!produto.PermiteValorLivre)
         {
-            var linha = _itens.FirstOrDefault(i => i.ProdutoId == produto.Id && i.PrecoUnitario == preco);
+            var linha = _itens.FirstOrDefault(i => i.ProdutoId == produto.Id && i.PrecoUnitario == preco && i.ItemEstoqueId == sabor?.Id);
             if (linha is not null)
             {
                 linha.Somar(quantidade);
@@ -229,7 +238,8 @@ public sealed class Comanda : Entity
             }
         }
 
-        var item = new ItemComanda(Id, produto.Id, produto.Nome, quantidade, preco, itemId);
+        var descricao = sabor is null ? produto.Nome : $"{produto.Nome} · {sabor.Nome}";
+        var item = new ItemComanda(Id, produto.Id, descricao, quantidade, preco, itemId, sabor?.Id);
         _itens.Add(item);
         RecalcularTotal();
         return item;
@@ -368,7 +378,7 @@ public sealed class Comanda : Entity
         foreach (var dados in itens ?? Enumerable.Empty<DadosItem>())
         {
             Guard.Contra(comanda._itens.Any(i => i.Id == dados.Id), "Item repetido na comanda.");
-            comanda._itens.Add(new ItemComanda(id, dados.ProdutoId, dados.Descricao, dados.Quantidade, dados.PrecoUnitario, dados.Id));
+            comanda._itens.Add(new ItemComanda(id, dados.ProdutoId, dados.Descricao, dados.Quantidade, dados.PrecoUnitario, dados.Id, dados.ItemEstoqueId));
         }
 
         comanda.RecalcularTotal();

@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -20,6 +21,11 @@ internal sealed class ProdutoConfiguration : IEntityTypeConfiguration<Produto>
         builder.Property(p => p.Ordem).IsRequired();
         builder.Property(p => p.CriadoEm).IsRequired();
         builder.Property(p => p.AtualizadoEm);
+
+        // RN-PR-06: produto ligado a grupo de estoque (potes). Produtos que já existem ficam sem grupo e com 1 por venda.
+        builder.Property(p => p.GrupoEstoqueId);
+        builder.Property(p => p.UnidadesPorVenda).HasDefaultValue(1).IsRequired();
+        builder.HasOne<GrupoEstoque>().WithMany().HasForeignKey(p => p.GrupoEstoqueId).OnDelete(DeleteBehavior.Restrict);
 
         // RN-PR-01: nome único sem diferenciar maiúsculas/minúsculas.
         builder.HasIndex(p => p.NomeNormalizado).IsUnique();
