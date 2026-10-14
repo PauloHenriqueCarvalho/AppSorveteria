@@ -78,6 +78,76 @@ public static class MensagensWhatsApp
         return texto.ToString();
     }
 
+    /// <summary>Uma linha do pedido para o texto do fornecedor.</summary>
+    public sealed record LinhaPedido(string Grupo, string Item, decimal Embalagens, UnidadeCompra Unidade);
+
+    /// <summary>
+    /// Pedido nº 12 — Verão Tropical
+    /// Para: Fábrica · segunda 19/10
+    /// Picolé de fruta: Limão 3 cx · Uva 2 cx
+    /// Massa (balde): Flocos 1 balde
+    /// Total estimado: R$ 255,60
+    /// </summary>
+    public static string Pedido(string nomeLoja, string fornecedor, int numero, DateOnly dia, IReadOnlyList<LinhaPedido> linhas, decimal? totalEstimado)
+    {
+        var texto = new StringBuilder()
+            .Append("Pedido nº ").Append(numero).Append(" — ").Append(nomeLoja.Trim()).Append('\n')
+            .Append("Para: ").Append(fornecedor.Trim()).Append(" · ").Append(DiasDaSemana[(int)dia.DayOfWeek]).Append(' ')
+            .Append(dia.ToString("dd/MM", CultureInfo.InvariantCulture));
+
+        foreach (var grupo in linhas.Where(l => l.Embalagens > 0).GroupBy(l => l.Grupo))
+        {
+            texto.Append('\n').Append(grupo.Key.Trim()).Append(": ")
+                .AppendJoin(" · ", grupo.Select(l => $"{l.Item.Trim()} {Embalagens(l.Embalagens, l.Unidade)}"));
+        }
+
+        if (totalEstimado is { } total)
+        {
+            texto.Append("\nTotal estimado: ").Append(Reais(total));
+        }
+
+        return texto.ToString();
+    }
+
+    /// <summary>
+    /// Entrega do pedido nº 12 — Verão Tropical
+    /// Faltou: Limão 1 cx · Uva 1 cx
+    /// Veio a mais: Morango 1 cx
+    /// Veio sem pedir: Flocos 1 balde
+    /// </summary>
+    public static string Divergencias(
+        string nomeLoja, int numero, IReadOnlyList<LinhaPedido> faltou, IReadOnlyList<LinhaPedido> veioAMais, IReadOnlyList<LinhaPedido> naoPedido)
+    {
+        var texto = new StringBuilder().Append("Entrega do pedido nº ").Append(numero).Append(" — ").Append(nomeLoja.Trim());
+        Linhas(texto, "Faltou", faltou);
+        Linhas(texto, "Veio a mais", veioAMais);
+        Linhas(texto, "Veio sem pedir", naoPedido);
+        return texto.ToString();
+
+        static void Linhas(StringBuilder texto, string titulo, IReadOnlyList<LinhaPedido> linhas)
+        {
+            if (linhas.Count > 0)
+            {
+                texto.Append('\n').Append(titulo).Append(": ")
+                    .AppendJoin(" · ", linhas.Select(l => $"{l.Item.Trim()} {Embalagens(l.Embalagens, l.Unidade)}"));
+            }
+        }
+    }
+
+    /// <summary>2,5 caixas → "2,5 cx"; 1 balde → "1 balde"; 2 → "2 baldes"; unidade → "3 un"; pacote → "1 pct".</summary>
+    public static string Embalagens(decimal quantidade, UnidadeCompra unidade)
+    {
+        var numero = quantidade.ToString("0.#", CultureInfo.InvariantCulture).Replace('.', ',');
+        var nome = unidade switch
+        {
+            UnidadeCompra.Caixa => "cx",
+            UnidadeCompra.Balde => quantidade > 1 ? "baldes" : "balde",
+            UnidadeCompra.Pacote => "pct",
+            _ => "un",
+        };
+        return $"{numero} {nome}";
+    }
+
     /// <summary>Link que abre o WhatsApp com a mensagem pronta; sem número, o próprio WhatsApp pede o contato.</summary>
     public static string Link(string? whatsAppDigitos, string mensagem)
     {

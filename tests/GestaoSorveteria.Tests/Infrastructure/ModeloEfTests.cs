@@ -78,6 +78,21 @@ public class ModeloEfTests
         Assert.Equal("status = 'Aberto' AND item_estoque_id IS NOT NULL", avisoAberto.GetFilter());
     }
 
+    [Fact]
+    public void Pedido_UmRascunhoPorFornecedorENumeroUnico()
+    {
+        using var db = Contexto();
+        var modelo = ModeloDeDesign(db);
+
+        Assert.Equal("pedidos_fornecedor", modelo.FindEntityType(typeof(PedidoFornecedor))!.GetTableName());
+        Assert.Equal("itens_pedido_fornecedor", modelo.FindEntityType(typeof(ItemPedidoFornecedor))!.GetTableName());
+        var rascunho = Indice(modelo, typeof(PedidoFornecedor), nameof(PedidoFornecedor.FornecedorId));
+        Assert.True(rascunho.IsUnique);
+        Assert.Equal("status = 'Rascunho'", rascunho.GetFilter());
+        Assert.True(Indice(modelo, typeof(PedidoFornecedor), nameof(PedidoFornecedor.Numero)).IsUnique);
+        Assert.True(Indice(modelo, typeof(ItemPedidoFornecedor), nameof(ItemPedidoFornecedor.PedidoId), nameof(ItemPedidoFornecedor.ItemEstoqueId)).IsUnique);
+    }
+
     private static IIndex Indice(IModel modelo, Type entidade, params string[] propriedades) =>
         modelo.FindEntityType(entidade)!.GetIndexes()
             .Single(i => i.Properties.Select(p => p.Name).SequenceEqual(propriedades));
