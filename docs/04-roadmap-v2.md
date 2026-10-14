@@ -93,6 +93,7 @@ Detalhes em docs/07.
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
+- [ ] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-12
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
@@ -121,11 +122,11 @@ Antes de começar: levar as 8 perguntas de docs/10, seção 5, para a dona (cada
 **Pronto quando:** um pedido real sai do painel para o WhatsApp do fornecedor, a entrega é conferida em menos de 2 minutos e o que faltou aparece no pedido seguinte.
 
 ### Sprint 7 — Baixa automática
-- [ ] Produto de venda ligado a grupo de estoque (RN-PR-06) no painel; `ItemEstoqueId` opcional no sync de comandas; baixa e estorno no servidor (RN-ES-05)
-- [ ] App: grade de sabores ao lançar produto ligado (1 toque); itens de estoque baixados com o catálogo
-- [ ] App: "Abri um balde" + `POST /api/sync/estoque` (RN-ES-06); contagem rápida no app (opcional)
+- [ ] App: **"Abasteci a frente"** (sabor + caixas, passo 0,5) e **"Abri um balde"**, offline, com desfazer em 10 min; `POST /api/sync/estoque` (RN-ES-05/06)
+- [ ] Produto de venda ligado a grupo de estoque no painel (RN-PR-06); conferência vendido × abastecido por grupo e semana (RN-ES-11)
 - [ ] Consumo diário, dias restantes, sugestão por consumo real e aviso "pedir hoje" (RN-ES-09/10, RN-PF-02 completo)
-- [ ] Teste com 2 semanas de vendas reais; ajustar alvos com a dona
+- [ ] (Se a dona pedir) grupo com venda por sabor (`VendaComSabor`): grade de sabores na venda e baixa no sync da comanda
+- [ ] Teste com 2 semanas reais; ajustar alvos com a dona
 
 **Pronto quando:** a dona abre o painel no dia do pedido, confere o sugerido e envia sem contar o freezer.
 

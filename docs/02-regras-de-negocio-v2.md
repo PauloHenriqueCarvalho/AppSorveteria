@@ -28,7 +28,7 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-PR-03 | Produto é **desativado**, nunca apagado, quando já foi vendido. Produto inativo não aparece no app: a API entrega os inativos na sincronização (`GET /api/produtos?desde=`) e o app esconde o botão | F1 | Application + App |
 | RN-PR-04 | Alterar o preço não altera vendas passadas (o item guarda o preço praticado) | F1 | Domain (`ItemComanda`) |
 | RN-PR-05 | `Ordem` define a posição do botão no app (mais vendidos primeiro) | F1 | Domain |
-| RN-PR-06 | Produto de venda pode ser ligado a um **grupo de estoque** (ex.: "Picolé ao leite" → grupo *Picolé ao leite*) com `UnidadesPorVenda` (padrão 1). Produto ligado pede o **sabor** na venda (RN-ES-05). Produto sem vínculo (ex.: self-service, venda avulsa) não movimenta estoque. Ficha técnica de insumos fica para a Fase 4 (docs/10) | F2 | Domain |
+| RN-PR-06 | Produto de venda pode ser ligado a um **grupo de estoque** (ex.: "Picolé ao leite" → grupo *Picolé ao leite*) com `UnidadesPorVenda` (padrão 1). **A venda não pede sabor** (RN-ES-05); o vínculo serve para a conferência vendido × abastecido (RN-ES-11) e para o custo (RN-PR-07). Produto sem vínculo (self-service, venda avulsa) não entra em nada disso. Ficha técnica de insumos fica para a Fase 4 (docs/10) | F2 | Domain |
 | RN-PR-07 | Custo estimado de um item vendido = custo da embalagem do item de estoque ÷ unidades por embalagem × unidades por venda (ex.: picolé = R$ 25,20 ÷ 28 = R$ 0,90); produto sem vínculo de estoque aceita custo informado manualmente | F3 | Application |
 
 ## 3. Caixa (turno)
@@ -83,14 +83,16 @@ Desenho e motivo em **docs/10**: a loja compra sorvete **pronto** de um forneced
 |---|---|---|---|
 | RN-ES-01 | **Item de estoque** = o que se compra pronto: grupo (Picolé de fruta, Picolé ao leite, Skimo, Moreninha, Pote 1L, Pote 2L, Pote 5L, Pote de açaí, Açaí, Açaí trufado, Massa), sabor, fornecedor, unidade de compra (`Caixa`, `Balde`, `Unidade`), unidades por embalagem (ex.: 28 picolés por caixa), custo da embalagem (≥ 0), estoque alvo em embalagens (opcional), ativo. Grupo + sabor é único (sem diferenciar maiúsculas). Catálogo inicial importado de `docs/fase2/catalogo-inicial.csv` | F2 | Domain (`ItemEstoque`) |
 | RN-ES-02 | Saldo guardado na **menor unidade** (picolé, pote, balde), inteiro; exibido em embalagens com meia caixa ("2,5 cx"). Entrada de contagem aceita passos de 0,5 caixa | F2 | Domain |
-| RN-ES-03 | Saldo = soma dos movimentos: `Entrada` (recebimento), `BaixaVenda`, `EstornoVenda`, `AberturaBalde`, `AjusteContagem`, `Perda`. Nunca se edita o saldo direto; `Perda` exige motivo | F2 | Domain |
+| RN-ES-03 | Saldo = soma dos movimentos: `Entrada` (recebimento), `SaidaParaFrente`, `AberturaBalde`, `BaixaVenda` e `EstornoVenda` (só grupos com venda por sabor), `AjusteContagem`, `Perda`. Nunca se edita o saldo direto; `Perda` exige motivo | F2 | Domain |
 | RN-ES-04 | **Saldo inicial** = primeira contagem (RN-ES-08) feita pelo painel ao começar a Fase 2 | F2 | Application |
-| RN-ES-05 | **Baixa pela venda:** item de comanda de produto ligado a um grupo (RN-PR-06) guarda o **sabor escolhido** (`ItemEstoqueId`). Quando a comanda **fechada** chega ao servidor, gera `BaixaVenda` = quantidade × unidades por venda. Comanda cancelada não baixa; estorno gera `EstornoVenda` | F2 | Application (sync) |
-| RN-ES-06 | **Massa e açaí em balde** saem quando o atendente registra **"Abri um balde"** de um sabor (1 balde, `AberturaBalde`). Venda por bola/peso não baixa. O registro nasce no celular com Id próprio e sobe pela sincronização (idempotente) | F2 | App + Application |
+| RN-ES-05 | **Saída por sabor = "Abasteci a frente"** (revisto em 14/10: pedir sabor por picolé na venda é inviável com 50 picolés numa comanda). Quem tira caixas (ou potes) do depósito para o freezer do balcão registra no tablet: sabor + quantidade em embalagens (passo 0,5 caixa). Gera `SaidaParaFrente` = quantidade × unidades por embalagem. O saldo é o que está **fechado no depósito**; o que foi para a frente conta como consumido. Grupo pode, por configuração, pedir sabor na venda em vez disso (`ModoSaida = VendaComSabor`), útil se a dona quiser para potes | F2 | Domain + App |
+| RN-ES-06 | **Massa e açaí em balde** saem com **"Abri um balde"** de um sabor (`AberturaBalde`, 1 balde). Venda por bola/peso não baixa. "Abasteci a frente" e "Abri um balde" nascem no celular com Id próprio, funcionam offline e sobem pela sincronização (idempotente). Registro errado se desfaz com um movimento inverso com motivo, feito no próprio tablet em até 10 min ou pela dona no painel | F2 | App + Application |
 | RN-ES-07 | A venda **nunca** é bloqueada por estoque; saldo negativo é permitido e aparece como aviso ("conferir contagem") | F2 | Domain |
 | RN-ES-08 | **Contagem rápida** (painel ou app): mostra o saldo esperado de cada item; quem conta altera só o que difere. Cada diferença vira `AjusteContagem` com o motivo "contagem dd/mm" e fica na conferência (esperado × contado), como no caixa | F2 | Application |
-| RN-ES-09 | **Consumo diário** = saídas (`BaixaVenda` + `AberturaBalde` − `EstornoVenda`) dos últimos 28 dias ÷ dias com caixa aberto. Menos de 14 dias de histórico → "sem histórico" e vale o estoque alvo. **Dias restantes** = saldo ÷ consumo diário | F2 | Application |
+| RN-ES-09 | **Consumo diário** = saídas (`SaidaParaFrente` + `AberturaBalde` + `BaixaVenda` dos grupos que vendem com sabor − `EstornoVenda`) dos últimos 28 dias ÷ dias com caixa aberto. Menos de 14 dias de histórico → "sem histórico" e vale o estoque alvo. **Dias restantes** = saldo ÷ consumo diário | F2 | Application |
 | RN-ES-10 | Aviso **"pedir hoje"** quando os dias restantes de um item são menores que o prazo de entrega do fornecedor + 1 dia | F2 | Application |
+| RN-ES-11 | **Conferência vendido × abastecido** por grupo e por semana: unidades vendidas no caixa (comandas fechadas com produto do grupo × unidades por venda) comparadas com as unidades que foram para a frente. Diferença aparece no painel ("48 picolés ao leite saíram sem venda"); é informativa, como a diferença do caixa, e nunca muda o estoque sozinha | F2 | Application |
+| RN-ES-12 | Na venda, a **quantidade** de um item pode ser digitada (teclado numérico ao tocar no número), além de + e −; limite 999 por item | F1/F2 | App |
 
 ### 6.2 Pedido ao fornecedor
 
@@ -115,7 +117,7 @@ Desenho e motivo em **docs/10**: a loja compra sorvete **pronto** de um forneced
 | RN-RC-05 | O sistema gera a **mensagem de cobrança** para o fornecedor (faltou X, veio Y no lugar de Z, diferença R$) | F2 | Application |
 | RN-RC-06 | Se o preço da nota for diferente, a dona informa o novo custo da embalagem no recebimento: atualiza o item de estoque para os próximos pedidos (o pedido antigo mantém o snapshot) | F2 | Domain |
 | RN-RC-07 | **Histórico do fornecedor**: pedidos do mês, valor pedido × recebido, % atendido médio e os itens que mais faltam | F2 | Application |
-| RN-RC-08 | Só **Admin** cria, envia, cancela e recebe pedidos e faz ajustes de estoque. Atendente só registra venda com sabor, "Abri um balde" e (se liberado) contagem | F2 | Application |
+| RN-RC-08 | Só **Admin** cria, envia, cancela e recebe pedidos e faz ajustes de estoque. Atendente só registra "Abasteci a frente", "Abri um balde" (e o desfazer em até 10 min) e, se liberado, contagem | F2 | Application |
 
 ## 7. Relatórios (Fase 3)
 

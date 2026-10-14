@@ -39,7 +39,7 @@ Com o sistema, o trabalho manual de cada etapa cai para o mínimo:
 
 | Etapa | Hoje (manual) | Com o sistema | Toques da dona |
 |---|---|---|---|
-| Saber o que tem | Contar freezer e depósito, item por item | **Saldo automático**: entra pelo recebimento, sai pela venda e pela abertura de balde | 0 |
+| Saber o que tem | Contar freezer e depósito, item por item | **Saldo automático** do depósito: entra pelo recebimento, sai quando uma caixa ou balde vai para a frente (1 toque por caixa, não por picolé) | 0 |
 | Decidir o que pedir | De cabeça | **Pedido sugerido** pelo consumo real e pelo prazo de entrega | revisar |
 | Montar o pedido | Digitar duas vezes | Rascunho pronto no dia do pedido, total em R$ calculado | +/− se quiser |
 | Enviar | Copiar e colar | Botão **Enviar no WhatsApp** com a mensagem pronta | 1 |
@@ -47,22 +47,35 @@ Com o sistema, o trabalho manual de cada etapa cai para o mínimo:
 | Cobrar o fornecedor | Não cobra (não sabe) | Diferenças em R$ e mensagem de cobrança pronta; o que faltou volta sozinho no próximo pedido | 1 |
 | Conferir o estoque | — | **Contagem rápida** semanal opcional: só digita o que não bate | poucos |
 
-### 2.1 De onde vem a baixa automática (sem ninguém contar)
+### 2.1 De onde vem a baixa automática (sem atrasar o balcão)
 
-| Grupo | Como sai do estoque | O que o atendente faz a mais |
-|---|---|---|
-| Picolé, Skimo, Moreninha | Venda no app | Escolhe o **sabor** ao lançar (1 toque numa grade de sabores) |
-| Potes 1L/2L/5L e potes de açaí | Venda no app | Escolhe o **sabor** ao lançar |
-| Massa e açaí em balde | Quando o balde **acaba e outro é aberto** (bola e peso não dão para medir) | Toca **"Abri um balde"** e escolhe o sabor |
+**Problema (14/10):** pedir o sabor de cada picolé na venda não funciona. Uma pessoa leva 50 picolés de sabores misturados e o atendente não tem como registrar um por um com fila no balcão.
 
-Sem a escolha de sabor, o sistema só saberia "vendeu 40 picolés" e não teria como sugerir o pedido por sabor. É o único passo novo para o atendente e substitui toda a contagem manual.
+**Solução: o sabor é registrado quando a caixa sai do depósito, não quando o picolé é vendido.** É o mesmo jeito do balde de massa: ninguém mede bola, registra o balde que abriu. A planilha já conta assim ("Na frente" × "Em estoque", em caixas e meias caixas).
 
-Enquanto o histórico de vendas por sabor é curto (menos de 14 dias), a sugestão usa um **estoque alvo** por item, que a dona define uma vez (ex.: "Pote 1L Morango: manter 8"). Depois o consumo real assume.
+| Grupo | Na venda (balcão) | Como sai do estoque por sabor | Quem registra e quando |
+|---|---|---|---|
+| Picolé, Skimo, Moreninha | **Sem sabor**: "Picolé ao leite × 50" (digita a quantidade) | **"Abasteci a frente"**: caixa que saiu do depósito para o freezer do balcão | Quem abastece, 1 vez por caixa (poucas por dia) |
+| Massa e açaí em balde | Bola/peso, sem sabor (como hoje) | **"Abri um balde"** | Quem troca o balde |
+| Potes 1L/2L/5L e potes de açaí | **Padrão: sem sabor**, igual ao picolé | "Abasteci a frente" por unidade **ou** sabor na venda, se a dona preferir (configurável por grupo) | Pergunta 7 |
+
+**O saldo de cada sabor é o que está fechado no depósito.** A caixa que foi para a frente conta como consumida. Para decidir o pedido é isso que importa: o que ainda tem guardado e quantas caixas de cada sabor saem por semana.
+
+**O que a venda sem sabor ainda entrega (conferência por grupo):**
+`picolés vendidos na semana` × `caixas abastecidas × 28`. Se saíram 6 caixas de picolé ao leite (168 un) e o caixa registrou 120 vendidos, há 48 picolés sem venda (quebra, consumo interno, venda sem registro ou meia caixa ainda na frente). O painel mostra essa diferença por semana, como o caixa mostra "faltou/sobrou".
+
+**No balcão, mais rápido do que hoje:**
+- Tocar no **número da quantidade** abre o teclado numérico: "50" em vez de 49 toques no +. Serve para qualquer produto e vale já na Fase 1.
+- Picolé ao leite, de fruta, Skimo e Moreninha continuam como hoje: um botão por tipo, porque o preço é por tipo.
+
+**Precisão:** a frente pode ter meia caixa aberta de um sabor, então o consumo por sabor tem erro de até 1 caixa por sabor numa semana. Para pedir em caixas isso basta. A contagem rápida semanal (RN-ES-08) inclui a frente quando a dona quiser acertar tudo.
+
+Enquanto o histórico é curto (menos de 14 dias), a sugestão usa um **estoque alvo** por sabor, que a dona define uma vez (ex.: "Picolé ao leite Chocolate: manter 3 caixas"). Depois o consumo real assume.
 
 ### 2.2 Conta da sugestão (RN-PF-02)
 
 ```
-consumo diário   = saídas (venda + abertura de balde) dos últimos 28 dias ÷ dias com loja aberta
+consumo diário   = saídas (caixas/potes levados para a frente + baldes abertos) dos últimos 28 dias ÷ dias com loja aberta
 cobertura (dias) = prazo de entrega do fornecedor + dias até o próximo pedido (padrão: 7)
 necessário       = consumo diário × cobertura
 sugerido         = necessário − saldo − já pedido e ainda não recebido
@@ -71,7 +84,7 @@ sem histórico    → sugerido = estoque alvo − saldo
 faltou no último recebimento → entra marcado "faltou no último pedido"
 ```
 
-Exemplo: Pote 1L Morango vende 1,2 por dia; o fornecedor entrega em 2 dias e o próximo pedido é daqui a 7. Necessário = 1,2 × 9 ≈ 10,8. Saldo 4 → sugere **7 potes**.
+Exemplo: Picolé ao leite Chocolate sai 0,4 caixa por dia (3 caixas por semana); o fornecedor entrega em 2 dias e o próximo pedido é daqui a 7. Necessário = 0,4 × 9 = 3,6 caixas. Depósito com 1 caixa → sugere **3 caixas** (2,6 arredondado para cima).
 
 ## 3. Fluxo da dona (no painel, pelo celular)
 
@@ -84,9 +97,9 @@ Exemplo: Pote 1L Morango vende 1,2 por dia; o fornecedor entrega em 2 dias e o p
 
 ## 4. O que muda nas outras partes
 
-- **App do atendente**: grade de sabores ao lançar picolé/pote; botão "Abri um balde"; (opcional) contagem rápida. O resto não muda. A venda continua offline; a baixa acontece no servidor quando a comanda sincroniza.
-- **Produtos de venda** (`produtos`): ganham o vínculo com o grupo de estoque (ex.: produto "Picolé ao leite" → grupo *Picolé ao leite*, 1 unidade por venda). Assim o preço de venda continua um só por produto, e o sabor vem do estoque.
-- **Fase 3 fica melhor**: o custo de cada venda passa a ser conhecido (custo da embalagem ÷ unidades), então margem por produto e por sabor sai sem ficha técnica (RN-PR-07 revisada).
+- **App do atendente**: a venda **não muda** (sem sabor); a quantidade passa a aceitar digitação. Botões novos fora da venda: **"Abasteci a frente"** (escolhe sabor e quantas caixas) e **"Abri um balde"**. Os registros nascem offline e sobem pela sincronização. (Opcional) contagem rápida.
+- **Produtos de venda** (`produtos`): ganham o vínculo com o grupo de estoque (ex.: produto "Picolé ao leite" → grupo *Picolé ao leite*). Não pedem sabor; servem para a conferência por grupo (vendido × abastecido) e, na Fase 3, para o custo da venda.
+- **Fase 3 fica melhor**: o custo de cada venda passa a ser conhecido (custo da embalagem ÷ unidades), então margem por produto sai sem ficha técnica (RN-PR-07 revisada). Margem por sabor só se o grupo vender com sabor.
 - **Proposta (docs/05)**: a frase "baixa automática dos insumos" vira "controle de estoque dos sorvetes comprados prontos, pedido sugerido e conferência da entrega".
 
 ## 5. Dúvidas para confirmar com a dona
@@ -101,13 +114,13 @@ As regras abaixo já têm um padrão para não travar o desenvolvimento; a respo
 | 4 | O que são os "Outros" dos potes de 2L e 5L? | Cadastrar os sabores reais |
 | 5 | O que o fornecedor mais erra: quantidade, sabor trocado, item que não vem? | Tratar os três |
 | 6 | Quem recebe a entrega: ela ou o atendente? | Ela, pelo painel; atendente fica para depois |
-| 7 | Topa o atendente escolher o sabor ao vender picolé e pote? | Sim (sem isso não há baixa automática) |
-| 8 | Precisa saber o que está **na frente** × **no depósito**, ou só o total? | Só o total (a reposição da frente fica com ela) |
+| 7 | O freezer do balcão é abastecido com **caixas inteiras** de picolé tiradas do depósito? E os potes, ficam no mesmo freezer ou têm reposição separada? | Sim, por caixa; potes também por "abasteci a frente" (unidade). Se ela preferir, pote passa a pedir sabor na venda |
+| 8 | Quem abastece a frente e registra no tablet: o atendente ou ela? | O atendente, no tablet, na hora em que tira a caixa do depósito |
 
 ## 6. Ordem de entrega
 
 1. **Sprint 5 — Catálogo e estoque**: importar o catálogo da planilha, fornecedor, saldo com movimentos, contagem inicial pelo painel. *Já substitui as abas de contagem.*
 2. **Sprint 6 — Pedido e recebimento**: pedido sugerido pelo estoque alvo, mensagem de WhatsApp, recebimento com diferenças e cobrança, histórico do fornecedor. *Já resolve a dor principal, mesmo antes da baixa automática.*
-3. **Sprint 7 — Baixa automática**: sabor na venda, "Abri um balde", baixa e estorno no servidor, sugestão por consumo real, aviso "pedir hoje", contagem rápida.
+3. **Sprint 7 — Baixa automática**: "Abasteci a frente" e "Abri um balde" no tablet, conferência vendido × abastecido por grupo, sugestão por consumo real, aviso "pedir hoje", contagem rápida. A quantidade digitada na venda pode ir antes, ainda na Fase 1.
 
 Regras: docs/02 seção 6. Tabelas e endpoints: docs/03 seção 5. Tarefas: docs/04, Sprints 5–7.

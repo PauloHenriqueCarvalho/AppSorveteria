@@ -92,6 +92,10 @@ tr:last-child td{border-bottom:0}
 .stepper{display:inline-flex;align-items:center;gap:4px}
 .stepper button{min-height:32px;width:32px;padding:0;font-weight:700}
 .stepper output{min-width:42px;text-align:center;font-family:var(--f-mono);font-weight:600}
+.qtybtn{min-width:56px;min-height:32px;padding:0 8px;font-family:var(--f-mono);font-weight:600}
+.qtybtn.on{border-color:var(--accent);background:var(--accent-soft)}
+.keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:320px}
+.keypad button{min-height:52px;font-size:20px;font-family:var(--f-mono);font-weight:600}
 .why{background:none;border:0;padding:0;min-height:0;color:var(--accent);text-decoration:underline;text-underline-offset:2px;font-size:12px}
 .calc{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
 .total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 14px;background:var(--sunk);border-radius:var(--r)}
@@ -120,7 +124,7 @@ footer{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 16p
     <div style="display:grid;gap:6px">
       <span class="eyebrow">Sorveteria · Fase 2 · protótipo clicável</span>
       <h1>Do balcão ao fornecedor, sem planilha</h1>
-      <p>Simulação com sabores, embalagens e preços tirados da planilha da dona. Venda alguns picolés, abra um balde e veja o pedido sugerido mudar. Os números de consumo e o histórico do fornecedor são exemplos.</p>
+      <p>Simulação com sabores, embalagens e preços tirados da planilha da dona. Venda 50 picolés sem escolher sabor, abasteça a frente com algumas caixas e veja o pedido sugerido mudar. Os números de consumo e o histórico do fornecedor são exemplos.</p>
     </div>
     <button class="ghost" id="reset" type="button">Recomeçar simulação</button>
   </header>
@@ -183,7 +187,9 @@ function novoEstado(){
   return {
     step:0,
     itens: BASE.map(function(b,i){ var g=grupo(b[0]); return {id:"i"+i,g:b[0],sabor:b[1],saldo:b[2],consumo:b[3],un:g.un,upe:g.upe,custo:g.custo,faltou:false}; }),
-    log:[], vendidos:0, aberto:null,
+    log:[], aberto:null, comanda:[], teclado:null, qtdFrente:1, ultimaComanda:null,
+    /* conferência da semana: exemplo de base + o que for simulado (unidades) */
+    semana:{"Picolé ao leite":{v:812,f:840},"Picolé de fruta":{v:421,f:448},"Skimo":{v:151,f:168},"Pote 1L":{v:31,f:33}},
     pedido:null, enviado:false, recebido:null, extraId:"", numero:45, historico:HIST.slice()
   };
 }
@@ -258,8 +264,8 @@ function render(){
   renderLog();
 }
 function renderLog(){
-  if(!S.log.length){ $("log").innerHTML='<p class="hint">Nenhum movimento ainda. Venda um picolé ou abra um balde na etapa 1.</p>'; return; }
-  var nomes={BaixaVenda:"Venda",AberturaBalde:"Abriu balde",Entrada:"Entrada (entrega)"};
+  if(!S.log.length){ $("log").innerHTML='<p class="hint">Nenhum movimento ainda. A venda não mexe aqui: use "Abasteci a frente" ou "Abri um balde" na etapa 1.</p>'; return; }
+  var nomes={SaidaParaFrente:"Foi para a frente",AberturaBalde:"Abriu balde",Entrada:"Entrada (entrega)"};
   $("log").innerHTML = S.log.map(function(m){
     var q = m.it.un==="Caixa"? (m.q>0?"+":"")+m.q+" un" : (m.q>0?"+":"")+m.q;
     return '<div><span class="chip mut">'+nomes[m.t]+'</span><span>'+esc(m.txt)+'</span><span class="q '+(m.q>0?"pos":"neg")+'">'+q+'</span></div>';
@@ -267,25 +273,61 @@ function renderLog(){
 }
 
 /* 1. balcão */
+function linhaComanda(g){ for(var i=0;i<S.comanda.length;i++){ if(S.comanda[i].g===g) return S.comanda[i]; } }
 function telaBalcao(){
-  var h = '<div class="spread"><h2>Comanda 18</h2><span class="hint">'+S.vendidos+' item(ns) lançados nesta simulação</span></div>';
-  if(S.aberto){
-    var g = S.aberto, its = S.itens.filter(function(it){ return g.modo==="balde" ? grupo(it.g).modo==="balde" : it.g===g.g; });
-    h += '<div class="sheet"><div class="spread"><h3>'+(g.modo==="balde"?"Abri um balde de…":"Qual sabor? · "+esc(g.g))+'</h3><button type="button" class="ghost" data-act="fechar-sabor">Voltar</button></div>'
-      + '<div class="flavors">'+its.map(function(it){ return '<button type="button" data-act="'+(g.modo==="balde"?"abrir":"vender")+'" data-id="'+it.id+'">'+(g.modo==="balde"?'<small>'+esc(it.g)+'</small>':'')+'<b>'+esc(it.sabor)+'</b><small>'+emEmb(it,it.saldo)+' em estoque</small></button>'; }).join("")+'</div>'
-      + '<p class="hint">Um toque e volta para a comanda. É o único passo novo para o atendente.</p></div>';
-  }
+  var h = '<div class="spread"><h2>Comanda 18</h2><span class="chip ok">Venda sem sabor</span></div>';
   h += '<div class="prodgrid">'
-    + GRUPOS.filter(function(g){return g.modo==="venda";}).map(function(g,i){ return '<button type="button" class="prod" data-act="escolher" data-g="'+esc(g.g)+'"><b>'+esc(g.venda)+'</b><span>pede o sabor</span></button>'; }).join("")
-    + '<button type="button" class="prod" data-act="avulso"><b>Self-service</b><span>valor da balança · não mexe no estoque</span></button>'
-    + '<button type="button" class="prod balde" data-act="balde"><b>Abri um balde</b><span>massa ou açaí acabou e outro foi aberto</span></button>'
+    + GRUPOS.filter(function(g){return g.modo==="venda";}).map(function(g){ return '<button type="button" class="prod" data-act="add" data-g="'+esc(g.g)+'"><b>'+esc(g.venda)+'</b><span>toque = +1</span></button>'; }).join("")
+    + '<button type="button" class="prod" data-act="avulso"><b>Self-service</b><span>valor da balança</span></button>'
     + '</div>';
+  if(S.comanda.length){
+    h += '<div class="tbl"><table><thead><tr><th>Item</th><th>Quantidade</th></tr></thead><tbody>'
+      + S.comanda.map(function(l){
+          var editando = S.teclado && S.teclado.g===l.g;
+          return '<tr><td>'+esc(l.g)+'</td><td><span class="stepper"><button type="button" aria-label="menos" data-act="c-menos" data-g="'+esc(l.g)+'">−</button>'
+            + '<button type="button" class="qtybtn'+(editando?' on':'')+'" data-act="teclado" data-g="'+esc(l.g)+'" aria-label="digitar quantidade">'+(editando? esc(S.teclado.txt||"0") : l.q)+'</button>'
+            + '<button type="button" aria-label="mais" data-act="c-mais" data-g="'+esc(l.g)+'">+</button></span></td></tr>';
+        }).join("") + '</tbody></table></div>';
+    if(S.teclado){
+      h += '<div class="keypad" role="group" aria-label="Teclado numérico">'
+        + ["1","2","3","4","5","6","7","8","9","⌫","0","OK"].map(function(k){ return '<button type="button" data-act="tecla" data-k="'+k+'"'+(k==="OK"?' class="primary"':'')+'>'+k+'</button>'; }).join("")
+        + '</div>';
+    } else {
+      h += '<p class="hint">Toque no número para digitar a quantidade: 50 picolés em 3 toques.</p>';
+    }
+    h += '<div class="row"><button type="button" class="primary" data-act="finalizar">Pagar e finalizar</button></div>';
+  } else if(S.ultimaComanda){
+    h += '<p class="hint">Última venda: '+esc(S.ultimaComanda)+'. O estoque por sabor não mudou; a venda entra na conferência da semana (etapa 2).</p>';
+  } else {
+    h += '<p class="hint">Experimente: toque em "Picolé ao leite", depois no número, e digite 50.</p>';
+  }
+
+  /* freezer do balcão */
+  h += '<div class="sheet"><div class="spread"><h3>Freezer do balcão</h3><span class="hint">fora da venda · poucas vezes por dia</span></div>';
+  if(S.aberto){
+    var g=S.aberto, balde=g.modo==="balde";
+    var its=S.itens.filter(function(it){ return balde? grupo(it.g).modo==="balde" : it.g===g.g; });
+    h += '<div class="spread"><b>'+(balde?"Abri um balde de…":"Abasteci a frente · "+esc(g.g))+'</b><button type="button" class="ghost" data-act="fechar-sabor">Voltar</button></div>';
+    if(!balde){
+      var passos = g.un==="Caixa"? [0.5,1,2,3] : [1,2,4,6];
+      h += '<div class="row"><span class="hint">Quantas '+(g.un==="Caixa"?"caixas":"unidades")+'?</span>'+passos.map(function(q){ return '<button type="button" data-act="qtd-frente" data-q="'+q+'"'+(S.qtdFrente===q?' class="primary"':'')+'>'+dec1.format(q)+'</button>'; }).join("")+'</div>';
+    }
+    h += '<div class="flavors">'+its.map(function(it){ return '<button type="button" data-act="'+(balde?"abrir":"frente")+'" data-id="'+it.id+'">'+(balde?'<small>'+esc(it.g)+'</small>':'')+'<b>'+esc(it.sabor)+'</b><small>'+emEmb(it,it.saldo)+' no depósito</small></button>'; }).join("")+'</div>';
+  } else {
+    h += '<div class="row">'
+      + GRUPOS.filter(function(g){return g.modo==="venda";}).map(function(g){ return '<button type="button" data-act="abastecer" data-g="'+esc(g.g)+'">Abasteci a frente: '+esc(g.g)+'</button>'; }).join("")
+      + '<button type="button" data-act="balde">Abri um balde</button></div>';
+  }
+  h += '</div>';
   return h;
 }
 function ladoBalcao(){
-  return '<span class="eyebrow">O que acontece</span><h2>A venda já é a contagem</h2>'
-   + '<ol><li>O atendente toca no produto e escolhe o sabor (um toque).</li><li>A venda segue offline, como hoje. Quando a comanda sincroniza, o servidor dá baixa no sabor certo.</li><li>Massa e açaí não dá para medir por bola: o estoque sai quando um balde novo é aberto.</li><li>Self-service e venda avulsa não mexem no estoque.</li></ol>'
-   + '<p class="hint">Na planilha, isso era a contagem manual de "Na frente" e "Em estoque", item por item.</p>'
+  return '<span class="eyebrow">O que acontece</span><h2>O sabor é registrado na caixa, não no picolé</h2>'
+   + '<ol><li>A venda continua rápida: "Picolé ao leite × 50", sem escolher sabor. A quantidade pode ser digitada.</li>'
+   + '<li>Quando alguém tira caixas do depósito para o freezer do balcão, toca em <b>Abasteci a frente</b>, escolhe o sabor e quantas caixas. Uma vez por caixa, não por picolé.</li>'
+   + '<li>Massa e açaí seguem a mesma ideia: <b>Abri um balde</b>.</li>'
+   + '<li>Tudo funciona sem internet e sobe depois.</li></ol>'
+   + '<p class="hint">É como a planilha já conta: "Na frente" e "Em estoque", em caixas e meias caixas.</p>'
    + '<button type="button" class="primary" data-go="1">Ver o estoque →</button>';
 }
 
@@ -293,7 +335,7 @@ function ladoBalcao(){
 function telaEstoque(){
   var alertas = S.itens.filter(pedirHoje);
   var h = '<div class="spread"><h2>Estoque agora</h2>'+(alertas.length?'<span class="chip warn">'+alertas.length+' para pedir hoje</span>':'<span class="chip ok">Nada urgente</span>')+'</div>';
-  h += '<div class="tbl"><table><thead><tr><th>Sabor</th><th class="r">Saldo</th><th class="r">Vende por dia</th><th class="r">Dura</th><th></th></tr></thead><tbody>';
+  h += '<div class="tbl"><table><thead><tr><th>Sabor</th><th class="r">Saldo</th><th class="r">Sai por dia</th><th class="r">Dura</th><th></th></tr></thead><tbody>';
   GRUPOS.forEach(function(g){
     var its = S.itens.filter(function(it){return it.g===g.g;}); if(!its.length) return;
     h += '<tr class="grp"><td colspan="5">'+esc(g.g)+' <span class="hint">· '+(g.un==="Caixa"?"caixa de "+g.upe+" · "+brl.format(g.custo):g.un.toLowerCase()+" · "+brl.format(g.custo))+'</span></td></tr>';
@@ -304,11 +346,20 @@ function telaEstoque(){
       h += '<tr><td>'+esc(it.sabor)+'</td><td class="r num">'+emEmb(it,it.saldo)+(it.un==="Caixa"?' <span class="hint">('+it.saldo+')</span>':'')+'</td><td class="r num">'+cons+'</td><td class="r num">'+(isFinite(d)?dec1.format(d)+" d":"—")+'</td><td>'+chip+'</td></tr>';
     });
   });
-  return h+'</tbody></table></div>';
+  h += '</tbody></table></div>';
+  h += '<h3>Conferência da semana: vendido × levado para a frente</h3>';
+  h += '<div class="tbl"><table><thead><tr><th>Grupo</th><th class="r">Vendido no caixa</th><th class="r">Foi para a frente</th><th>Diferença</th></tr></thead><tbody>';
+  Object.keys(S.semana).forEach(function(gn){
+    var w=S.semana[gn], g=grupo(gn), d=w.f-w.v;
+    var chip = Math.abs(d) <= g.upe? '<span class="chip ok">'+(d>0? d+' un ainda na frente?':'confere')+'</span>' : d>0? '<span class="chip warn">'+d+' saíram sem venda</span>' : '<span class="chip bad">'+(-d)+' vendidos sem abastecer</span>';
+    h += '<tr><td>'+esc(gn)+'</td><td class="r num">'+w.v+'</td><td class="r num">'+w.f+(g.upe>1?' <span class="hint">('+dec1.format(w.f/g.upe)+' cx)</span>':'')+'</td><td>'+chip+'</td></tr>';
+  });
+  h += '</tbody></table></div><p class="hint">Valores de exemplo somados ao que você simular. Até 1 caixa de diferença é normal: é a caixa aberta na frente.</p>';
+  return h;
 }
 function ladoEstoque(){
   return '<span class="eyebrow">O que acontece</span><h2>Saldo que se mantém sozinho</h2>'
-   + '<ul><li><b>Entra</b> quando a dona confere a entrega.</li><li><b>Sai</b> pela venda com sabor e pela abertura de balde.</li><li><b>Dura</b> = saldo ÷ quanto vende por dia (últimos 28 dias).</li><li><b>Pedir hoje</b> quando não dura até a próxima entrega ('+PRAZO+' dias + 1).</li></ul>'
+   + '<ul><li><b>Entra</b> quando a dona confere a entrega.</li><li><b>Sai</b> quando a caixa, o pote ou o balde vai para a frente. O saldo é o que está fechado no depósito.</li><li><b>Dura</b> = saldo ÷ quanto sai por dia (últimos 28 dias).</li><li><b>Conferência</b>: picolés vendidos no caixa × picolés que foram para a frente. Mostra quebra, consumo interno ou venda sem registro, como a diferença do caixa.</li><li><b>Pedir hoje</b> quando não dura até a próxima entrega ('+PRAZO+' dias + 1).</li></ul>'
    + '<p class="hint">Picolé fica guardado em unidades e aparece em caixas, com meia caixa, como ela já conta. Uma contagem rápida por semana (opcional) corrige quebra e erro.</p>'
    + '<button type="button" class="primary" data-go="2">Montar o pedido →</button>';
 }
@@ -348,7 +399,7 @@ function explica(it,s){
 function ladoPedido(){
   return '<span class="eyebrow">O que acontece</span><h2>O pedido vem pronto</h2>'
    + '<p>No dia do pedido, o sistema monta a lista. A dona só revisa e ajusta com + e −.</p>'
-   + '<p class="calc">sugerido = vende por dia × ('+PRAZO+' dias de entrega + '+PROXIMO+' até o próximo pedido) − saldo − já pedido</p>'
+   + '<p class="calc">sugerido = sai por dia × ('+PRAZO+' dias de entrega + '+PROXIMO+' até o próximo pedido) − saldo − já pedido</p>'
    + '<ul><li>Arredonda para cima em caixas inteiras (o fornecedor de exemplo não aceita meia caixa).</li><li>Sem histórico de vendas, usa o estoque alvo que ela define uma vez por sabor.</li><li>O que faltou na última entrega volta marcado.</li><li>Ajuste dela é respeitado se a sugestão for remontada.</li></ul>'
    + '<p class="hint">Toque em "por que…" para ver a conta de cada linha.</p>';
 }
@@ -485,12 +536,23 @@ document.addEventListener("click", function(ev){
   if(b.hasAttribute("data-go")){ ir(+b.getAttribute("data-go")); return; }
   var act=b.getAttribute("data-act"), id=b.getAttribute("data-id"), it=id&&item(id);
   switch(act){
-    case "escolher": S.aberto=grupo(b.getAttribute("data-g")); break;
+    case "add": var gg=b.getAttribute("data-g"), lc=linhaComanda(gg); if(lc) lc.q++; else S.comanda.push({g:gg,q:1}); break;
+    case "c-mais": linhaComanda(b.getAttribute("data-g")).q++; break;
+    case "c-menos": var lm=linhaComanda(b.getAttribute("data-g")); lm.q--; if(lm.q<=0){ S.comanda.splice(S.comanda.indexOf(lm),1); S.teclado=null; } break;
+    case "teclado": S.teclado={g:b.getAttribute("data-g"), txt:""}; break;
+    case "tecla": var k=b.getAttribute("data-k"), tk=S.teclado;
+      if(k==="⌫") tk.txt=tk.txt.slice(0,-1);
+      else if(k==="OK"){ var n=parseInt(tk.txt,10); var lt=linhaComanda(tk.g); if(n>0 && n<=999){ lt.q=n; } else if(tk.txt){ toast("Use de 1 a 999"); } S.teclado=null; }
+      else if(tk.txt.length<3) tk.txt+=k;
+      break;
+    case "finalizar": S.teclado=null; S.ultimaComanda=S.comanda.map(function(l){ var w=S.semana[l.g]; if(w) w.v+=l.q; return l.g+" × "+l.q; }).join(", "); S.comanda=[]; toast("Venda finalizada"); break;
+    case "abastecer": S.aberto=grupo(b.getAttribute("data-g")); S.qtdFrente=1; break;
+    case "qtd-frente": S.qtdFrente=+b.getAttribute("data-q"); break;
+    case "frente": var u=Math.round(S.qtdFrente*it.upe); mov(it,-u,"SaidaParaFrente"); if(S.semana[it.g]) S.semana[it.g].f+=u; S.aberto=null; toast(dec1.format(S.qtdFrente)+" "+nomeEmb(it,S.qtdFrente)+" de "+it.sabor+" na frente"); break;
     case "balde": S.aberto={modo:"balde"}; break;
     case "fechar-sabor": S.aberto=null; break;
-    case "vender": mov(it,-1,"BaixaVenda"); S.vendidos++; S.aberto=null; toast(it.g+" "+it.sabor+" na comanda"); break;
     case "abrir": mov(it,-1,"AberturaBalde"); S.aberto=null; toast("Balde de "+it.sabor+" aberto"); break;
-    case "avulso": S.vendidos++; toast("Self-service lançado: estoque não muda"); break;
+    case "avulso": toast("Self-service lançado: estoque não muda"); break;
     case "why": var w=$("why-"+id); w.hidden=!w.hidden; return;
     case "mais": var l=S.pedido.linhas[id]; l.qtd++; l.mexeu=true; break;
     case "menos": var l2=S.pedido.linhas[id]; if(l2.qtd>0){l2.qtd--; l2.mexeu=true;} break;

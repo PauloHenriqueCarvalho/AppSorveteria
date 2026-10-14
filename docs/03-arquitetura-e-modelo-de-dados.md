@@ -225,6 +225,7 @@ fornecedores        (id, nome, whatsapp, dias_pedido varchar(30) -- "Seg,Qui",
 
 itens_estoque       (id, fornecedor_id FK, grupo varchar(40), sabor varchar(80),
                      unidade_compra varchar(10) -- Caixa | Balde | Unidade,
+                     modo_saida varchar(20) -- ParaFrente (padrão) | AberturaBalde | VendaComSabor,
                      unidades_por_embalagem int ≥ 1, custo_embalagem numeric(12,2),
                      estoque_alvo_embalagens numeric(6,1) null, ordem int, ativo,
                      saldo_unidades int -- cache do Σ movimentos, só leitura rápida
@@ -232,8 +233,8 @@ itens_estoque       (id, fornecedor_id FK, grupo varchar(40), sabor varchar(80),
 
 movimentos_estoque  (id, item_estoque_id FK, tipo varchar(20), quantidade_unidades int -- + entra / − sai,
                      comanda_id? , item_comanda_id?, pedido_id?, contagem_id?,
-                     usuario_id FK, em, motivo varchar(200) null)
-                     tipo: Entrada | BaixaVenda | EstornoVenda | AberturaBalde | AjusteContagem | Perda
+                     usuario_id FK, em, motivo varchar(200) null, origem varchar(10) -- App | Painel | Sync)
+                     tipo: Entrada | SaidaParaFrente | AberturaBalde | BaixaVenda | EstornoVenda | AjusteContagem | Perda | Desfazer
                      -- único (item_comanda_id, tipo): reenvio do sync não baixa duas vezes
 
 contagens           (id, usuario_id, em, observacao)
@@ -254,12 +255,13 @@ itens_pedido_fornecedor (id, pedido_id FK, item_estoque_id FK,
 produtos            + grupo_estoque varchar(40) null    -- RN-PR-06: pede o sabor na venda
                     + unidades_por_venda int default 1
                     + custo_manual numeric(12,2) null   -- Fase 3, produto sem vínculo de estoque
-itens_comanda       + item_estoque_id uuid null          -- sabor escolhido (RN-ES-05)
+itens_comanda       + item_estoque_id uuid null          -- só para grupos com modo_saida = VendaComSabor
 ```
 
 **Sincronização (local-first, sem quebrar o app atual):**
-- `ItemComandaSyncDto` ganha `ItemEstoqueId` **opcional**. App antigo continua aceito (sem baixa); a baixa sai no servidor ao gravar a comanda fechada, na mesma transação.
-- Novo `POST /api/sync/estoque`: lote de **aberturas de balde** e **contagens** feitas no celular, idempotente pelo `Id` (mesmo contrato `aceita` / `ja_recebida` / `rejeitada`).
+- A venda **não muda**: comanda sincroniza como hoje. Só grupos com `modo_saida = VendaComSabor` usam `ItemEstoqueId` (opcional) no `ItemComandaSyncDto`.
+- Novo `POST /api/sync/estoque`: lote de **"Abasteci a frente"**, **"Abri um balde"**, desfazer e contagens feitos no celular, idempotente pelo `Id` (mesmo contrato `aceita` / `ja_recebida` / `rejeitada`).
+- Conferência vendido × abastecido (RN-ES-11): `GET /api/estoque/conferencia?semana=` soma comandas fechadas por grupo e saídas para a frente.
 - O app baixa os itens de estoque (sabores) junto com o catálogo: `GET /api/estoque/itens?desde=`.
 
 **Endpoints (Admin, painel):**
