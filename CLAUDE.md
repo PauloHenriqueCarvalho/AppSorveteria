@@ -50,7 +50,8 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 - **Painel profissional (ADR 020, 14/10/2026):** estrutura de ERP (menu lateral, trilha, indicadores, tabelas) e marca Verão Tropical. Componentes em `src/componentes/Ui.tsx` e `Icone.tsx`; tela nova usa esses componentes e as classes de `index.css`, sem biblioteca de UI. Próximo: API do dashboard e Vendas/Caixas em tabela (docs/04).
 - **Deploy (Sprint 4): nada publicado ainda.** `Dockerfile`, `/health` e docs/07 prontos.
 - **Fase 2 — estoque e pedidos (Sprints 5 e 6, 14/10/2026), na develop:** catálogo da planilha com fornecedores (importação com prévia), avisos "Está acabando" com urgente/resumo no WhatsApp da dona, contagem semanal (painel e `POST /api/sync/contagens`), pedido ao fornecedor (sugestão pela contagem estimada + entregas + a caminho + avisos + faltas, folha A4, WhatsApp, conferência da entrega, histórico) — #68–#75, #77, #79, #80. **App, abertos para o Paulo testar no tablet:** #67 (quantidade digitada) e #76 ("Está acabando", resumo do dia e a contagem semanal do #78, que já foi juntado nele).
-- **Próximo:** Sprint 7 (potes com saldo automático, docs/04) e deploy (Sessão C do docs/08, espera as contas Neon/Render/Cloudflare). Etapa C do app (C2→C5) segue no docs/08.
+- **Sprint 7 — potes com saldo pela venda (14/10/2026), na develop:** produto ligado ao grupo de estoque (RN-PR-06), sabor na venda, baixa na sincronização e estorno (RN-ES-09), entrada na conferência da entrega (RN-RC-03), aviso automático pelo saldo (RN-AV-04), saldos no painel (Potes) e conferência na contagem com diferenças no resumo do dia (RN-ES-08) — #81, #82, #84. **App aberto para o Paulo:** #83 (escolher o sabor na venda; juntar depois do #76). Antes de ligar os potes na loja: contar os potes uma vez (é a base do saldo).
+- **Próximo:** deploy (Sessão C do docs/08, espera as contas Neon/Render/Cloudflare) e a Etapa C do app (C2→C5, docs/08).
 
 ## Comandos
 
