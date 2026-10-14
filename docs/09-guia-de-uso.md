@@ -72,6 +72,26 @@ Na tela de comandas, toque no botão amarelo **📦 Está acabando**. Dá para a
 
 **Aviso em laranja** foi recusado pelo sistema, com o motivo escrito embaixo (por exemplo: a dona já tinha fechado esse aviso). Toque nele e escolha **Avisar de novo** (se ainda está faltando) ou **Tirar da lista**.
 
+### 6. Contagem semanal do freezer
+
+Uma vez por semana, na **véspera do dia do pedido**, alguém conta o que tem no freezer. Nesse dia aparece na tela de comandas (e na aba **Caixa**) o aviso **📋 Hoje é dia de contagem**: toque nele. Nos outros dias, a contagem fica no botão **📋 Contagem**, ao lado do "Está acabando". Dá para contar mesmo com o caixa fechado.
+
+1. A lista vem na **mesma ordem da planilha**: picolés de fruta, ao leite, Skimo, massas, açaí, potes. Vá item por item, olhando o freezer.
+2. Para cada item, marque **quanto tem agora**:
+   - **+** e **−** mudam o número. **Caixa vai de meia em meia** (0,5 = meia caixa); balde, pote e pacote vão de 1 em 1.
+   - Ou **toque no número** e digite (ex.: **2,5**). Para apagar um número errado, toque nele e deixe em branco.
+   - Não tem nenhum? Toque em **Não tem nenhum** (fica 0, em vermelho).
+3. O número começa **vazio** de propósito: conte de verdade. Embaixo do nome aparece a **contagem anterior** (ex.: "Contagem anterior: 2,5 caixas (07/10)") só para comparar.
+4. Item contado fica verde. No alto aparece quanto falta (ex.: "32 de 123 contados · faltam 91").
+5. Precisou parar? Toque em **💾 Salvar e continuar depois**. Tudo o que você marcou já está guardado; quando voltar à tela, a contagem continua de onde parou (outra pessoa também pode continuar).
+6. Terminou? Toque em **✅ Concluir contagem** e confirme. **Depois de concluir não dá para mudar.** Item que ficou sem número vai como "não contado" (não vira zero): se acabou, use **Não tem nenhum**. Errou algo depois de concluir? Faça uma nova contagem.
+
+**Sem internet?** Conte do mesmo jeito. A contagem fica no tablet e sobe sozinha para o painel quando a internet voltar ("contagem aguardando envio" aparece no alto da tela de comandas).
+
+**Contagem começada em outro dia** (alguém esqueceu de concluir): ao abrir a tela, o app pergunta se quer **Continuar** essa ou **Começar nova**. Começando uma nova, a antiga fica de lado e não vale.
+
+**Contagem em laranja** foi recusada pelo sistema, com o motivo escrito. Se ainda não foi concluída, corrija o número e ela é enviada de novo, ou toque em **Começar outra contagem**. Se já estava concluída, faça uma nova contagem e mostre a mensagem para a dona.
+
 ## Para a dona (no celular ou no computador)
 
 Abra o **endereço do painel** (no alto desta página) e entre com o usuário **admin** e a sua senha. A primeira abertura do dia pode levar **até 1 minuto** ("Conectando ao servidor…"): é normal, o servidor estava dormindo.
@@ -85,7 +105,7 @@ Abra o **endereço do painel** (no alto desta página) e entre com o usuário **
 | **Configurações** | Nome da loja nas mensagens e o **seu WhatsApp** | Cadastrar o número que recebe o urgente na hora e o resumo do fim do dia; "Enviar mensagem de teste" |
 | **Usuários** | Atendentes | Criar atendente, **redefinir o PIN**, desativar quem saiu |
 | **Avisos** (Estoque e compras) | O que o balcão avisou que está acabando: urgentes primeiro, quanto tem agora, quem avisou e quando. O número vermelho no menu é quantos estão abertos | **Fechar** o aviso com o motivo ("comprei no mercado") — ele também fecha sozinho quando a entrega chegar; "Ainda falta" (a prioridade só sobe); criar aviso; **Resumo do dia** pronto para o WhatsApp |
-| **Contagem** (Estoque e compras) | As contagens semanais do freezer (do tablet ou daqui): quando, quem contou, quantos itens | **Nova contagem**: digite ou use − e + (caixa vai de meia em meia), a contagem anterior aparece ao lado só como referência; "Salvar rascunho" para terminar depois; "Concluir" quando acabar (depois não muda mais) |
+| **Contagem** (Estoque e compras) | As contagens semanais do freezer (do tablet ou daqui): quando, quem contou, quantos itens. A do tablet aparece aqui quando chega a internet; só a **concluída** vale | **Nova contagem**: digite ou use − e + (caixa vai de meia em meia), a contagem anterior aparece ao lado só como referência; "Salvar rascunho" para terminar depois; "Concluir" quando acabar (depois não muda mais) |
 | **Catálogo** (Estoque e compras) | O que a loja compra, separado por grupo como na planilha: sabor, fornecedor, embalagem, custo, mínimo e alvo | **Importar a planilha** (primeiro mostra a prévia, depois você confirma; o que já está cadastrado não muda), cadastrar item (copos, casquinhas, insumos), trocar o modo de controle do grupo, desativar sabor que saiu, exportar para o Excel |
 | **Fornecedores** | Quem vende para a loja, dia do pedido, prazo de entrega e como o pedido é enviado | Cadastrar, mudar o dia do pedido, WhatsApp, meia caixa, mostrar preços na folha. Fornecedor com itens ativos só é desativado depois de trocar ou desativar os itens |
 
@@ -98,6 +118,8 @@ Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produt
 | O tablet diz que não tem internet | Nada: continue vendendo. Confira se o Wi‑Fi está ligado no fim do turno |
 | O WhatsApp não abriu no aviso urgente ou no resumo do dia | O app mostra a mensagem: toque em **Copiar mensagem** e mande para a dona de outro celular. O aviso já está guardado |
 | O resumo do dia não saiu no fechamento | Com internet, aba **Caixa** → **📲 Enviar resumo do dia** |
+| Não aparece "Hoje é dia de contagem" | O dia vem do **dia do pedido** do fornecedor (painel → Fornecedores): a contagem é na véspera. Confira o dia lá e abra o app com internet uma vez. Dá para contar a qualquer hora pelo botão **📋 Contagem** |
+| A contagem do tablet não chegou ao painel | Deixe o tablet com internet por 1 minuto. Se ela aparecer em laranja na tela de contagem, foi recusada: leia o motivo e faça uma nova |
 | O painel demora para abrir | Espere 1 minuto. Se passar de 2, confira a internet do celular |
 | Venda com valor errado já finalizada | Dona: painel → Vendas → Estornar (com motivo). Atendente: lança a venda certa de novo |
 | Atendente esqueceu de fechar o caixa | Dona: painel → Caixas → **Fechar pelo painel** (com motivo). O valor contado fica 0 e a diferença aparece para conferir no dia seguinte |

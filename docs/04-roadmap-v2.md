@@ -121,7 +121,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [ ] Saída da semana (RN-ES-07) e diferenças da contagem no resumo: dependem do recebimento (Sprint 6) e do saldo dos potes (Sprint 7)
 - [ ] App: quantidade digitada na venda (RN-ES-04)
 - [x] App: botão **"Está acabando"** (busca em todos os grupos ou "Outro", quantidade, prioridade, sem duplicar com "Ainda falta"); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa (e botão na aba Caixa); avisos na fila de envio com recusado em laranja; cache do catálogo de estoque, WhatsApp da dona e dias de contagem no tablet (RN-AV-01/02/03/06/07/08/09) — PR aberto para teste no tablet (14/10)
-- [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
+- [x] App: tela de **contagem semanal** na ordem da planilha (− e + de meia em meia caixa, toque no número para digitar, "não tem nenhum", contagem anterior do tablet só como referência, salvar parcial e continuar, concluir pelas regras do Domain); fila de envio `POST /api/sync/contagens` com recusada em laranja; lembrete **"Hoje é dia de contagem"** na véspera do pedido (tela de comandas e aba Caixa) (RN-ES-05/06) — PR aberto para teste no tablet, empilhado no do "Está acabando" (14/10)
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
 - [x] Painel: avisos (abertos/fechados, contador no menu, novo, "ainda falta", fechar com motivo), resumo do dia, configurações (WhatsApp da dona) — 14/10
 - [x] Painel: contagem semanal (lista, nova com a anterior de referência, rascunho, concluir, ver concluída) — 14/10
