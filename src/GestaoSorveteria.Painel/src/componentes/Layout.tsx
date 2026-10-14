@@ -32,6 +32,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     itens: [
       { para: '/avisos', texto: 'Avisos', icone: 'avisos', noCelular: true, contaAvisos: true },
       { para: '/contagens', texto: 'Contagem', icone: 'contagem' },
+      { para: '/pedidos', texto: 'Pedidos', icone: 'pedidos' },
       { para: '/estoque', texto: 'Catálogo', icone: 'estoque' },
       { para: '/fornecedores', texto: 'Fornecedores', icone: 'fornecedor' },
     ],
@@ -66,6 +67,9 @@ function nomeDoDetalhe(caminho: string): string {
   }
   if (caminho.endsWith('/resumo')) {
     return 'Resumo do dia'
+  }
+  if (caminho.endsWith('/conferir')) {
+    return 'Conferir entrega'
   }
   return 'Detalhe'
 }

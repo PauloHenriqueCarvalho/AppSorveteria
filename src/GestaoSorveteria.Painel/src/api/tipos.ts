@@ -462,3 +462,140 @@ export interface SalvarContagemRequest {
   linhas: { itemEstoqueId: string; embalagens: number | null }[]
   concluir: boolean
 }
+
+// ---------------------------------------------------------------- Fase 2 — pedido ao fornecedor (Contracts/Pedidos)
+
+export type StatusPedido = 'Rascunho' | 'Enviado' | 'Recebido' | 'Cancelado'
+export type OrigemLinhaPedido = 'Sugestao' | 'Aviso' | 'FaltouAnterior' | 'AdicionadoPelaDona' | 'NaoPedido'
+export type SituacaoRecebimento = 'Certo' | 'Faltou' | 'VeioAMais' | 'NaoPedido'
+
+/** GET /api/pedidos-fornecedor — últimos 90 dias e os que ainda não chegaram. */
+export interface PedidoResumoDto {
+  id: string
+  numero: number
+  fornecedorId: string
+  fornecedorNome: string
+  status: StatusPedido
+  criadoEm: string
+  enviadoEm: string | null
+  recebidoEm: string | null
+  canceladoEm: string | null
+  totalPedido: number
+  totalRecebido: number | null
+  percentualAtendido: number | null
+  itensComQuantidade: number
+}
+
+/** Linha do pedido, na ordem da planilha. Valores em R$ calculados pela API. */
+export interface LinhaPedidoDto {
+  itemEstoqueId: string
+  grupoId: string
+  grupoNome: string
+  itemNome: string
+  unidade: UnidadeCompra
+  unidadesPorEmbalagem: number
+  /** Passo do pedido: 0,5 (caixa, fornecedor aceita meia) ou 1. */
+  passo: number
+  /** Última contagem concluída, em unidades. */
+  contadoUnidades: number | null
+  sugeridoEmbalagens: number
+  pedidoEmbalagens: number
+  recebidoEmbalagens: number | null
+  custoEmbalagem: number
+  subtotal: number
+  alteradoPelaDona: boolean
+  origem: OrigemLinhaPedido
+  observacao: string | null
+  pedirDeNovo: boolean
+  situacao: SituacaoRecebimento | null
+  diferencaValor: number | null
+}
+
+/** GET /api/pedidos-fornecedor/{id} — tela, folha impressa (RN-PF-07) e conferência. */
+export interface PedidoDto {
+  id: string
+  numero: number
+  fornecedorId: string
+  fornecedorNome: string
+  envio: FormaEnvioPedido
+  mostrarPrecos: boolean
+  aceitaMeiaCaixa: boolean
+  status: StatusPedido
+  criadoPorNome: string
+  criadoEm: string
+  enviadoEm: string | null
+  recebidoEm: string | null
+  recebidoPorNome: string | null
+  canceladoEm: string | null
+  canceladoPorNome: string | null
+  motivoCancelamento: string | null
+  /** Dia comercial ("2026-10-21"): envio (ou hoje) + prazo do fornecedor. */
+  entregaPrevista: string
+  totalPedido: number
+  totalRecebido: number | null
+  percentualAtendido: number | null
+  linhas: LinhaPedidoDto[]
+}
+
+export interface LinhaAlteradaRequest {
+  itemEstoqueId: string
+  embalagens: number
+}
+
+/** POST /api/pedidos-fornecedor/{id}/enviar */
+export interface EnviarPedidoResponse {
+  pedido: PedidoDto
+  mensagemWhatsApp: string | null
+  linkWhatsApp: string | null
+}
+
+export interface LinhaRecebidaRequest {
+  itemEstoqueId: string
+  recebidoEmbalagens: number
+  pedirDeNovo?: boolean
+}
+
+export interface NovoCustoRequest {
+  itemEstoqueId: string
+  custoEmbalagem: number
+}
+
+/** POST /api/pedidos-fornecedor/{id}/receber (RN-RC-01). "Chegou tudo certo" = listas vazias. */
+export interface ReceberPedidoRequest {
+  diferencas: LinhaRecebidaRequest[]
+  naoPedidos: LinhaRecebidaRequest[]
+  novosCustos: NovoCustoRequest[]
+}
+
+export interface ReceberPedidoResponse {
+  pedido: PedidoDto
+  avisosFechados: number
+  mensagemFornecedor: string | null
+  linkWhatsApp: string | null
+}
+
+/** GET /api/pedidos-fornecedor/{id}/mensagens — para reabrir o WhatsApp depois. */
+export interface MensagensPedidoDto {
+  pedido: string | null
+  linkPedido: string | null
+  divergencias: string | null
+  linkDivergencias: string | null
+}
+
+/** GET /api/fornecedores/{id}/historico (RN-RC-06): últimos 30 dias. */
+export interface HistoricoFornecedorDto {
+  fornecedorId: string
+  fornecedorNome: string
+  pedidosRecebidos: number
+  valorPedido: number
+  valorRecebido: number
+  percentualAtendidoMedio: number | null
+  itensQueMaisFaltam: ItemQueMaisFaltaDto[]
+}
+
+export interface ItemQueMaisFaltaDto {
+  itemEstoqueId: string
+  descricao: string
+  vezesQueFaltou: number
+  embalagensQueFaltaram: number
+}
