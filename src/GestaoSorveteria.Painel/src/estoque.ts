@@ -1,0 +1,116 @@
+// Textos do estoque na linguagem da dona e leitura do arquivo da planilha. Nenhuma conta de dinheiro aqui (ADR 018).
+import type { DiaSemana, FormaEnvioPedido, ModoControle, UnidadeCompra } from './api/tipos.ts'
+
+export const MODOS: { valor: ModoControle; nome: string; explicacao: string }[] = [
+  {
+    valor: 'Contagem',
+    nome: 'Contagem semanal',
+    explicacao: 'Conta o que tem no freezer uma vez por semana (picolé, massa, açaí). É a partir dela que sai o pedido.',
+  },
+  {
+    valor: 'SaldoPelaVenda',
+    nome: 'Saldo pela venda',
+    explicacao: 'O atendente escolhe o sabor na venda e o sistema desconta sozinho (teste dos potes). A contagem só confere.',
+  },
+  {
+    valor: 'SoAviso',
+    nome: 'Só aviso',
+    explicacao: 'Não conta nem desconta: entra no pedido quando alguém avisa que está acabando (copos, casquinhas, insumos).',
+  },
+]
+
+export function nomeDoModo(modo: ModoControle): string {
+  return MODOS.find((m) => m.valor === modo)?.nome ?? modo
+}
+
+export const UNIDADES: { valor: UnidadeCompra; nome: string; variasPorEmbalagem: boolean }[] = [
+  { valor: 'Caixa', nome: 'Caixa', variasPorEmbalagem: true },
+  { valor: 'Balde', nome: 'Balde', variasPorEmbalagem: false },
+  { valor: 'Unidade', nome: 'Unidade', variasPorEmbalagem: false },
+  { valor: 'Pacote', nome: 'Pacote', variasPorEmbalagem: true },
+]
+
+/** ("Caixa", 28) → "Caixa com 28"; ("Balde", 1) → "Balde". */
+export function descreverEmbalagem(unidade: UnidadeCompra, porEmbalagem: number): string {
+  const nome = UNIDADES.find((u) => u.valor === unidade)?.nome ?? unidade
+  return porEmbalagem > 1 ? `${nome} com ${porEmbalagem}` : nome
+}
+
+/** Semana começando na segunda, como a loja enxerga. */
+export const DIAS: { valor: DiaSemana; curto: string; nome: string }[] = [
+  { valor: 'Monday', curto: 'Seg', nome: 'Segunda' },
+  { valor: 'Tuesday', curto: 'Ter', nome: 'Terça' },
+  { valor: 'Wednesday', curto: 'Qua', nome: 'Quarta' },
+  { valor: 'Thursday', curto: 'Qui', nome: 'Quinta' },
+  { valor: 'Friday', curto: 'Sex', nome: 'Sexta' },
+  { valor: 'Saturday', curto: 'Sáb', nome: 'Sábado' },
+  { valor: 'Sunday', curto: 'Dom', nome: 'Domingo' },
+]
+
+/** ["Thursday", "Monday"] → "Seg e Qui"; um dia só sai por extenso ("Segunda"). */
+export function descreverDias(dias: DiaSemana[]): string {
+  const escolhidos = DIAS.filter((d) => dias.includes(d.valor))
+  if (escolhidos.length === 1) {
+    return escolhidos[0].nome
+  }
+  const curtos = escolhidos.map((d) => d.curto)
+  return curtos.length <= 1 ? curtos.join('') : `${curtos.slice(0, -1).join(', ')} e ${curtos[curtos.length - 1]}`
+}
+
+export const ENVIOS: { valor: FormaEnvioPedido; nome: string }[] = [
+  { valor: 'Impresso', nome: 'Impresso' },
+  { valor: 'WhatsApp', nome: 'WhatsApp' },
+  { valor: 'Ambos', nome: 'Impresso e WhatsApp' },
+]
+
+export function nomeDoEnvio(envio: FormaEnvioPedido): string {
+  return ENVIOS.find((e) => e.valor === envio)?.nome ?? envio
+}
+
+/** "11987654321" → "(11) 98765-4321"; com o 55 do Brasil (12 ou 13 dígitos) → "+55 (11) 98765-4321". */
+export function formatarWhatsApp(digitos: string): string {
+  const comPais = digitos.length > 11
+  const nacional = comPais ? digitos.slice(2) : digitos
+  const ddd = nacional.slice(0, 2)
+  const numero = nacional.slice(2)
+  const meio = numero.length - 4
+  return `${comPais ? `+${digitos.slice(0, 2)} ` : ''}(${ddd}) ${numero.slice(0, meio)}-${numero.slice(meio)}`
+}
+
+/** "2,5" / "2.5" / "3" → 2.5 / 3 (embalagens); null se não for número ≥ 0. A API confere o passo de meia caixa. */
+export function lerQuantidade(texto: string): number | null {
+  const limpo = texto.trim().replace(',', '.')
+  if (!/^\d+(\.\d+)?$/.test(limpo)) {
+    return null
+  }
+  return Number(limpo)
+}
+
+/** 2.5 → "2,5" para preencher o campo. */
+export function quantidadeParaCampo(valor: number): string {
+  return String(valor).replace('.', ',')
+}
+
+export const TAMANHO_MAXIMO_CSV = 1_000_000
+
+/**
+ * Bytes do arquivo → texto. Tenta UTF-8 (o "CSV UTF-8" do Excel e o arquivo do repositório); se não for, lê como
+ * Windows-1252, que é o "CSV (separado por vírgulas)" comum do Excel no Windows. Assim os acentos chegam certos nos dois casos.
+ */
+export function decodificarCsv(bytes: ArrayBuffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes)
+  }
+}
+
+/** Cabeçalho que a importação entende (docs/fase2/catalogo-inicial.csv). */
+export const COLUNAS_CSV = [
+  'categoria',
+  'sabor',
+  'unidade_compra',
+  'unidades_por_embalagem',
+  'custo_embalagem',
+  'fornecedor',
+] as const

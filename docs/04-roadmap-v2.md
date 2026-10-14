@@ -117,7 +117,8 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [ ] API: catálogo (importar CSV), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
 - [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
-- [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, catálogo com fornecedor/alvo/mínimo, cadastro de insumos e fornecedores, WhatsApp da dona
+- [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
+- [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, WhatsApp da dona
 
 **Pronto quando:** o atendente avisa "acabou Coco preto" e a dona recebe no WhatsApp na hora; no fim do dia chega o resumo; a contagem semanal substitui a planilha.
 
