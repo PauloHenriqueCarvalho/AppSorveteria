@@ -6,8 +6,12 @@ namespace GestaoSorveteria.Domain.Estoque;
 /// <param name="Passo">0,5 quando o item é caixa e o fornecedor aceita meia caixa; 1 no resto.</param>
 public sealed record LinhaSugerida(ItemEstoque Item, decimal Passo, decimal SugeridoEmbalagens, OrigemLinhaPedido Origem, string? Observacao = null);
 
-/// <summary>O que a dona marcou na conferência para uma linha do pedido (só as diferentes; o resto "chegou certo").</summary>
-public sealed record LinhaRecebida(Guid ItemEstoqueId, decimal RecebidoEmbalagens, bool PedirDeNovo = true);
+/// <summary>
+/// O que a dona marcou na conferência para uma linha do pedido (só as diferentes; o resto "chegou certo").
+/// <paramref name="CustoAtual"/>: custo do catálogo agora, para linha que estava com 0 no pedido e veio mesmo assim (sabor
+/// trocado) — ela entra como "veio sem pedir" com o custo de agora, como o item que nem estava na lista (RN-RC-05).
+/// </summary>
+public sealed record LinhaRecebida(Guid ItemEstoqueId, decimal RecebidoEmbalagens, bool PedirDeNovo = true, decimal? CustoAtual = null);
 
 /// <summary>Item que veio sem estar no pedido (sabor trocado). O custo é o do catálogo naquele momento.</summary>
 public sealed record LinhaNaoPedida(ItemEstoque Item, decimal Passo, decimal RecebidoEmbalagens);
@@ -196,6 +200,7 @@ public sealed class PedidoFornecedor : Entity
             Guard.Contra(!porItem.TryAdd(diferenca.ItemEstoqueId, diferenca), "O mesmo item apareceu duas vezes na conferência.");
             var linhaDoPedido = Linha(diferenca.ItemEstoqueId) ?? throw new DomainException("Item que não está no pedido: registre como \"não pedido\".");
             linhaDoPedido.ValidarRecebido(diferenca.RecebidoEmbalagens);
+            Guard.Contra(diferenca.CustoAtual < 0, "O custo não pode ser negativo.");
         }
 
         var novas = new List<ItemPedidoFornecedor>();
@@ -214,7 +219,7 @@ public sealed class PedidoFornecedor : Entity
         foreach (var linha in _itens)
         {
             var recebida = porItem.GetValueOrDefault(linha.ItemEstoqueId);
-            linha.DefinirRecebido(recebida?.RecebidoEmbalagens ?? linha.PedidoEmbalagens, recebida?.PedirDeNovo ?? true);
+            linha.DefinirRecebido(recebida?.RecebidoEmbalagens ?? linha.PedidoEmbalagens, recebida?.PedirDeNovo ?? true, recebida?.CustoAtual);
         }
 
         foreach (var (linha, naoPedido) in novas.Zip(listaNaoPedidos))
@@ -283,7 +288,7 @@ public sealed class ItemPedidoFornecedor : Entity
     /// <summary>RN-RC-02. Nulo enquanto a entrega não foi conferida.</summary>
     public SituacaoRecebimento? Situacao => RecebidoEmbalagens is not { } recebido
         ? null
-        : Origem == OrigemLinhaPedido.NaoPedido ? SituacaoRecebimento.NaoPedido
+        : Origem == OrigemLinhaPedido.NaoPedido || (PedidoEmbalagens == 0 && recebido > 0) ? SituacaoRecebimento.NaoPedido
         : recebido < PedidoEmbalagens ? SituacaoRecebimento.Faltou
         : recebido > PedidoEmbalagens ? SituacaoRecebimento.VeioAMais
         : SituacaoRecebimento.Certo;
@@ -359,10 +364,15 @@ public sealed class ItemPedidoFornecedor : Entity
 
     internal void ValidarRecebido(decimal embalagens) => Validar(embalagens, "A quantidade recebida", PassoRecebimento);
 
-    internal void DefinirRecebido(decimal embalagens, bool pedirDeNovo)
+    /// <param name="custoAtual">Linha com 0 no pedido que veio mesmo assim: passa a valer o custo de agora (veio sem pedir).</param>
+    internal void DefinirRecebido(decimal embalagens, bool pedirDeNovo, decimal? custoAtual = null)
     {
         RecebidoEmbalagens = Validar(embalagens, "A quantidade recebida", PassoRecebimento);
         PedirDeNovo = pedirDeNovo;
+        if (PedidoEmbalagens == 0 && embalagens > 0 && custoAtual is { } custo)
+        {
+            CustoEmbalagem = custo; // o subtotal do pedido continua 0: o total pedido não muda
+        }
     }
 
     private decimal Validar(decimal embalagens, string campo) => Validar(embalagens, campo, Passo);

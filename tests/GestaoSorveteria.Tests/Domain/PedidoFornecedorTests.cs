@@ -255,6 +255,26 @@ public class PedidoFornecedorTests
     }
 
     [Fact]
+    public void Receber_LinhaComZeroQueVeio_ViraVeioSemPedirComOCustoDeAgora()
+    {
+        var pedido = Rascunho(
+            new LinhaSugerida(_limao, 1m, 2m, OrigemLinhaPedido.Sugestao),
+            new LinhaSugerida(_uva, 1m, 0m, OrigemLinhaPedido.Sugestao));
+        pedido.Enviar(Agora);
+
+        // Sabor trocado: a uva estava na lista com 0 e veio 1 caixa, com preço novo na nota.
+        pedido.Receber([new LinhaRecebida(_uva.Id, 1m, CustoAtual: 27m)], [], Cenario.Dona, Agora.AddDays(1));
+
+        var uva = pedido.Linha(_uva.Id)!;
+        Assert.Equal(SituacaoRecebimento.NaoPedido, uva.Situacao);
+        Assert.Equal(27m, uva.CustoEmbalagem);
+        Assert.Equal(27m, uva.DiferencaValor);
+        Assert.Equal(50.40m, pedido.TotalPedido); // o pedido não muda
+        Assert.Equal(77.40m, pedido.TotalRecebido); // 2 × 25,20 + 27
+        Assert.Equal(100m, pedido.PercentualAtendido);
+    }
+
+    [Fact]
     public void Receber_RascunhoOuItemRepetido_Lanca()
     {
         var pedido = Rascunho(new LinhaSugerida(_limao, 1m, 2m, OrigemLinhaPedido.Sugestao));
