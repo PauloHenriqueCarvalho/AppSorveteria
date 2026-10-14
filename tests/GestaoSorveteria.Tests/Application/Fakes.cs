@@ -272,3 +272,31 @@ internal sealed class ConfiguracaoLojaRepositoryFake : IConfiguracaoLojaReposito
         return Task.CompletedTask;
     }
 }
+
+/// <summary>Contagens semanais em memória.</summary>
+internal sealed class ContagemRepositoryFake : IContagemRepository
+{
+    public List<Contagem> Contagens { get; } = new();
+
+    public Task<Contagem?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Contagens.FirstOrDefault(c => c.Id == id));
+
+    public Task<IReadOnlyList<Contagem>> ListarAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Contagem>>(Contagens
+            .Where(c => !c.Concluida || (c.IniciadaEm >= deUtc && c.IniciadaEm < ateUtc))
+            .OrderByDescending(c => c.IniciadaEm)
+            .ToList());
+
+    public Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, int>>(Contagens
+            .Where(c => c.ConcluidaEm < antesDeUtc)
+            .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades)))
+            .GroupBy(x => x.ItemEstoqueId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ConcluidaEm).First().ContadoUnidades!.Value));
+
+    public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)
+    {
+        Contagens.Add(contagem);
+        return Task.CompletedTask;
+    }
+}

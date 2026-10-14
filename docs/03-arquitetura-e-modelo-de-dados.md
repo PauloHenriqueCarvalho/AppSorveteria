@@ -277,7 +277,8 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
   - Aviso que a dona (ou a entrega) **fechou**: reenvio sem novidade → `ja_recebida` com `aberto = false` (o app tira da lista); mudança feita no tablet **depois** do fechamento → `rejeitada` com "A dona fechou este aviso às HH:mm. Se ainda está faltando, avise de novo".
   - Aviso juntado a outro que depois foi fechado: se tudo o que o tablet sabe é anterior ao fechamento, não reabre (`ja_recebida`, `aberto = false`).
   - Datas além de agora + 10 min são recusadas (relógio do tablet adiantado travaria as atualizações seguintes).
-- Contagens sobem por `POST /api/sync/contagens` (próximo passo do Sprint 5).
+- **`POST /api/sync/contagens`**: contagem do tablet com **todas as linhas registradas** (embalagens; nulo = não contado), parcial ou concluída (`concluidaEm`), idempotente pelo `Id`. Aberta no servidor recebe as linhas; reenvio igual → `ja_recebida`; mudança numa contagem já concluída → `rejeitada` ("faça uma nova contagem").
+- O app sabe quando lembrar da contagem por `diasDeContagem` em `GET /api/estoque/itens` (véspera do dia de pedido de cada fornecedor com item na contagem).
 - O app baixa grupos e itens **sem custo** em `GET /api/estoque/itens` e os avisos abertos em `GET /api/avisos?abertos=true`; o WhatsApp da dona vem de `GET /api/configuracoes`.
 - O WhatsApp sai do aparelho (link `wa.me`), não do servidor. O texto do urgente é montado no próprio app (`MensagensWhatsApp.Urgente`, no Domain), para sair mesmo sem internet. `GET /api/avisos/resumo-do-dia` devolve o texto do resumo e o link; o app pede **depois de enviar a fila** (o total vendido conta só as vendas que já chegaram). Atendente só pede o de hoje; outros dias, só a dona.
 
@@ -292,7 +293,7 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
 | GET | `/api/estoque/catalogo` | fornecedores, grupos e itens (com custo) para o painel |
 | POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` (+ `/{id}/ativar`, `/{id}/desativar`) | catálogo (RN-ES-01/02/11, RN-PF-01/09) |
 | POST | `/api/estoque/itens/importar` | CSV da planilha; `simular: true` devolve a prévia sem gravar (RN-ES-10) |
-| GET/POST | `/api/estoque/contagens` | contagem pelo painel; histórico e saída semanal por item |
+| GET/POST | `/api/estoque/contagens`, `/api/estoque/contagens/nova`, `/{id}` | contagem pelo painel (rascunho e concluir), histórico; a contagem anterior vem como referência (só Admin) |
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
 | PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
 | POST | `/api/pedidos-fornecedor/{id}/enviar` | confirma; devolve texto do WhatsApp |

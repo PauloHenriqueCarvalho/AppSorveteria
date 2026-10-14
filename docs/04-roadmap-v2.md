@@ -117,7 +117,8 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [ ] Infrastructure: configurações EF (`snake_case`, índices únicos: item grupo+nome, grupo nome, fornecedor nome, 1 aviso aberto por item) + repositório + migração `Fase2Estoque` (skill `migracao-ef`)
 - [x] Infrastructure + API do catálogo: tabelas da Fase 2 (migração `Fase2Estoque`), `GET /api/estoque/catalogo` e alterações (Admin), `GET /api/estoque/itens` (app, sem custo) — 14/10
 - [x] API: avisos (criar sem duplicar, "ainda falta", fechar, WhatsApp aberto), resumo do dia, configuração (WhatsApp da dona), `POST /api/sync/avisos` (RN-AV-01…10) — 14/10
-- [ ] API: contagens (painel e `POST /api/sync/contagens`), diferenças da contagem no resumo do dia
+- [x] API: contagens pelo painel (modelo, rascunho, concluir) e `POST /api/sync/contagens`; `diasDeContagem` para o lembrete do app (RN-ES-05/06) — 14/10
+- [ ] Saída da semana (RN-ES-07) e diferenças da contagem no resumo: dependem do recebimento (Sprint 6) e do saldo dos potes (Sprint 7)
 - [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10

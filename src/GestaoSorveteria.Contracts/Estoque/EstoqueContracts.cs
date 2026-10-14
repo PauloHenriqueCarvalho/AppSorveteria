@@ -89,9 +89,14 @@ public sealed record LinhaImportacaoDto(int Linha, string Mensagem);
 /// GET /api/estoque/itens — o que o app do atendente precisa para "Está acabando" e para a contagem: grupos e itens
 /// sem custo nem fornecedor (o atendente não vê preço de compra).
 /// </summary>
+/// <param name="DiasDeContagem">
+/// RN-ES-05: dias da semana ("Sunday"…) em que o app mostra "Hoje é dia de contagem" — a véspera do dia de pedido de cada
+/// fornecedor ativo que tem item na contagem.
+/// </param>
 public sealed record CatalogoEstoqueAppResponse(
     IReadOnlyList<GrupoEstoqueDto> Grupos,
-    IReadOnlyList<ItemEstoqueAppDto> Itens);
+    IReadOnlyList<ItemEstoqueAppDto> Itens,
+    IReadOnlyList<string> DiasDeContagem);
 
 public sealed record ItemEstoqueAppDto(
     Guid Id,

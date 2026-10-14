@@ -588,6 +588,8 @@ public class CatalogoEstoqueServiceTests
         Assert.Equal("Caixa", item.Unidade);
         Assert.Equal(28, item.UnidadesPorEmbalagem);
         Assert.Equal(item.GrupoId, Assert.Single(catalogo.Grupos).Id);
+        // Fornecedor criado pela importação pede na segunda: a contagem é no domingo (RN-ES-05).
+        Assert.Equal(new[] { "Sunday" }, catalogo.DiasDeContagem.ToArray());
         // O DTO do app não tem propriedade de custo nem de fornecedor.
         Assert.DoesNotContain(typeof(GestaoSorveteria.Contracts.Estoque.ItemEstoqueAppDto).GetProperties(),
             p => p.Name.Contains("Custo") || p.Name.Contains("Fornecedor"));
