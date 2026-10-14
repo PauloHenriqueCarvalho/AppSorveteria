@@ -344,7 +344,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
 | GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte; vendas por hora, mesmo dia da semana anterior e mais vendidos desde 14/10 — RN-RL-03/06/07) | `ResumoDiaDto` |
-| GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
+| GET | `/api/comandas?de=&ate=&status=&atendente=&forma=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; `atendente` = Id de quem vendeu; `forma` = Dinheiro, Pix, CartaoDebito ou CartaoCredito — venda com pelo menos um pagamento nela, então o pagamento dividido aparece nas duas; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09) — **pronto** (corpo `{ "motivo": "..." }`; não altera o caixa) | `ComandaDetalheDto` |
 | GET | `/api/caixas?de=&ate=` | Caixas (histórico) — **pronto** (sem datas: 30 dias; máx. 93; hoje faz 1 consulta por caixa — agregar no repositório se pesar) | `IReadOnlyList<CaixaResumoDto>` |

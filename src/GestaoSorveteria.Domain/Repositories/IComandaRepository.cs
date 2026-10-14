@@ -23,7 +23,7 @@ public interface IComandaRepository
     Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
         DateTime deUtc,
         DateTime ateUtc,
-        StatusComanda? status,
+        FiltroVendas filtro,
         int pular,
         int quantidade,
         CancellationToken cancellationToken = default);

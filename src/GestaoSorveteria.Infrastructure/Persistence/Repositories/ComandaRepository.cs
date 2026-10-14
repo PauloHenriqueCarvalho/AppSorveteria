@@ -26,9 +26,19 @@ internal sealed class ComandaRepository : IComandaRepository
             .Include(c => c.Pagamentos)
             .Where(c => c.CaixaId == caixaId);
 
-        if (status is { } filtro)
+        if (filtro.Status is { } status)
         {
-            query = query.Where(c => c.Status == filtro);
+            query = query.Where(c => c.Status == status);
+        }
+
+        if (filtro.UsuarioId is { } usuarioId)
+        {
+            query = query.Where(c => c.UsuarioId == usuarioId);
+        }
+
+        if (filtro.Forma is { } forma)
+        {
+            query = query.Where(c => c.Pagamentos.Any(p => p.Forma == forma));
         }
 
         return await query
@@ -47,7 +57,7 @@ internal sealed class ComandaRepository : IComandaRepository
     public async Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
         DateTime deUtc,
         DateTime ateUtc,
-        StatusComanda? status,
+        FiltroVendas filtro,
         int pular,
         int quantidade,
         CancellationToken cancellationToken = default)

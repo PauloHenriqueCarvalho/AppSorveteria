@@ -451,6 +451,7 @@ textarea {
 }
 
 .campo-inline input,
+.campo-inline select,
 .data-compacta {
   min-height: 40px;
   padding: 0 0.6rem;
@@ -1587,7 +1588,8 @@ a.lista-item:hover {
 }
 
 .filtros .campo-inline {
-  flex: 0 1 220px;
+  flex: 1 1 140px;
+  max-width: 240px;
 }
 
 .filtros .campo-inline select {
