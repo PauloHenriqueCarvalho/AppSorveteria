@@ -7,6 +7,7 @@ using GestaoSorveteria.Application.Caixas;
 using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Contagens;
 using GestaoSorveteria.Application.Estoque;
+using GestaoSorveteria.Application.Pedidos;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Relatorios;
 using GestaoSorveteria.Application.Sync;
@@ -65,6 +66,8 @@ builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<CatalogoEstoqueService>();
 builder.Services.AddScoped<AvisoService>();
 builder.Services.AddScoped<ContagemService>();
+builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<SaldoEstoqueService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------
 var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();

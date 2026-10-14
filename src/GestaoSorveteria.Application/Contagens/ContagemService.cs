@@ -84,7 +84,7 @@ public sealed class ContagemService
         foreach (var linha in request.Linhas ?? [])
         {
             var (item, grupo) = catalogo.Item(linha.ItemEstoqueId);
-            contagem.Registrar(item, grupo, linha.Embalagens);
+            contagem.Registrar(item, grupo, linha.Embalagens, contadoEmUtc: agora);
         }
 
         if (request.Concluir)
@@ -173,7 +173,9 @@ public sealed class ContagemService
         foreach (var linha in linhas)
         {
             var (item, grupo) = catalogo.Item(linha.ItemEstoqueId);
-            contagem.Registrar(item, grupo, linha.Embalagens, linhaId: linha.Id == Guid.Empty ? null : linha.Id);
+            contagem.Registrar(
+                item, grupo, linha.Embalagens, linhaId: linha.Id == Guid.Empty ? null : linha.Id,
+                contadoEmUtc: ContadoEmNoTablet(linha.ContadoEm, contagem.IniciadaEm, dto.ConcluidaEm ?? _clock.UtcNow));
         }
 
         if (dto.ConcluidaEm is { } concluidaEm)
@@ -191,6 +193,21 @@ public sealed class ContagemService
     }
 
     /// <summary>Linhas e conclusão em texto, para saber se o reenvio mudou alguma coisa.</summary>
+    /// <summary>
+    /// Hora em que o tablet diz que contou o item, dentro da contagem (entre o início e a conclusão): relógio do tablet um
+    /// pouco fora não rejeita a contagem inteira. Sem a hora, vale a conclusão (RN-ES-08).
+    /// </summary>
+    private static DateTime? ContadoEmNoTablet(DateTime? informado, DateTime iniciadaEm, DateTime limite)
+    {
+        if (informado is not { } quando)
+        {
+            return null;
+        }
+
+        var utc = quando.Kind == DateTimeKind.Utc ? quando : DateTime.SpecifyKind(quando, DateTimeKind.Utc);
+        return utc < iniciadaEm ? iniciadaEm : utc > limite ? limite : utc;
+    }
+
     private static string Retrato(Contagem contagem) =>
         $"{contagem.ConcluidaEm:O}|" + string.Join(";", contagem.Itens.OrderBy(i => i.ItemEstoqueId).Select(i => $"{i.ItemEstoqueId}={i.ContadoUnidades}"));
 
@@ -227,7 +244,7 @@ public sealed class ContagemService
             .Select(x =>
             {
                 var registrada = registradas.GetValueOrDefault(x.Item.Id);
-                int? anterior = anteriores.TryGetValue(x.Item.Id, out var a) ? a : null;
+                int? anterior = anteriores.TryGetValue(x.Item.Id, out var a) ? a.Unidades : null;
                 return new LinhaContagemDto(
                     x.Item.Id,
                     x.Grupo.Id,

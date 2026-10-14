@@ -1,12 +1,15 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { mensagemDoErro } from '../../api/erros.ts'
 import { alterarAtivoFornecedor, CHAVE_CATALOGO_ESTOQUE, salvarFornecedor } from '../../api/estoque.ts'
+import { CHAVE_PEDIDOS, obterHistoricoFornecedor } from '../../api/pedidos.ts'
 import type { CatalogoEstoqueResponse, DiaSemana, FormaEnvioPedido, FornecedorDto, SalvarFornecedorRequest } from '../../api/tipos.ts'
 import Consulta from '../../componentes/Consulta.tsx'
-import { CabecalhoPagina, Secao } from '../../componentes/Ui.tsx'
-import { DIAS, ENVIOS, formatarWhatsApp } from '../../estoque.ts'
+import { CabecalhoPagina, Indicador, Secao } from '../../componentes/Ui.tsx'
+import { DIAS, ENVIOS, formatarEmbalagens, formatarWhatsApp } from '../../estoque.ts'
+import { formatarMoeda } from '../../formatacao.ts'
+import { formatarPercentual } from '../../pedidos.ts'
 import { useCatalogoEstoque } from '../estoque/useCatalogoEstoque.ts'
 
 /** /fornecedores/novo e /fornecedores/:id — RN-PF-01 e RN-PF-09. */
@@ -200,6 +203,8 @@ function Formulario({ dados, fornecedor }: { dados: CatalogoEstoqueResponse; for
         </div>
       </form>
 
+      {fornecedor && <Historico fornecedorId={fornecedor.id} />}
+
       {fornecedor && (
         <Secao titulo={fornecedor.ativo ? 'Desativar' : 'Ativar'}>
           <p className="suave">
@@ -221,5 +226,54 @@ function Formulario({ dados, fornecedor }: { dados: CatalogoEstoqueResponse; for
         </Secao>
       )}
     </>
+  )
+}
+
+/** RN-RC-06: como o fornecedor tem atendido nos últimos 30 dias (valores calculados pela API). */
+function Historico({ fornecedorId }: { fornecedorId: string }) {
+  const historico = useQuery({
+    queryKey: [...CHAVE_PEDIDOS, 'historico', fornecedorId],
+    queryFn: () => obterHistoricoFornecedor(fornecedorId),
+  })
+  const h = historico.data
+  if (!h) {
+    return null
+  }
+
+  return (
+    <Secao titulo="Últimos 30 dias">
+      {h.pedidosRecebidos === 0 ? (
+        <p className="suave">Nenhuma entrega conferida nos últimos 30 dias.</p>
+      ) : (
+        <>
+          <div className="grade-indicadores">
+            <Indicador rotulo="Entregas" valor={h.pedidosRecebidos} detalhe="conferidas" />
+            <Indicador rotulo="Pedido" valor={formatarMoeda(h.valorPedido)} />
+            <Indicador rotulo="Veio" valor={formatarMoeda(h.valorRecebido)} tom="marca" />
+            <Indicador
+              rotulo="Atendido"
+              valor={formatarPercentual(h.percentualAtendidoMedio)}
+              detalhe="média das entregas"
+              tom={(h.percentualAtendidoMedio ?? 0) >= 95 ? 'bom' : 'atencao'}
+            />
+          </div>
+          {h.itensQueMaisFaltam.length > 0 && (
+            <>
+              <h3 className="subtitulo">O que mais falta</h3>
+              <ul className="lista-faltas">
+                {h.itensQueMaisFaltam.map((f) => (
+                  <li key={f.itemEstoqueId}>
+                    <span>{f.descricao}</span>
+                    <span className="suave">
+                      faltou {f.vezesQueFaltou} {f.vezesQueFaltou === 1 ? 'vez' : 'vezes'} · {formatarEmbalagens(f.embalagensQueFaltaram)} no total
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+    </Secao>
   )
 }

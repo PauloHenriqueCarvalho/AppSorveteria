@@ -28,6 +28,21 @@ public class ModeloEfTests
             "O modelo do EF mudou sem migração: gere com `dotnet ef migrations add` ou com [gerar-migracao: Nome] no commit.");
     }
 
+    /// <summary>
+    /// xmin é coluna de sistema do PostgreSQL (token de concorrência do caixa, do aviso e do pedido): o SQL gerado não pode
+    /// tentar criá-la, senão a migração quebra no banco ("conflicts with a system column name").
+    /// </summary>
+    [Fact]
+    public void ScriptDoBanco_NaoTentaCriarAColunaDeSistemaXmin()
+    {
+        using var db = Contexto();
+
+        var script = db.Database.GenerateCreateScript();
+
+        Assert.Contains("CREATE TABLE pedidos_fornecedor", script);
+        Assert.DoesNotContain("xmin", script);
+    }
+
     [Fact]
     public void Estoque_TabelasEColunas_EmSnakeCaseComoNoDocs03()
     {
@@ -76,6 +91,44 @@ public class ModeloEfTests
         var avisoAberto = Indice(modelo, typeof(Aviso), nameof(Aviso.ItemEstoqueId));
         Assert.True(avisoAberto.IsUnique);
         Assert.Equal("status = 'Aberto' AND item_estoque_id IS NOT NULL", avisoAberto.GetFilter());
+    }
+
+    [Fact]
+    public void Pedido_UmRascunhoPorFornecedorENumeroUnico()
+    {
+        using var db = Contexto();
+        var modelo = ModeloDeDesign(db);
+
+        Assert.Equal("pedidos_fornecedor", modelo.FindEntityType(typeof(PedidoFornecedor))!.GetTableName());
+        Assert.Equal("itens_pedido_fornecedor", modelo.FindEntityType(typeof(ItemPedidoFornecedor))!.GetTableName());
+        var rascunho = Indice(modelo, typeof(PedidoFornecedor), nameof(PedidoFornecedor.FornecedorId));
+        Assert.True(rascunho.IsUnique);
+        Assert.Equal("status = 'Rascunho'", rascunho.GetFilter());
+        Assert.True(Indice(modelo, typeof(PedidoFornecedor), nameof(PedidoFornecedor.Numero)).IsUnique);
+        Assert.True(Indice(modelo, typeof(ItemPedidoFornecedor), nameof(ItemPedidoFornecedor.PedidoId), nameof(ItemPedidoFornecedor.ItemEstoqueId)).IsUnique);
+    }
+
+    [Fact]
+    public void Potes_MovimentosIdempotentesESaborNaVenda()
+    {
+        using var db = Contexto();
+        var modelo = ModeloDeDesign(db);
+
+        Assert.Equal("movimentos_estoque", modelo.FindEntityType(typeof(MovimentoEstoque))!.GetTableName());
+        var porLinha = Indice(modelo, typeof(MovimentoEstoque), nameof(MovimentoEstoque.Tipo), nameof(MovimentoEstoque.ItemComandaId));
+        Assert.True(porLinha.IsUnique);
+        Assert.Equal("item_comanda_id IS NOT NULL", porLinha.GetFilter());
+        var porPedido = Indice(
+            modelo, typeof(MovimentoEstoque), nameof(MovimentoEstoque.Tipo), nameof(MovimentoEstoque.PedidoId), nameof(MovimentoEstoque.ItemEstoqueId));
+        Assert.True(porPedido.IsUnique);
+        Assert.Equal("pedido_id IS NOT NULL", porPedido.GetFilter());
+
+        var produto = modelo.FindEntityType(typeof(GestaoSorveteria.Domain.Produtos.Produto))!;
+        Assert.Equal(1, produto.FindProperty(nameof(GestaoSorveteria.Domain.Produtos.Produto.UnidadesPorVenda))!.GetDefaultValue());
+        Assert.Equal(
+            "item_estoque_id",
+            modelo.FindEntityType(typeof(GestaoSorveteria.Domain.Comandas.ItemComanda))!
+                .FindProperty(nameof(GestaoSorveteria.Domain.Comandas.ItemComanda.ItemEstoqueId))!.GetColumnName());
     }
 
     private static IIndex Indice(IModel modelo, Type entidade, params string[] propriedades) =>

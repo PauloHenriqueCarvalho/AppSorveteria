@@ -233,18 +233,21 @@ grupos_estoque      (id, nome, nome_normalizado, modo_controle varchar(20) -- Co
 itens_estoque       (id, grupo_id FK, fornecedor_id FK, nome varchar(80),
                      unidade_compra varchar(10) -- Caixa | Balde | Unidade | Pacote,
                      unidades_por_embalagem int ≥ 1, custo_embalagem numeric(12,2),
-                     estoque_alvo_embalagens numeric(6,1)?, minimo_unidades int?, ordem, ativo,
-                     saldo_unidades int?            -- só SaldoPelaVenda; cache do Σ movimentos
-                    )                                -- único (grupo_id, nome_normalizado); saldo_unidades entra na Sprint 7
+                     estoque_alvo_embalagens numeric(6,1)?, minimo_unidades int?, ordem, ativo)
+                                                     -- único (grupo_id, nome_normalizado)
 
-movimentos_estoque  (id, item_estoque_id FK, tipo varchar(20), quantidade_unidades int,
-                     comanda_id?, item_comanda_id?, pedido_id?, contagem_id?, usuario_id, em, motivo?)
-                     tipo: Entrada | BaixaVenda | EstornoVenda | AjusteContagem
-                     -- só para grupos SaldoPelaVenda; único (item_comanda_id, tipo)
+movimentos_estoque  (id, item_estoque_id FK, tipo varchar(15) -- Entrada | BaixaVenda | EstornoVenda,
+                     unidades int > 0, em, registrado_em, pedido_id FK?, comanda_id FK?, item_comanda_id FK?)
+                     -- só grupos SaldoPelaVenda (potes); nunca apagado. em = quando aconteceu na loja (entrega chegou,
+                     -- venda fechada; o estorno repete o em da venda); registrado_em = quando o servidor gravou.
+                     -- único (tipo, item_comanda_id) e (tipo, pedido_id, item_estoque_id): a sincronização repetida não baixa duas vezes
+                     -- saldo (RN-ES-08) = contado na última contagem + Σ movimentos com em depois da hora em que o item foi contado
 
 contagens           (id, usuario_id, iniciada_em, concluida_em?, origem varchar(10) -- App | Painel)
 itens_contagem      (id, contagem_id FK, item_estoque_id FK, contado_unidades int?,  -- null = não contado
-                     saldo_sistema_unidades int?)  -- potes: para mostrar a diferença; único (contagem_id, item_estoque_id)
+                     saldo_sistema_unidades int?,  -- potes: para mostrar a diferença
+                     contado_em timestamptz?)      -- quando o item foi contado (base do saldo); null = vale concluida_em
+                                                   -- único (contagem_id, item_estoque_id)
 
 avisos              (id, item_estoque_id?, texto_livre varchar(120)?, quantidade_atual int,
                      prioridade varchar(10) -- Urgente | Alta | Media, observacao?,
@@ -255,7 +258,8 @@ avisos              (id, item_estoque_id?, texto_livre varchar(120)?, quantidade
                      -- índice único parcial: 1 Aberto por item_estoque_id
 
 pedidos_fornecedor  (id, fornecedor_id FK, numero int, status varchar(15), criado_em, enviado_em?,
-                     recebido_em?, cancelado_em?, motivo_cancelamento?, total_pedido numeric(12,2),
+                     recebido_em?  -- conferência no sistema, chegou_em?  -- quando a entrega chegou (conta para o estoque),
+                     cancelado_em?, motivo_cancelamento?, total_pedido numeric(12,2),
                      total_recebido numeric(12,2)?, percentual_atendido numeric(5,2)?, usuario_id)
                      -- índice único parcial: 1 Rascunho por fornecedor
 
@@ -264,9 +268,9 @@ itens_pedido_fornecedor (id, pedido_id FK, item_estoque_id FK, sugerido_embalage
                      custo_embalagem numeric(12,2), alterado_pela_dona bool, origem varchar(20)
                      -- Sugestao | Aviso | FaltouAnterior, pedir_de_novo bool, nao_pedido bool)
 
-produtos            + grupo_estoque_id uuid null, + unidades_por_venda int default 1
+produtos            + grupo_estoque_id FK uuid null, + unidades_por_venda int default 1   -- RN-PR-06 (Sprint 7)
                     + custo_manual numeric(12,2) null    -- Fase 3
-itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-ES-09)
+itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-ES-09); só em item de produto
 ```
 
 **Sincronização (local-first):**
@@ -293,13 +297,15 @@ itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-E
 | GET | `/api/estoque/catalogo` | fornecedores, grupos e itens (com custo) para o painel |
 | POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` (+ `/{id}/ativar`, `/{id}/desativar`) | catálogo (RN-ES-01/02/11, RN-PF-01/09) |
 | POST | `/api/estoque/itens/importar` | CSV da planilha; `simular: true` devolve a prévia sem gravar (RN-ES-10) |
+| GET | `/api/estoque/saldos` | saldo de cada pote (grupos `SaldoPelaVenda`): última contagem + entregas − vendas depois dela, mínimo, vendidos na semana (RN-ES-08) |
 | GET/POST | `/api/estoque/contagens`, `/api/estoque/contagens/nova`, `/{id}` | contagem pelo painel (rascunho e concluir), histórico; a contagem anterior vem como referência (só Admin) |
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
 | PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
 | POST | `/api/pedidos-fornecedor/{id}/enviar` | confirma; devolve texto do WhatsApp |
-| GET | `/api/pedidos-fornecedor/{id}/folha` | dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
+| GET | `/api/pedidos-fornecedor?fornecedorId=`, `/api/pedidos-fornecedor/{id}` | lista (90 dias + não recebidos) e o pedido completo — também os dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
 | POST | `/api/pedidos-fornecedor/{id}/receber` | conferência; diferenças e texto para o fornecedor |
 | POST | `/api/pedidos-fornecedor/{id}/cancelar` | com motivo |
+| GET | `/api/pedidos-fornecedor/{id}/mensagens` | WhatsApp para reabrir: o pedido (fornecedor que recebe por WhatsApp) e o que veio diferente na entrega |
 | GET | `/api/fornecedores/{id}/historico` | % atendido, itens que mais faltam |
 
 **Montagem automática do rascunho:** o painel chama `montar` ao abrir no dia do pedido (idempotente); um `BackgroundService` faz o mesmo quando a API estiver acordada. Não depende de agendador pago.
@@ -316,6 +322,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
 | POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
 | POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
+| PUT | `/api/produtos/{id}/estoque` | Admin | liga o produto a um grupo de estoque (`grupoEstoqueId` nulo = desliga) e quantas unidades saem por venda (RN-PR-06). Grupo de potes → `pedeSabor` no produto: o app mostra a grade de sabores e manda `itemEstoqueId` na linha da venda (RN-ES-09) |
 | GET | `/api/usuarios`, `/api/usuarios/{id}` | Admin | todos os usuários, inclusive desativados (`UsuarioDto`) |
 | POST | `/api/usuarios` | Admin | cria atendente (PIN) ou Admin (senha) — `CriarUsuarioRequest` (`perfil` = `Atendente`/`Admin`); login repetido → 400 (RN-US-02); senha fora da política → 400 (RN-US-03); 201 |
 | POST | `/api/usuarios/{id}/redefinir-senha` | Admin | `RedefinirSenhaRequest { novaSenha }`; sem pedir a antiga (RN-US-08); vale a política do perfil do usuário |

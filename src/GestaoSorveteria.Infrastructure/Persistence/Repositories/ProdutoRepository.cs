@@ -44,6 +44,9 @@ internal sealed class ProdutoRepository : IProdutoRepository
             p => p.NomeNormalizado == nomeNormalizado && (ignorarId == null || p.Id != ignorarId),
             cancellationToken);
 
+    public async Task<IReadOnlyList<Produto>> ListarDoGrupoEstoqueAsync(Guid grupoEstoqueId, CancellationToken cancellationToken = default) =>
+        await _db.Produtos.Where(p => p.GrupoEstoqueId == grupoEstoqueId).ToListAsync(cancellationToken);
+
     public async Task AdicionarAsync(Produto produto, CancellationToken cancellationToken = default) =>
         await _db.Produtos.AddAsync(produto, cancellationToken);
 }

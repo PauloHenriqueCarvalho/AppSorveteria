@@ -77,7 +77,7 @@ public class ContagemServiceTests
         Assert.Equal(2.5m, limao.AnteriorEmbalagens);
         Assert.Equal(0.5m, limao.PassoEmbalagens);
         Assert.Equal(1m, modelo.Linhas[2].PassoEmbalagens);
-        Assert.Empty(_contagens.Contagens.Where(c => !c.Concluida)); // nada gravado
+        Assert.DoesNotContain(_contagens.Contagens, c => !c.Concluida); // nada gravado
     }
 
     [Fact]
@@ -98,6 +98,10 @@ public class ContagemServiceTests
         Assert.Equal(3m, concluida.Linhas.Single(l => l.ItemNome == "Flocos").ContadoEmbalagens);
         Assert.Single(_contagens.Contagens);
         Assert.Equal(2, _uow.Confirmacoes);
+        // Cada item guarda quando foi contado (base do saldo dos potes, RN-ES-06/08).
+        var linhas = _contagens.Contagens.Single().Itens;
+        Assert.Equal(Agora, linhas.Single(i => i.ItemEstoqueId == _limao.Id).ContadoEm);
+        Assert.Equal(Agora.AddMinutes(15), linhas.Single(i => i.ItemEstoqueId == _flocos.Id).ContadoEm);
     }
 
     [Fact]
@@ -166,6 +170,24 @@ public class ContagemServiceTests
         Assert.Equal(OrigemContagem.App, contagem.Origem);
         Assert.Equal(Agora.AddMinutes(-2), contagem.ConcluidaEm);
         Assert.Null(contagem.Itens.Single(i => i.ItemEstoqueId == _uva.Id).ContadoUnidades); // não contado continua não contado
+    }
+
+    [Fact]
+    public async Task Sync_HoraDoItemForaDaContagem_FicaDentroDela()
+    {
+        var dto = new ContagemSyncDto(Guid.NewGuid(), _ana.Id, Agora.AddMinutes(-30), Agora.AddMinutes(-2),
+        [
+            new LinhaContagemSyncDto(Guid.NewGuid(), _limao.Id, 2.5m, Agora.AddMinutes(-10)),
+            new LinhaContagemSyncDto(Guid.NewGuid(), _uva.Id, 1m, Agora.AddHours(-5)), // relógio do tablet atrasado
+            new LinhaContagemSyncDto(Guid.NewGuid(), _flocos.Id, 3m),
+        ]);
+
+        Assert.Equal(StatusSync.Aceita, Assert.Single((await Enviar(dto)).Resultados).Status);
+
+        var linhas = _contagens.Contagens.Single().Itens;
+        Assert.Equal(Agora.AddMinutes(-10), linhas.Single(i => i.ItemEstoqueId == _limao.Id).ContadoEm);
+        Assert.Equal(Agora.AddMinutes(-30), linhas.Single(i => i.ItemEstoqueId == _uva.Id).ContadoEm);
+        Assert.Null(linhas.Single(i => i.ItemEstoqueId == _flocos.Id).ContadoEm); // sem hora: vale a conclusão
     }
 
     [Fact]

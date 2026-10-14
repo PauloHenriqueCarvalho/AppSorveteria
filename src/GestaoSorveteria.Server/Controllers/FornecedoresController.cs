@@ -1,5 +1,7 @@
 using GestaoSorveteria.Application.Estoque;
+using GestaoSorveteria.Application.Pedidos;
 using GestaoSorveteria.Contracts.Estoque;
+using GestaoSorveteria.Contracts.Pedidos;
 using GestaoSorveteria.Server.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +16,20 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class FornecedoresController : ControllerBase
 {
     private readonly CatalogoEstoqueService _catalogo;
+    private readonly PedidoService _pedidos;
 
-    public FornecedoresController(CatalogoEstoqueService catalogo)
+    public FornecedoresController(CatalogoEstoqueService catalogo, PedidoService pedidos)
     {
         _catalogo = catalogo;
+        _pedidos = pedidos;
     }
+
+    /// <summary>RN-RC-06: últimos 30 dias — pedidos recebidos, valor pedido × recebido, % atendido médio e itens que mais faltam.</summary>
+    [HttpGet("{id:guid}/historico")]
+    [ProducesResponseType(typeof(HistoricoFornecedorDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<HistoricoFornecedorDto>> Historico(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _pedidos.HistoricoAsync(id, cancellationToken));
 
     /// <summary>Dias de pedido em inglês, como no .NET ("Monday"); envio <c>Impresso</c>, <c>WhatsApp</c> ou <c>Ambos</c>.</summary>
     [HttpPost]

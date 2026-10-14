@@ -16,6 +16,9 @@ public class SyncComandasTests
     private readonly ComandaRepositoryFake _comandas = new();
     private readonly UsuarioRepositoryFake _usuarios = new();
     private readonly ProdutoRepositoryFake _produtos = new();
+    private readonly EstoqueRepositoryFake _estoque = new();
+    private readonly AvisoRepositoryFake _avisos = new();
+    private readonly MovimentoEstoqueRepositoryFake _movimentos = new();
     private readonly UnitOfWorkFake _uow = new();
     private readonly ClockFake _clock = new() { UtcNow = Abertura.AddHours(3) };
     private readonly SyncService _service;
@@ -32,7 +35,8 @@ public class SyncComandasTests
         _atendente = atendente.Id;
         _picole = Produto.Criar("Picolé de morango", "Picolés", 5m, false, 1, Abertura);
         _produtos.Produtos.Add(_picole);
-        _service = new SyncService(_caixas, _comandas, _usuarios, _produtos, _uow, _clock);
+        _service = new SyncService(
+            _caixas, _comandas, _usuarios, _produtos, _estoque, SaldosFake.Novo(_clock, _estoque, avisos: _avisos, movimentos: _movimentos), _uow, _clock);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

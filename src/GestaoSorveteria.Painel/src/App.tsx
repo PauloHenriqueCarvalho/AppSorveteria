@@ -21,6 +21,10 @@ import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
 import ImportarCatalogo from './paginas/estoque/ImportarCatalogo.tsx'
 import EditarFornecedor from './paginas/fornecedores/EditarFornecedor.tsx'
 import ListaFornecedores from './paginas/fornecedores/ListaFornecedores.tsx'
+import ConferirEntrega from './paginas/pedidos/ConferirEntrega.tsx'
+import DetalhePedido from './paginas/pedidos/DetalhePedido.tsx'
+import FolhaPedido from './paginas/pedidos/FolhaPedido.tsx'
+import ListaPedidos from './paginas/pedidos/ListaPedidos.tsx'
 import EditarProduto from './paginas/produtos/EditarProduto.tsx'
 import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
 import DetalheUsuario from './paginas/usuarios/DetalheUsuario.tsx'
@@ -47,6 +51,8 @@ const router = createBrowserRouter([
   {
     element: <RotaProtegida />,
     children: [
+      // Folha impressa do pedido (RN-PF-07): sem menu, só a folha.
+      { path: 'pedidos/:id/imprimir', element: <FolhaPedido /> },
       {
         element: <Layout />,
         children: [
@@ -65,6 +71,9 @@ const router = createBrowserRouter([
           { path: 'contagens', element: <ListaContagens /> },
           { path: 'contagens/nova', element: <EditarContagem /> },
           { path: 'contagens/:id', element: <EditarContagem /> },
+          { path: 'pedidos', element: <ListaPedidos /> },
+          { path: 'pedidos/:id', element: <DetalhePedido /> },
+          { path: 'pedidos/:id/conferir', element: <ConferirEntrega /> },
           { path: 'estoque', element: <CatalogoEstoque /> },
           { path: 'estoque/importar', element: <ImportarCatalogo /> },
           { path: 'estoque/itens/novo', element: <EditarItemEstoque /> },

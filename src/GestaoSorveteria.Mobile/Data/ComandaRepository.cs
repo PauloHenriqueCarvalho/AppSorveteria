@@ -167,7 +167,7 @@ public sealed class ComandaRepository(BancoLocal banco)
         return Dominio.Comanda.Restaurar(
             linha.Id, linha.CaixaId, linha.UsuarioId, linha.Numero, linha.Tipo, linha.Status,
             linha.CriadaEm, linha.CriadaEm, linha.Observacao,
-            itens.Select(i => new Dominio.DadosItem(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario)),
+            itens.Select(i => new Dominio.DadosItem(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, null)), // sabor dos potes: Sprint 7 (app)
             pagamentos.Select(p => new Dominio.DadosPagamento(p.Forma, p.Valor, p.ValorRecebido, p.Id)),
             linha.FechadaEm, linha.CanceladaEm, linha.MotivoCancelamento);
     }

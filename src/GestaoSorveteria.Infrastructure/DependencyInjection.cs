@@ -34,7 +34,9 @@ public static class DependencyInjection
         services.AddScoped<IEstoqueRepository, EstoqueRepository>();
         services.AddScoped<IAvisoRepository, AvisoRepository>();
         services.AddScoped<IContagemRepository, ContagemRepository>();
+        services.AddScoped<IPedidoFornecedorRepository, PedidoFornecedorRepository>();
         services.AddScoped<IConfiguracaoLojaRepository, ConfiguracaoLojaRepository>();
+        services.AddScoped<IMovimentoEstoqueRepository, MovimentoEstoqueRepository>();
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
