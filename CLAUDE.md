@@ -121,6 +121,7 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - **Ciclo:** a skill `proximo-passo` pega a próxima tarefa do `docs/04`, cria a branch, implementa com os agentes, roda build/testes, passa pelo `revisor-dominio`, abre PR para a `develop`, acompanha o CI e faz o merge quando verde. PR de app que precisa de teste no celular fica aberto para o Paulo.
 - **Permissões:** `.claude/settings.json` libera build/test/ef/docker/git/gh sem perguntar e **bloqueia** push na `main`, `--force`, `reset --hard`, `rm -rf` e apagar o banco.
 - **Duas frentes em paralelo:** use `git worktree` (ex.: `../AppSorveteria-app` na branch do app) e uma sessão do Claude Code em cada pasta, para API e app não se atropelarem.
+- **Migração sem `dotnet ef` à mão** (ex.: sessão na nuvem com NuGet bloqueado): commit numa branch `feature/**` com `[gerar-migracao: NomeEmPascalCase]` na mensagem; o workflow `Gerar migração EF` gera a migração + snapshot, confere que não sobrou mudança pendente, mostra o SQL no log e faz o commit na branch. Revise como manda a skill `migracao-ef`. O teste `Modelo_ComparadoComAsMigracoes_NaoTemMudancaPendente` reprova o CI quando o modelo muda sem migração.
 - **CI:** `CI` (API + testes, Ubuntu) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam; `Painel` (npm ci, lint, testes, build) quando `src/GestaoSorveteria.Painel` muda.
 - **Merge na `main`:** só o Paulo, por PR da `develop`.
 
