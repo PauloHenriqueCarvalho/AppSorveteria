@@ -20,6 +20,7 @@ internal sealed class PedidoFornecedorConfiguration : IEntityTypeConfiguration<P
         builder.Property(p => p.AtualizadoEm).IsRequired();
         builder.Property(p => p.EnviadoEm);
         builder.Property(p => p.RecebidoEm);
+        builder.Property(p => p.ChegouEm); // quando a entrega chegou na loja (conta para o estoque, RN-RC-01)
         builder.Property(p => p.RecebidoPorUsuarioId);
         builder.Property(p => p.CanceladoEm);
         builder.Property(p => p.CanceladoPorUsuarioId);

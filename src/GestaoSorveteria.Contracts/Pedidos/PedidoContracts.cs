@@ -87,10 +87,12 @@ public sealed record EnviarPedidoResponse(PedidoDto Pedido, string? MensagemWhat
 /// <paramref name="Diferencas"/>: só as linhas que vieram diferentes. <paramref name="NaoPedidos"/>: sabores trocados.
 /// <paramref name="NovosCustos"/>: preço novo na nota (vale para os próximos pedidos, RN-RC-05).
 /// </summary>
+/// <remarks><c>ChegouEm</c>: quando a entrega chegou na loja (UTC); sem ele, agora. Conferir dias depois não conta a entrega duas vezes no estoque.</remarks>
 public sealed record ReceberPedidoRequest(
     IReadOnlyList<LinhaRecebidaRequest>? Diferencas,
     IReadOnlyList<LinhaRecebidaRequest>? NaoPedidos,
-    IReadOnlyList<NovoCustoRequest>? NovosCustos);
+    IReadOnlyList<NovoCustoRequest>? NovosCustos,
+    DateTime? ChegouEm = null);
 
 public sealed record LinhaRecebidaRequest(Guid ItemEstoqueId, decimal RecebidoEmbalagens, bool PedirDeNovo = true);
 

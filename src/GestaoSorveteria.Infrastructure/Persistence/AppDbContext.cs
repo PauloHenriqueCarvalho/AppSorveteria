@@ -38,6 +38,7 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<ConfiguracaoLoja> ConfiguracoesLoja => Set<ConfiguracaoLoja>();
     public DbSet<PedidoFornecedor> PedidosFornecedor => Set<PedidoFornecedor>();
     public DbSet<ItemPedidoFornecedor> ItensPedidoFornecedor => Set<ItemPedidoFornecedor>();
+    public DbSet<MovimentoEstoque> MovimentosEstoque => Set<MovimentoEstoque>();
 
     public void DescartarAlteracoes() => ChangeTracker.Clear();
 

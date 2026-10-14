@@ -236,7 +236,8 @@ public sealed class PedidoService
             diferencas,
             naoPedidos,
             usuarioId,
-            agora);
+            agora,
+            request.ChegouEm);
 
         var avisosFechados = 0;
         foreach (var linha in pedido.Itens.Where(i => i.RecebidoEmbalagens > 0))
@@ -305,7 +306,7 @@ public sealed class PedidoService
             .ToList();
         var ultimaContagem = await _contagens.UltimaContagemPorItemAsync(agora.AddMinutes(1), cancellationToken);
         // Entregas desde a mais antiga das duas: janela da média ou última contagem de algum item (o que chegou depois dela soma).
-        var desde = ultimaContagem.Values.Select(c => c.ConcluidaEm).Append(agora.AddDays(-DiasDeHistorico)).Min();
+        var desde = ultimaContagem.Values.Select(c => c.Em).Append(agora.AddDays(-DiasDeHistorico)).Min();
         var recebidos = await _pedidos.ListarRecebidosEntreAsync(desde, agora.AddMinutes(1), cancellationToken);
         var avisosAbertos = (await _avisos.ListarAsync(fechadosDesdeUtc: null, cancellationToken))
             .Where(a => a.ItemEstoqueId is not null)
@@ -342,7 +343,7 @@ public sealed class PedidoService
                 var historico = contagens
                     .Select(c => (c.ConcluidaEm, Linha: c.Itens.FirstOrDefault(i => i.ItemEstoqueId == item.Id)))
                     .Where(x => x.Linha?.ContadoUnidades is not null)
-                    .Select(x => new SugestaoPedido.Contado(x.ConcluidaEm!.Value, x.Linha!.ContadoUnidades!.Value))
+                    .Select(x => new SugestaoPedido.Contado(x.Linha!.ContadoEm ?? x.ConcluidaEm!.Value, x.Linha!.ContadoUnidades!.Value))
                     .ToList();
                 var media = SugestaoPedido.SaidaSemanalMedia(historico, (de, ate) => RecebidoEntre(recebidos, item, de, ate));
 
@@ -350,12 +351,12 @@ public sealed class PedidoService
                 // ciclo já trouxe; mais o que está a caminho.
                 decimal? estoque = null;
                 var temContagem = ultimaContagem.TryGetValue(item.Id, out var contado);
-                var contagemAntiga = temContagem && agora - contado.ConcluidaEm > ContagemRecente;
+                var contagemAntiga = temContagem && agora - contado.Em > ContagemRecente;
                 if (temContagem && (media is not null || !contagemAntiga))
                 {
-                    var diasDesde = (decimal)(agora - contado.ConcluidaEm).Ticks / TimeSpan.TicksPerDay;
+                    var diasDesde = (decimal)(agora - contado.Em).Ticks / TimeSpan.TicksPerDay;
                     estoque = SugestaoPedido.EstoqueEstimado(
-                        contado.Unidades, RecebidoEntre(recebidos, item, contado.ConcluidaEm, agora.AddMinutes(1)), media, diasDesde);
+                        contado.Unidades, RecebidoEntre(recebidos, item, contado.Em, agora.AddMinutes(1)), media, diasDesde);
                 }
                 else
                 {
@@ -375,7 +376,7 @@ public sealed class PedidoService
 
                 if (contagemAntiga)
                 {
-                    marcas.Add($"Última contagem em {DiaComercial.DataDe(contado.ConcluidaEm):dd/MM}");
+                    marcas.Add($"Última contagem em {DiaComercial.DataDe(contado.Em):dd/MM}");
                 }
             }
 
@@ -436,7 +437,7 @@ public sealed class PedidoService
 
     private static decimal RecebidoEntre(IReadOnlyList<PedidoFornecedor> recebidos, ItemEstoque item, DateTime de, DateTime ate) =>
         recebidos
-            .Where(p => p.RecebidoEm > de && p.RecebidoEm <= ate)
+            .Where(p => (p.ChegouEm ?? p.RecebidoEm) > de && (p.ChegouEm ?? p.RecebidoEm) <= ate) // quando chegou na loja (RN-RC-01)
             .SelectMany(p => p.Itens.Where(i => i.ItemEstoqueId == item.Id))
             .Sum(i => (i.RecebidoEmbalagens ?? 0) * item.UnidadesPorEmbalagem);
 

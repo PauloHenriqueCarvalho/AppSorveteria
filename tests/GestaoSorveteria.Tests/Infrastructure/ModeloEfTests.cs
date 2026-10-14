@@ -108,6 +108,29 @@ public class ModeloEfTests
         Assert.True(Indice(modelo, typeof(ItemPedidoFornecedor), nameof(ItemPedidoFornecedor.PedidoId), nameof(ItemPedidoFornecedor.ItemEstoqueId)).IsUnique);
     }
 
+    [Fact]
+    public void Potes_MovimentosIdempotentesESaborNaVenda()
+    {
+        using var db = Contexto();
+        var modelo = ModeloDeDesign(db);
+
+        Assert.Equal("movimentos_estoque", modelo.FindEntityType(typeof(MovimentoEstoque))!.GetTableName());
+        var porLinha = Indice(modelo, typeof(MovimentoEstoque), nameof(MovimentoEstoque.Tipo), nameof(MovimentoEstoque.ItemComandaId));
+        Assert.True(porLinha.IsUnique);
+        Assert.Equal("item_comanda_id IS NOT NULL", porLinha.GetFilter());
+        var porPedido = Indice(
+            modelo, typeof(MovimentoEstoque), nameof(MovimentoEstoque.Tipo), nameof(MovimentoEstoque.PedidoId), nameof(MovimentoEstoque.ItemEstoqueId));
+        Assert.True(porPedido.IsUnique);
+        Assert.Equal("pedido_id IS NOT NULL", porPedido.GetFilter());
+
+        var produto = modelo.FindEntityType(typeof(GestaoSorveteria.Domain.Produtos.Produto))!;
+        Assert.Equal(1, produto.FindProperty(nameof(GestaoSorveteria.Domain.Produtos.Produto.UnidadesPorVenda))!.GetDefaultValue());
+        Assert.Equal(
+            "item_estoque_id",
+            modelo.FindEntityType(typeof(GestaoSorveteria.Domain.Comandas.ItemComanda))!
+                .FindProperty(nameof(GestaoSorveteria.Domain.Comandas.ItemComanda.ItemEstoqueId))!.GetColumnName());
+    }
+
     private static IIndex Indice(IModel modelo, Type entidade, params string[] propriedades) =>
         modelo.FindEntityType(entidade)!.GetIndexes()
             .Single(i => i.Properties.Select(p => p.Name).SequenceEqual(propriedades));

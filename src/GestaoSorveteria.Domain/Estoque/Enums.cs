@@ -87,3 +87,16 @@ public enum SituacaoRecebimento
     VeioAMais = 3,
     NaoPedido = 4,
 }
+
+/// <summary>RN-ES-08: o que mexe no saldo dos potes (grupo <c>SaldoPelaVenda</c>). A contagem não é movimento: ela é a nova base.</summary>
+public enum TipoMovimentoEstoque
+{
+    /// <summary>Entrega conferida (RN-RC-03).</summary>
+    Entrada = 1,
+
+    /// <summary>Venda fechada que chegou ao servidor (RN-ES-09).</summary>
+    BaixaVenda = 2,
+
+    /// <summary>Venda estornada pelo painel: devolve o que a baixa tirou.</summary>
+    EstornoVenda = 3,
+}

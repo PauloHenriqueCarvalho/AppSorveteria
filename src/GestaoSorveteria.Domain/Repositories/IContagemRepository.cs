@@ -2,8 +2,14 @@ using GestaoSorveteria.Domain.Estoque;
 
 namespace GestaoSorveteria.Domain.Repositories;
 
-/// <summary>Quanto o item tinha na última contagem concluída e quando ela foi concluída.</summary>
-public readonly record struct UltimaContagemDoItem(int Unidades, DateTime ConcluidaEm);
+/// <summary>
+/// Quanto o item tinha na última contagem concluída, quando ela foi concluída e quando o item foi contado (se informado).
+/// <see cref="Em"/> é o momento que vale para o estoque: a hora em que o item foi contado ou, sem ela, a conclusão.
+/// </summary>
+public readonly record struct UltimaContagemDoItem(int Unidades, DateTime ConcluidaEm, DateTime? ContadoEm = null)
+{
+    public DateTime Em => ContadoEm ?? ConcluidaEm;
+}
 
 /// <summary>Contagens semanais (RN-ES-05/06), com as linhas.</summary>
 public interface IContagemRepository
