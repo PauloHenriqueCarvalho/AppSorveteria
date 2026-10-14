@@ -13,6 +13,7 @@ namespace SorveteriaMaui.ViewModel;
 /// Aba Caixa (C3): abrir com fundo de troco, sangria/suprimento, números do turno e fechamento com conferência.
 /// Todos os valores vêm do <c>Caixa</c> do Domain via <see cref="CaixaAppService"/>; a tela só mostra.
 /// Depois de fechar, oferece o resumo do dia para o WhatsApp da dona (RN-AV-07); o botão fica aqui a qualquer hora.
+/// Também lembra a contagem semanal do freezer no dia dela (RN-ES-05), com atalho para a tela.
 /// </summary>
 public class CaixaViewModel : BindableObject
 {
@@ -20,6 +21,7 @@ public class CaixaViewModel : BindableObject
     private readonly CaixaRepository _caixas;
     private readonly SyncService _sync;
     private readonly AvisoAppService _avisos;
+    private readonly ContagemAppService _contagens;
 
     private bool _temCaixaAberto;
     private string _fundoTrocoTexto = string.Empty;
@@ -29,18 +31,22 @@ public class CaixaViewModel : BindableObject
     private bool _enviandoResumo;
     private bool _resumoPendente;
     private string _mensagemResumo = string.Empty;
+    private bool _lembreteContagem;
+    private string _textoContagem = "Conte o freezer uma vez por semana, na véspera do pedido.";
 
-    public CaixaViewModel(CaixaAppService caixa, CaixaRepository caixas, SyncService sync, AvisoAppService avisos)
+    public CaixaViewModel(CaixaAppService caixa, CaixaRepository caixas, SyncService sync, AvisoAppService avisos, ContagemAppService contagens)
     {
         _caixa = caixa;
         _caixas = caixas;
         _sync = sync;
         _avisos = avisos;
+        _contagens = contagens;
         AbrirCaixaCommand = new Command(async () => await AbrirCaixa());
         SangriaCommand = new Command(async () => await Movimentar(sangria: true));
         SuprimentoCommand = new Command(async () => await Movimentar(sangria: false));
         FecharCaixaCommand = new Command(async () => await FecharCaixa());
         EnviarResumoCommand = new Command(async () => await EnviarResumo());
+        ContagemCommand = new Command(async () => await Shell.Current.GoToAsync("ContagemView"));
     }
 
     public ICommand AbrirCaixaCommand { get; }
@@ -48,6 +54,20 @@ public class CaixaViewModel : BindableObject
     public ICommand SuprimentoCommand { get; }
     public ICommand FecharCaixaCommand { get; }
     public ICommand EnviarResumoCommand { get; }
+    public ICommand ContagemCommand { get; }
+
+    /// <summary>RN-ES-05: "Hoje é dia de contagem" (véspera do pedido), até concluir a contagem de hoje.</summary>
+    public bool LembreteContagem
+    {
+        get => _lembreteContagem;
+        set { _lembreteContagem = value; OnPropertyChanged(); }
+    }
+
+    public string TextoContagem
+    {
+        get => _textoContagem;
+        set { _textoContagem = value; OnPropertyChanged(); }
+    }
 
     /// <summary>RN-AV-07: o resumo de hoje não saiu no fechamento (sem internet ou erro) — lembrete em destaque.</summary>
     public bool ResumoPendente
@@ -120,6 +140,7 @@ public class CaixaViewModel : BindableObject
     public async Task Carregar()
     {
         ResumoPendente = _avisos.ResumoPendenteHoje;
+        await AtualizarLembreteContagem();
         await Operacao.CarregarAsync(async () =>
         {
             var resumo = await _caixa.ResumoAsync();
@@ -326,6 +347,25 @@ public class CaixaViewModel : BindableObject
         {
             MensagemResumo = string.Empty;
             EnviandoResumo = false;
+        }
+    }
+
+    /// <summary>Só um lembrete: se a leitura falhar, o cartão fica como estava (o caixa nunca depende da Fase 2).</summary>
+    private async Task AtualizarLembreteContagem()
+    {
+        try
+        {
+            var lembrete = await _contagens.LembreteAsync();
+            LembreteContagem = lembrete.Mostrar;
+            TextoContagem = lembrete.Mostrar
+                ? "📋 Hoje é dia de contagem do freezer. Conte antes de ir embora: a dona usa para fazer o pedido."
+                : lembrete.EmAndamento
+                    ? "Tem uma contagem salva pela metade. Toque para continuar."
+                    : "Conte o freezer uma vez por semana, na véspera do pedido.";
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Sorveteria] Lembrete da contagem não atualizado: {ex.Message}");
         }
     }
 

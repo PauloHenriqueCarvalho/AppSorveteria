@@ -19,6 +19,7 @@ public class ListarComandasViewModel : BindableObject
     private readonly CatalogoService _catalogoCiclo;
     private readonly EstoqueService _estoque;
     private readonly AvisoRepository _avisos;
+    private readonly ContagemAppService _contagens;
 
     public ObservableCollection<Comanda> Comandas { get; set; } = new();
 
@@ -28,6 +29,29 @@ public class ListarComandasViewModel : BindableObject
     {
         get => _textoEstaAcabando;
         set { _textoEstaAcabando = value; OnPropertyChanged(); }
+    }
+
+    private string _textoContagem = "📋  Contagem";
+    /// <summary>Fase 2: botão da contagem semanal ("Continuar contagem" se há uma salva pela metade).</summary>
+    public string TextoContagem
+    {
+        get => _textoContagem;
+        set { _textoContagem = value; OnPropertyChanged(); }
+    }
+
+    private bool _lembreteContagem;
+    /// <summary>RN-ES-05: "Hoje é dia de contagem" (véspera do pedido), até concluir a contagem de hoje.</summary>
+    public bool LembreteContagem
+    {
+        get => _lembreteContagem;
+        set { _lembreteContagem = value; OnPropertyChanged(); }
+    }
+
+    private string _textoLembreteContagem = string.Empty;
+    public string TextoLembreteContagem
+    {
+        get => _textoLembreteContagem;
+        set { _textoLembreteContagem = value; OnPropertyChanged(); }
     }
 
     private string _indicadorEnvio = string.Empty;
@@ -52,20 +76,50 @@ public class ListarComandasViewModel : BindableObject
     private async Task AtualizarIndicador()
     {
         var estado = await _sync.EstadoAsync();
-        // Avisos "Está acabando" na fila entram junto, sem misturar com a contagem de vendas.
-        var avisosNaFila = estado.AvisosPendentes > 0 ? $" · {estado.AvisosPendentes} aviso(s) de estoque" : string.Empty;
+        // Avisos "Está acabando" e contagens na fila entram junto, sem misturar com a contagem de vendas.
+        var estoqueNaFila = string.Join(" e ", new[]
+        {
+            estado.AvisosPendentes > 0 ? $"{estado.AvisosPendentes} aviso(s) de estoque" : null,
+            estado.ContagensPendentes > 0 ? $"{estado.ContagensPendentes} contagem(ns)" : null,
+        }.Where(t => t is not null));
+        var estoqueNoFim = estoqueNaFila.Length > 0 ? $" · {estoqueNaFila}" : string.Empty;
         MainThread.BeginInvokeOnMainThread(() =>
         {
             IndicadorEnvio = estado.Sincronizando ? "⏳ Enviando vendas…"
                 : estado.PrecisaPin ? "🔒 Sessão vencida — toque para entrar e enviar"
                 : estado.Pendentes == 0 ? (estado.Rejeitadas > 0 ? $"⚠ {estado.Rejeitadas} venda(s) rejeitada(s) — veja o histórico"
-                    : estado.AvisosPendentes > 0 ? $"📤 {estado.AvisosPendentes} aviso(s) de estoque aguardando envio"
+                    : estoqueNaFila.Length > 0 ? $"📤 {estoqueNaFila} aguardando envio"
                     : "✅ Tudo enviado")
-                : estado.ComandasPendentes == 1 && estado.CaixasPendentes == 0 ? $"📤 1 venda aguardando envio{avisosNaFila}"
-                : $"📤 {estado.ComandasPendentes} venda(s) e {estado.CaixasPendentes} caixa(s) aguardando envio{avisosNaFila}";
-            MensagemEnvio = estado.Pendentes > 0 || estado.AvisosPendentes > 0 || estado.PrecisaPin ? estado.UltimaMensagem : string.Empty;
+                : estado.ComandasPendentes == 1 && estado.CaixasPendentes == 0 ? $"📤 1 venda aguardando envio{estoqueNoFim}"
+                : $"📤 {estado.ComandasPendentes} venda(s) e {estado.CaixasPendentes} caixa(s) aguardando envio{estoqueNoFim}";
+            MensagemEnvio = estado.Pendentes > 0 || estoqueNaFila.Length > 0 || estado.PrecisaPin ? estado.UltimaMensagem : string.Empty;
         });
         await AtualizarBotaoEstaAcabando();
+        await AtualizarContagem();
+    }
+
+    /// <summary>
+    /// RN-ES-05: lembrete "Hoje é dia de contagem" e o texto do botão. Como o contador do "Está acabando", se a leitura
+    /// falhar fica como estava — a lista de comandas (a venda) nunca depende da Fase 2.
+    /// </summary>
+    private async Task AtualizarContagem()
+    {
+        try
+        {
+            var lembrete = await _contagens.LembreteAsync();
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                TextoContagem = lembrete.EmAndamento ? "📋  Continuar contagem" : "📋  Contagem";
+                LembreteContagem = lembrete.Mostrar;
+                TextoLembreteContagem = lembrete.EmAndamento
+                    ? "📋  Hoje é dia de contagem do freezer — toque para continuar a contagem"
+                    : "📋  Hoje é dia de contagem do freezer — toque aqui para contar";
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Sorveteria] Lembrete da contagem não atualizado: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -123,8 +177,9 @@ public class ListarComandasViewModel : BindableObject
     public ICommand VerDetalhesCommand { get; }
     public ICommand SairCommand { get; }
     public ICommand EstaAcabandoCommand { get; }
+    public ICommand ContagemCommand { get; }
 
-    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa, SyncService sync, EstoqueService estoque, AvisoRepository avisos)
+    public ListarComandasViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService, SessaoUsuario sessao, CatalogoService catalogo, CaixaAppService caixa, SyncService sync, EstoqueService estoque, AvisoRepository avisos, ContagemAppService contagens)
     {
         _comandas = comandas;
         _repositorio = repositorio;
@@ -136,6 +191,7 @@ public class ListarComandasViewModel : BindableObject
         _sync = sync;
         _estoque = estoque;
         _avisos = avisos;
+        _contagens = contagens;
 
         EnviarAgoraCommand = new Command(async () => await EnviarAgora());
         _sync.Mudou += async (_, _) => await AtualizarIndicador();
@@ -145,6 +201,8 @@ public class ListarComandasViewModel : BindableObject
 
         // Fase 2 (docs/10 §2.2): não depende do caixa — dá para avisar com o caixa fechado
         EstaAcabandoCommand = new Command(async () => await Shell.Current.GoToAsync("EstaAcabandoView"));
+        // Fase 2 (docs/10 §2.1): contagem semanal do freezer, também sem caixa aberto
+        ContagemCommand = new Command(async () => await Shell.Current.GoToAsync("ContagemView"));
 
         SairCommand = new Command(async () => await Sair());
         NovaComandaCommand = new Command(async () => await AbrirNovaComanda());

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using GestaoSorveteria.Contracts.Avisos;
+using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Sync;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
@@ -8,7 +9,8 @@ namespace SorveteriaMaui.Services.Api;
 
 /// <summary>
 /// Situação da fila para a tela (indicador "X vendas aguardando envio", RN-SY-05). <see cref="Pendentes"/> conta só
-/// vendas e caixas; os avisos "Está acabando" à espera vêm à parte em <see cref="AvisosPendentes"/>.
+/// vendas e caixas; os avisos "Está acabando" e as contagens semanais à espera vêm à parte (<see cref="AvisosPendentes"/>,
+/// <see cref="ContagensPendentes"/>).
 /// </summary>
 public sealed record EstadoSync(
     int ComandasPendentes,
@@ -18,7 +20,8 @@ public sealed record EstadoSync(
     bool PrecisaPin,
     string UltimaMensagem,
     DateTime? UltimoEnvioUtc,
-    int AvisosPendentes)
+    int AvisosPendentes,
+    int ContagensPendentes = 0)
 {
     public int Pendentes => ComandasPendentes + CaixasPendentes;
 }
@@ -26,13 +29,18 @@ public sealed record EstadoSync(
 /// <summary>
 /// Sincronização local-first (C4, docs/03 §8, skill <c>sincronizacao-local-first</c>). Envia os documentos
 /// prontos — caixas e comandas fechadas/canceladas — para <c>POST /api/sync/*</c>, idempotente pelo Id (RN-SY-02),
-/// na ordem caixa aberto → comandas do caixa → caixa fechado (RN-SY-03); depois, os avisos "Está acabando" (RN-AV-09).
-/// Dispara ao fechar/cancelar comanda, ao mexer no caixa, ao salvar aviso, a cada 1 min e ao abrir o app. Falha de rede
-/// pausa sem descartar nada; <c>rejeitada</c> fica visível com o motivo. A venda nunca espera este serviço.
+/// na ordem caixa aberto → comandas do caixa → caixa fechado (RN-SY-03); depois, os avisos "Está acabando" (RN-AV-09) e as
+/// contagens semanais (RN-ES-05). Dispara ao fechar/cancelar comanda, ao mexer no caixa, ao salvar aviso, ao salvar ou
+/// concluir contagem, a cada 1 min e ao abrir o app. Falha de rede pausa sem descartar nada; <c>rejeitada</c> fica visível
+/// com o motivo. A venda nunca espera este serviço.
 /// </summary>
-public sealed class SyncService(ApiCliente api, ComandaRepository comandas, CaixaRepository caixas, SessaoUsuario sessao, AvisoRepository avisos)
+public sealed class SyncService(
+    ApiCliente api, ComandaRepository comandas, CaixaRepository caixas, SessaoUsuario sessao, AvisoRepository avisos, ContagemRepository contagens)
 {
     public static readonly TimeSpan Intervalo = TimeSpan.FromMinutes(1);
+
+    /// <summary>Limite do lote de <c>POST /api/sync/contagens</c> (<c>SyncContagensRequest</c>).</summary>
+    private const int MaximoContagensPorLote = 20;
 
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
     private bool _sincronizando;
@@ -61,7 +69,8 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
         _precisaPin,
         _ultimaMensagem,
         _ultimoEnvioUtc,
-        await avisos.ContarPendentesEnvioAsync());
+        await avisos.ContarPendentesEnvioAsync(),
+        await contagens.ContarPendentesEnvioAsync());
 
     /// <summary>Liga o ciclo de 1 min (RN-SY-03). Chamado uma vez, ao abrir o app; idempotente.</summary>
     public void IniciarCiclo()
@@ -234,7 +243,59 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
             await EnviarAvisosAsync(usuarioAtual);
         }
 
+        // 5. Contagens semanais (parciais e concluídas), por último.
+        await EnviarContagensAsync();
+
         return true;
+    }
+
+    /// <summary>
+    /// RN-ES-05: cada contagem pendente vai inteira, como está no tablet (em andamento ou concluída), em lotes de até 20.
+    /// aceita / ja_recebida → sai da fila (se não mudou durante o envio); rejeitada → motivo guardado e laranja na tela da
+    /// contagem. Rede/sessão lançam e a fila espera, sem perder nada.
+    /// </summary>
+    private async Task EnviarContagensAsync()
+    {
+        var pendentes = await contagens.ListarPendentesEnvioAsync();
+        var recusadas = 0;
+        foreach (var lote in pendentes.Chunk(MaximoContagensPorLote))
+        {
+            var dtos = new List<ContagemSyncDto>(lote.Length);
+            foreach (var contagem in lote)
+            {
+                var linhas = await contagens.ListarLinhasParaEnvioAsync(contagem.Id);
+                dtos.Add(new ContagemSyncDto(
+                    contagem.Id,
+                    contagem.UsuarioId,
+                    contagem.IniciadaEm,
+                    contagem.ConcluidaEm,
+                    linhas.Select(l => new LinhaContagemSyncDto(l.Id, l.ItemEstoqueId, l.Embalagens)).ToList()));
+            }
+
+            var resposta = await api.EnviarContagensAsync(new SyncContagensRequest(dtos));
+            var porId = resposta.Resultados.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First());
+            foreach (var contagem in lote)
+            {
+                if (!porId.TryGetValue(contagem.Id, out var resultado))
+                {
+                    await contagens.RegistrarFalhaEnvioAsync(contagem.Id, "O servidor não devolveu resultado para esta contagem.");
+                }
+                else if (resultado.Status == StatusSync.Rejeitada)
+                {
+                    await contagens.MarcarRecusadoAsync(contagem.Id, contagem.Versao, resultado.Motivo ?? "Recusada pelo servidor sem motivo.");
+                    recusadas++;
+                }
+                else
+                {
+                    await contagens.MarcarEnviadoAsync(contagem.Id, contagem.Versao); // aceita ou ja_recebida
+                }
+            }
+        }
+
+        if (recusadas > 0)
+        {
+            AvisoRapido.Mostrar("A contagem do freezer foi recusada pelo sistema: veja o motivo na tela Contagem");
+        }
     }
 
     /// <summary>
