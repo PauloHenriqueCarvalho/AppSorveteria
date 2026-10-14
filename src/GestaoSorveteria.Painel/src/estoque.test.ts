@@ -6,7 +6,9 @@ import {
   descreverQuantidade,
   formatarWhatsApp,
   lerQuantidade,
+  nomeDaEmbalagem,
   quando,
+  respeitaPasso,
 } from './estoque.ts'
 
 describe('descreverEmbalagem', () => {
@@ -84,5 +86,23 @@ describe('descreverQuantidade', () => {
   it('zero é acabou', () => {
     expect(descreverQuantidade(0)).toBe('Acabou')
     expect(descreverQuantidade(3)).toBe('Restam 3')
+  })
+})
+
+describe('respeitaPasso', () => {
+  it('aceita meia caixa só quando o passo é 0,5', () => {
+    expect(respeitaPasso(2.5, 0.5)).toBe(true)
+    expect(respeitaPasso(2.5, 1)).toBe(false)
+    expect(respeitaPasso(3, 1)).toBe(true)
+    expect(respeitaPasso(0.3, 0.5)).toBe(false)
+  })
+})
+
+describe('nomeDaEmbalagem', () => {
+  it('fica no singular até 1 (meia caixa também)', () => {
+    expect(nomeDaEmbalagem('Caixa', 1)).toBe('caixa')
+    expect(nomeDaEmbalagem('Caixa', 0.5)).toBe('caixa')
+    expect(nomeDaEmbalagem('Caixa', 2.5)).toBe('caixas')
+    expect(nomeDaEmbalagem('Unidade', 3)).toBe('unid.')
   })
 })

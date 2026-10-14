@@ -418,3 +418,47 @@ export interface ConfiguracaoLojaDto {
   nomeLoja: string
   whatsAppDona: string | null
 }
+
+// ---------------------------------------------------------------- Fase 2 — contagem semanal (Contracts/Contagens)
+
+export interface ContagemResumoDto {
+  id: string
+  contadoPorNome: string
+  origem: 'App' | 'Painel'
+  iniciadaEm: string
+  concluidaEm: string | null
+  itensContados: number
+  itensNaoContados: number
+}
+
+/** Uma linha por item que entra na contagem, na ordem da planilha. Quantidades em unidades e em embalagens. */
+export interface LinhaContagemDto {
+  itemEstoqueId: string
+  grupoId: string
+  grupoNome: string
+  itemNome: string
+  unidade: UnidadeCompra
+  unidadesPorEmbalagem: number
+  /** 0,5 para caixa (meia caixa), 1 para o resto. */
+  passoEmbalagens: number
+  contadoUnidades: number | null
+  contadoEmbalagens: number | null
+  anteriorUnidades: number | null
+  anteriorEmbalagens: number | null
+  saldoSistemaUnidades: number | null
+}
+
+export interface ContagemDto {
+  id: string
+  contadoPorNome: string
+  origem: 'App' | 'Painel'
+  iniciadaEm: string
+  concluidaEm: string | null
+  linhas: LinhaContagemDto[]
+}
+
+export interface SalvarContagemRequest {
+  id: string
+  linhas: { itemEstoqueId: string; embalagens: number | null }[]
+  concluir: boolean
+}
