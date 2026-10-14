@@ -74,22 +74,35 @@ public sealed class ItemEstoque : Entity
         decimal? estoqueAlvoEmbalagens,
         int? minimoUnidades)
     {
-        FornecedorId = Guard.NaoVazio(fornecedorId, "o fornecedor");
-        Nome = Guard.Texto(nome, "o nome do item", 1, 80);
-        NomeNormalizado = Nome.ToLowerInvariant();
+        // Valida tudo antes de mudar qualquer campo: um erro não deixa o item alterado pela metade.
+        Guard.NaoVazio(fornecedorId, "o fornecedor");
+        var nomeValido = NomeEstoque.Limpar(Guard.Texto(nome, "o nome do item", 1, 80));
         Guard.Contra(!Enum.IsDefined(unidade), "Unidade de compra inválida.");
         Guard.Contra(unidadesPorEmbalagem < 1 || unidadesPorEmbalagem > UnidadesPorEmbalagemMaximo,
             $"Unidades por embalagem: de 1 a {UnidadesPorEmbalagemMaximo}.");
         Guard.Contra(unidade != UnidadeCompra.Caixa && unidadesPorEmbalagem != 1 && unidade != UnidadeCompra.Pacote,
             "Só caixa e pacote têm mais de uma unidade por embalagem.");
+        var custoValido = Guard.Dinheiro(custoEmbalagem, "o custo da embalagem", permiteZero: true);
+        if (estoqueAlvoEmbalagens is { } alvo)
+        {
+            ValidarEmbalagens(alvo, "O estoque alvo", unidade);
+        }
+
+        Guard.Contra(minimoUnidades < 0, "O mínimo não pode ser negativo.");
+
+        FornecedorId = fornecedorId;
+        Nome = nomeValido;
+        NomeNormalizado = NomeEstoque.Normalizar(nomeValido);
         Unidade = unidade;
         UnidadesPorEmbalagem = unidadesPorEmbalagem;
-        CustoEmbalagem = Guard.Dinheiro(custoEmbalagem, "o custo da embalagem", permiteZero: true);
+        CustoEmbalagem = custoValido;
         Ordem = ordem;
-        EstoqueAlvoEmbalagens = estoqueAlvoEmbalagens is { } alvo ? ValidarEmbalagens(alvo, "O estoque alvo") : null;
-        Guard.Contra(minimoUnidades < 0, "O mínimo não pode ser negativo.");
+        EstoqueAlvoEmbalagens = estoqueAlvoEmbalagens;
         MinimoUnidades = minimoUnidades;
     }
+
+    /// <summary>A dona reorganiza o catálogo (ex.: um sabor que estava em "Picolé de fruta" vai para "Picolé ao leite").</summary>
+    public void MoverParaGrupo(Guid grupoId) => GrupoId = Guard.NaoVazio(grupoId, "o grupo");
 
     /// <summary>RN-PF-05/RN-RC-05: novo preço da nota vale para os próximos pedidos.</summary>
     public void AlterarCusto(decimal custoEmbalagem) =>
@@ -105,7 +118,7 @@ public sealed class ItemEstoque : Entity
     /// </summary>
     public int ParaUnidades(decimal embalagens)
     {
-        ValidarEmbalagens(embalagens, "A quantidade");
+        ValidarEmbalagens(embalagens, "A quantidade", Unidade);
         var unidades = embalagens * UnidadesPorEmbalagem;
         Guard.Contra(unidades != decimal.Truncate(unidades),
             $"Meia caixa de {Nome} não fecha em unidades inteiras ({UnidadesPorEmbalagem} por caixa).");
@@ -117,16 +130,17 @@ public sealed class ItemEstoque : Entity
         Math.Round((decimal)unidades / UnidadesPorEmbalagem, 1, MidpointRounding.AwayFromZero);
 
     /// <summary>Passo aceito na contagem e no pedido: 0,5 para caixa, 1 para o resto.</summary>
-    public decimal PassoEmbalagens => Unidade == UnidadeCompra.Caixa ? 0.5m : 1m;
+    public decimal PassoEmbalagens => Passo(Unidade);
 
-    private decimal ValidarEmbalagens(decimal embalagens, string campo)
+    private static decimal Passo(UnidadeCompra unidade) => unidade == UnidadeCompra.Caixa ? 0.5m : 1m;
+
+    private static void ValidarEmbalagens(decimal embalagens, string campo, UnidadeCompra unidade)
     {
         Guard.Contra(embalagens < 0, $"{campo} não pode ser negativa.");
         Guard.Contra(embalagens > 9999, $"{campo} passa do máximo aceito.");
-        Guard.Contra(embalagens % PassoEmbalagens != 0,
-            Unidade == UnidadeCompra.Caixa
+        Guard.Contra(embalagens % Passo(unidade) != 0,
+            unidade == UnidadeCompra.Caixa
                 ? $"{campo} de caixas vai de meia em meia (ex.: 2,5)."
                 : $"{campo} deve ser um número inteiro.");
-        return embalagens;
     }
 }

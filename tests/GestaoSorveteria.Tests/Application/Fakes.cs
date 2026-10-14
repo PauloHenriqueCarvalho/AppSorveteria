@@ -1,6 +1,7 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Domain.Usuarios;
@@ -166,6 +167,60 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
     public Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default)
     {
         Comandas.Add(comanda);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Catálogo de estoque da Fase 2 em memória.</summary>
+internal sealed class EstoqueRepositoryFake : IEstoqueRepository
+{
+    public List<Fornecedor> Fornecedores { get; } = new();
+
+    public List<GrupoEstoque> Grupos { get; } = new();
+
+    public List<ItemEstoque> Itens { get; } = new();
+
+    public Task<IReadOnlyList<Fornecedor>> ListarFornecedoresAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Fornecedor>>(Fornecedores.ToList());
+
+    public Task<Fornecedor?> ObterFornecedorAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Fornecedores.FirstOrDefault(f => f.Id == id));
+
+    public Task AdicionarFornecedorAsync(Fornecedor fornecedor, CancellationToken cancellationToken = default)
+    {
+        Fornecedores.Add(fornecedor);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<GrupoEstoque>> ListarGruposAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<GrupoEstoque>>(Grupos.OrderBy(g => g.Ordem).ThenBy(g => g.Nome).ToList());
+
+    public Task<GrupoEstoque?> ObterGrupoAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Grupos.FirstOrDefault(g => g.Id == id));
+
+    public Task AdicionarGrupoAsync(GrupoEstoque grupo, CancellationToken cancellationToken = default)
+    {
+        Grupos.Add(grupo);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<ItemEstoque>> ListarItensAsync(bool somenteAtivos, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<ItemEstoque>>(Itens
+            .Where(i => !somenteAtivos || i.Ativo)
+            .OrderBy(i => Grupos.FirstOrDefault(g => g.Id == i.GrupoId)?.Ordem ?? int.MaxValue)
+            .ThenBy(i => i.Ordem)
+            .ThenBy(i => i.Nome)
+            .ToList());
+
+    public Task<ItemEstoque?> ObterItemAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Itens.FirstOrDefault(i => i.Id == id));
+
+    public Task<bool> ExisteItemComNomeAsync(Guid grupoId, string nomeNormalizado, Guid? ignorarId = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Itens.Any(i => i.GrupoId == grupoId && i.NomeNormalizado == nomeNormalizado && i.Id != ignorarId));
+
+    public Task AdicionarItemAsync(ItemEstoque item, CancellationToken cancellationToken = default)
+    {
+        Itens.Add(item);
         return Task.CompletedTask;
     }
 }

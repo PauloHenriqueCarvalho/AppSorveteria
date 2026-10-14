@@ -138,7 +138,7 @@ Na entrega, a dona (ou o atendente) abre o pedido no painel: **"Chegou tudo cert
 
 | # | Pergunta | Padrão adotado |
 |---|---|---|
-| 1 | Qual o dia do pedido de cada fornecedor e em quantos dias chega? | Fábrica: pedido semanal, entrega em 2 dias; contagem na véspera |
+| 1 | Qual o dia do pedido de cada fornecedor e em quantos dias chega? | Fábrica: pedido semanal na **segunda-feira**, entrega em 2 dias; contagem na véspera (domingo). A dona troca o dia no painel |
 | 2 | A fábrica aceita **meia caixa** de picolé? | Não: pedido em caixas inteiras |
 | 3 | Skimo vem em caixa de 24? Moreninha é por unidade? Pote de açaí 1,5L custa R$ 18? | Como está na planilha; corrigir no catálogo |
 | 4 | O que são os "Outros" dos potes de 2L e 5L? | Cadastrar os sabores reais |

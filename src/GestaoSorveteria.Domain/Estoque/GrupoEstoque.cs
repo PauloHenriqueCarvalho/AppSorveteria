@@ -39,8 +39,8 @@ public sealed class GrupoEstoque : Entity
 
     public void Renomear(string nome)
     {
-        Nome = Guard.Texto(nome, "o nome do grupo", 2, 40);
-        NomeNormalizado = Nome.ToLowerInvariant();
+        Nome = NomeEstoque.Limpar(Guard.Texto(nome, "o nome do grupo", 2, 40));
+        NomeNormalizado = NomeEstoque.Normalizar(Nome);
     }
 
     /// <summary>RN-ES-02: a dona pode trocar (ex.: potes voltam para contagem se o teste não der certo).</summary>
