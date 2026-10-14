@@ -75,6 +75,24 @@ public class SugestaoPedidoTests
         Assert.Equal((decimal)esperado, SugestaoPedido.EmEmbalagens((decimal)unidades, porEmbalagem, (decimal)passo));
     }
 
+    [Theory]
+    [InlineData(2026, 10, 19, 2026, 10, 19)] // segunda é dia de pedido: o ciclo começa hoje
+    [InlineData(2026, 10, 22, 2026, 10, 19)] // quinta: começou na segunda
+    [InlineData(2026, 10, 18, 2026, 10, 12)] // domingo: ainda é o ciclo da segunda anterior
+    public void InicioDoCiclo_DiaDePedidoMaisRecenteAteHoje(int a, int m, int d, int ea, int em, int ed)
+    {
+        Assert.Equal(new DateOnly(ea, em, ed), SugestaoPedido.InicioDoCiclo(new DateOnly(a, m, d), [DayOfWeek.Monday]));
+    }
+
+    [Theory]
+    [InlineData(14, 0, 28.0, 7.0, 0.0)]     // contou 14, saem 28 por semana, 7 dias depois: acabou (nunca negativo)
+    [InlineData(14, 56, 28.0, 7.0, 42.0)]   // chegaram 56 depois da contagem
+    [InlineData(14, 56, null, 30.0, 70.0)]  // sem média não dá para descontar a saída
+    public void EstoqueEstimado_DescontaASaidaDesdeAContagem(int contado, int recebido, double? media, double dias, double esperado)
+    {
+        Assert.Equal((decimal)esperado, SugestaoPedido.EstoqueEstimado(contado, recebido, (decimal?)media, (decimal)dias));
+    }
+
     [Fact]
     public void EmEmbalagens_DizimaDaMedia_NaoGanhaUmaCaixaAMais()
     {

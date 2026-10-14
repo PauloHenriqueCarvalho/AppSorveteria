@@ -202,6 +202,12 @@ public class PedidoFornecedorTests
         Assert.Null(pedido.Linha(_limao.Id)!.RecebidoEmbalagens);
         Assert.Null(pedido.Linha(_flocos.Id));
         Assert.Equal(2, pedido.Itens.Count);
+
+        // Sem quem conferiu também não muda nada.
+        Assert.Throws<DomainException>(() => pedido.Receber([], [new LinhaNaoPedida(_flocos, 1m, 1m)], Guid.Empty, Agora.AddDays(1)));
+        Assert.Equal(StatusPedido.Enviado, pedido.Status);
+        Assert.Null(pedido.Linha(_limao.Id)!.RecebidoEmbalagens);
+        Assert.Equal(2, pedido.Itens.Count);
     }
 
     [Fact]

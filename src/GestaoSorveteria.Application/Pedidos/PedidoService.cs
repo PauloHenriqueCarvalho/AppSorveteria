@@ -21,6 +21,12 @@ public sealed class PedidoService
     /// <summary>A lista mostra os pedidos dos últimos dias, além dos que ainda não foram recebidos.</summary>
     public const int DiasNaLista = 90;
 
+    /// <summary>
+    /// Contagem mais velha que isso sem média de saída não serve de estoque (não dá para descontar o que saiu desde ela):
+    /// o item é tratado como sem contagem e a linha mostra a data da última.
+    /// </summary>
+    public static readonly TimeSpan ContagemRecente = TimeSpan.FromDays(14);
+
     private readonly IPedidoFornecedorRepository _pedidos;
     private readonly IEstoqueRepository _estoque;
     private readonly IContagemRepository _contagens;
@@ -80,7 +86,7 @@ public sealed class PedidoService
         if (automatico)
         {
             var hoje = DiaComercial.DataDe(agora);
-            var deHoje = (await _pedidos.ListarAsync(fornecedorId, agora.AddDays(-2), cancellationToken))
+            var deHoje = (await _pedidos.ListarAsync(fornecedorId, agora.AddDays(-DiasNaLista), cancellationToken))
                 .Where(p => p.Status is StatusPedido.Enviado or StatusPedido.Recebido && DiaComercial.DataDe(p.EnviadoEm!.Value) == hoje)
                 .MaxBy(p => p.EnviadoEm);
             if (deHoje is not null && await _pedidos.ObterRascunhoAsync(fornecedorId, cancellationToken) is null)
@@ -89,9 +95,8 @@ public sealed class PedidoService
             }
         }
 
-        var sugestao = await SugerirAsync(fornecedor, cancellationToken);
-
         var pedido = await _pedidos.ObterRascunhoAsync(fornecedorId, cancellationToken);
+        var sugestao = await SugerirAsync(fornecedor, pedido, cancellationToken);
         if (pedido is null)
         {
             pedido = PedidoFornecedor.Montar(fornecedor, await _pedidos.ProximoNumeroAsync(cancellationToken), usuarioId, agora, sugestao);
@@ -272,9 +277,10 @@ public sealed class PedidoService
 
     // ---------------------------------------------------------------- sugestão (RN-PF-02/03, RN-RC-04)
 
-    private async Task<List<LinhaSugerida>> SugerirAsync(Fornecedor fornecedor, CancellationToken cancellationToken)
+    private async Task<List<LinhaSugerida>> SugerirAsync(Fornecedor fornecedor, PedidoFornecedor? rascunho, CancellationToken cancellationToken)
     {
         var agora = _clock.UtcNow;
+        var hoje = DiaComercial.DataDe(agora);
         var catalogo = await CatalogoAsync(cancellationToken);
         var itens = catalogo.Itens.Values.Where(i => i.Ativo && i.FornecedorId == fornecedor.Id).ToList();
 
@@ -291,15 +297,20 @@ public sealed class PedidoService
             .ToDictionary(a => a.ItemEstoqueId!.Value);
         var nomes = (await _usuarios.ListarAsync(cancellationToken)).ToDictionary(u => u.Id, u => u.Nome);
         var pedidosDoFornecedor = await _pedidos.ListarAsync(fornecedor.Id, agora.AddDays(-DiasNaLista), cancellationToken);
+
         // A caminho: enviado e ainda não recebido — já vai chegar, não pode ser pedido de novo.
         var aCaminho = pedidosDoFornecedor.Where(p => p.Status == StatusPedido.Enviado).ToList();
-        // RN-RC-04: o que faltou só volta se o último pedido enviado do fornecedor é o que foi conferido com falta
-        // (se já saiu outro depois, a falta entrou nele ou a dona decidiu não pedir).
-        var ultimoEnviado = pedidosDoFornecedor
-            .Where(p => p.Status is StatusPedido.Enviado or StatusPedido.Recebido)
-            .MaxBy(p => p.EnviadoEm);
-        var ultimoRecebido = ultimoEnviado?.Status == StatusPedido.Recebido ? ultimoEnviado : null;
-        var diasACobrir = SugestaoPedido.DiasACobrir(DiaComercial.DataDe(agora).DayOfWeek, fornecedor.DiasPedido, fornecedor.PrazoEntregaDias);
+        // Item sem contagem: o que os pedidos enviados neste ciclo já trouxeram.
+        var inicioDoCiclo = DiaComercial.IntervaloUtc(SugestaoPedido.InicioDoCiclo(hoje, fornecedor.DiasPedido)).InicioUtc;
+        var recebidosNoCiclo = pedidosDoFornecedor.Where(p => p.Status == StatusPedido.Recebido && p.EnviadoEm >= inicioDoCiclo).ToList();
+        // RN-RC-04: a falta de um pedido recebido volta enquanto nenhum pedido do fornecedor foi enviado depois da conferência
+        // dele (se já saiu outro, a falta entrou nele ou a dona decidiu não pedir).
+        var comFaltaPendente = pedidosDoFornecedor
+            .Where(p => p.Status == StatusPedido.Recebido
+                && !pedidosDoFornecedor.Any(o => o.EnviadoEm > p.RecebidoEm && o.Status is StatusPedido.Enviado or StatusPedido.Recebido))
+            .OrderBy(p => p.RecebidoEm)
+            .ToList();
+        var diasACobrir = SugestaoPedido.DiasACobrir(hoje.DayOfWeek, fornecedor.DiasPedido, fornecedor.PrazoEntregaDias);
 
         var linhas = new List<LinhaSugerida>();
         foreach (var item in itens.OrderBy(i => catalogo.Grupos[i.GrupoId].Ordem).ThenBy(i => i.Ordem).ThenBy(i => i.Nome))
@@ -307,9 +318,9 @@ public sealed class PedidoService
             var grupo = catalogo.Grupos[item.GrupoId];
             var passo = Passo(item, fornecedor);
             var aCaminhoDoItem = aCaminho.Where(p => p.Linha(item.Id) is { PedidoEmbalagens: > 0 }).OrderBy(p => p.EnviadoEm).ToList();
+            var marcas = new List<string>();
             decimal sugerido = 0;
             var origem = OrigemLinhaPedido.Sugestao;
-            string? observacao = null;
 
             if (grupo.EntraNaContagem)
             {
@@ -319,33 +330,53 @@ public sealed class PedidoService
                     .Select(x => new SugestaoPedido.Contado(x.ConcluidaEm!.Value, x.Linha!.ContadoUnidades!.Value))
                     .ToList();
                 var media = SugestaoPedido.SaidaSemanalMedia(historico, (de, ate) => RecebidoEntre(recebidos, item, de, ate));
-                // Estoque de agora = última contagem + o que chegou depois dela + o que está a caminho.
-                int? estoque = null;
-                if (ultimaContagem.TryGetValue(item.Id, out var contado))
+
+                // Estoque de agora: pela última contagem (menos a saída estimada desde ela) ou, sem contagem que sirva, pelo que o
+                // ciclo já trouxe; mais o que está a caminho.
+                decimal? estoque = null;
+                var temContagem = ultimaContagem.TryGetValue(item.Id, out var contado);
+                var contagemAntiga = temContagem && agora - contado.ConcluidaEm > ContagemRecente;
+                if (temContagem && (media is not null || !contagemAntiga))
                 {
-                    estoque = contado.Unidades + RecebidoEntre(recebidos, item, contado.ConcluidaEm, agora.AddMinutes(1));
+                    var diasDesde = (decimal)(agora - contado.ConcluidaEm).Ticks / TimeSpan.TicksPerDay;
+                    estoque = SugestaoPedido.EstoqueEstimado(
+                        contado.Unidades, RecebidoEntre(recebidos, item, contado.ConcluidaEm, agora.AddMinutes(1)), media, diasDesde);
+                }
+                else
+                {
+                    var noCiclo = recebidosNoCiclo.Sum(p => (p.Linha(item.Id)?.RecebidoEmbalagens ?? 0) * item.UnidadesPorEmbalagem);
+                    estoque = noCiclo > 0 ? noCiclo : null;
                 }
 
-                var chegando = (int)aCaminhoDoItem.Sum(p => p.Linha(item.Id)!.PedidoEmbalagens * item.UnidadesPorEmbalagem);
+                var chegando = aCaminhoDoItem.Sum(p => p.Linha(item.Id)!.PedidoEmbalagens * item.UnidadesPorEmbalagem);
                 if (chegando > 0)
                 {
                     estoque = (estoque ?? 0) + chegando;
                 }
 
-                int? alvo = item.EstoqueAlvoEmbalagens is { } a ? item.ParaUnidades(a) : null;
+                decimal? alvo = item.EstoqueAlvoEmbalagens is { } a ? a * item.UnidadesPorEmbalagem : null;
                 var necessidade = SugestaoPedido.NecessidadeEmUnidades(media, diasACobrir, estoque, alvo);
                 sugerido = SugestaoPedido.EmEmbalagens(necessidade, item.UnidadesPorEmbalagem, passo);
+
+                if (contagemAntiga)
+                {
+                    marcas.Add($"Última contagem em {DiaComercial.DataDe(contado.ConcluidaEm):dd/MM}");
+                }
             }
 
-            var marcas = new List<string>();
-
-            // RN-RC-04: o que faltou na última entrega volta (se a dona não desmarcou "pedir de novo").
-            // Fica marcada mesmo quando a conta já cobre a falta, para a dona ver de onde veio.
-            if (ultimoRecebido?.Linha(item.Id) is { Faltou: > 0, PedirDeNovo: true } faltou)
+            // RN-RC-04: o que faltou volta (se a dona não desmarcou "pedir de novo"). Fica marcado mesmo quando a conta já
+            // cobre a falta, para a dona ver de onde veio.
+            var faltas = comFaltaPendente
+                .Select(p => (Pedido: p, Linha: p.Linha(item.Id)))
+                .Where(x => x.Linha is { Faltou: > 0, PedirDeNovo: true })
+                .ToList();
+            if (faltas.Count > 0)
             {
-                sugerido = Math.Max(sugerido, Math.Ceiling(faltou.Faltou / passo) * passo);
+                var faltou = faltas.Sum(x => x.Linha!.Faltou);
+                sugerido = Math.Max(sugerido, Math.Ceiling(faltou / passo) * passo);
                 origem = OrigemLinhaPedido.FaltouAnterior;
-                marcas.Add($"Faltou {MensagensWhatsApp.Embalagens(faltou.Faltou, item.Unidade)} no pedido nº {ultimoRecebido.Numero}");
+                marcas.InsertRange(0, faltas.Select(x =>
+                    $"Faltou {MensagensWhatsApp.Embalagens(x.Linha!.Faltou, item.Unidade)} no pedido nº {x.Pedido.Numero}"));
             }
 
             // RN-PF-03: aviso aberto entra com pelo menos 1 embalagem e marcado com quem avisou — salvo se o item já vem num
@@ -364,20 +395,32 @@ public sealed class PedidoService
                 marcas.Add($"A caminho: {MensagensWhatsApp.Embalagens(quanto, item.Unidade)} no pedido nº {string.Join(", ", aCaminhoDoItem.Select(p => p.Numero))}");
             }
 
-            observacao = marcas.Count == 0 ? null : Cortar(string.Join(" · ", marcas), 200);
+            var observacao = marcas.Count == 0 ? null : Cortar(string.Join(" · ", marcas), 200);
 
-            // Insumos (SoAviso) só entram com aviso; o resto entra sempre (a dona vê o catálogo inteiro e ajusta com +/−).
+            // Insumos (SoAviso) só entram com aviso ou falta; o resto entra sempre (a dona vê o catálogo inteiro e ajusta com +/−).
             if (grupo.EntraNaContagem || origem != OrigemLinhaPedido.Sugestao)
             {
                 linhas.Add(new LinhaSugerida(item, passo, sugerido, origem, observacao));
             }
         }
 
+        // Linhas do rascunho que saíram da sugestão (insumo acrescentado pela dona, item desativado) também acompanham custo e
+        // passo de agora, com sugerido 0 e sem marcas velhas. Item que mudou de fornecedor fica como está.
+        foreach (var linha in rascunho?.Itens ?? [])
+        {
+            if (linhas.All(l => l.Item.Id != linha.ItemEstoqueId)
+                && catalogo.Itens.GetValueOrDefault(linha.ItemEstoqueId) is { } item
+                && item.FornecedorId == fornecedor.Id)
+            {
+                linhas.Add(new LinhaSugerida(item, Passo(item, fornecedor), 0, OrigemLinhaPedido.Sugestao));
+            }
+        }
+
         return linhas;
     }
 
-    private static int RecebidoEntre(IReadOnlyList<PedidoFornecedor> recebidos, ItemEstoque item, DateTime de, DateTime ate) =>
-        (int)recebidos
+    private static decimal RecebidoEntre(IReadOnlyList<PedidoFornecedor> recebidos, ItemEstoque item, DateTime de, DateTime ate) =>
+        recebidos
             .Where(p => p.RecebidoEm > de && p.RecebidoEm <= ate)
             .SelectMany(p => p.Itens.Where(i => i.ItemEstoqueId == item.Id))
             .Sum(i => (i.RecebidoEmbalagens ?? 0) * item.UnidadesPorEmbalagem);

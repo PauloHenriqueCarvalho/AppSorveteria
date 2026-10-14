@@ -17,7 +17,7 @@ public static class SugestaoPedido
     /// (contagens com 6 ou 8 dias de distância contam igual). Intervalo com saída negativa ("contou mais do que devia")
     /// fica de fora da média. Devolve a média dos últimos <see cref="IntervalosNaMedia"/> intervalos válidos, ou null sem histórico.
     /// </summary>
-    public static decimal? SaidaSemanalMedia(IReadOnlyList<Contado> contagens, Func<DateTime, DateTime, int> recebidoEntre)
+    public static decimal? SaidaSemanalMedia(IReadOnlyList<Contado> contagens, Func<DateTime, DateTime, decimal> recebidoEntre)
     {
         var ordenadas = contagens.OrderBy(c => c.Em).ToList();
         var porSemana = new List<decimal>();
@@ -53,11 +53,36 @@ public static class SugestaoPedido
     }
 
     /// <summary>
+    /// Primeiro dia do ciclo de pedido atual: o dia de pedido mais recente até hoje (hoje, se hoje for dia de pedido).
+    /// Item sem contagem usa o que os pedidos enviados desde então já trouxeram (o alvo é o que cada ciclo traz).
+    /// </summary>
+    public static DateOnly InicioDoCiclo(DateOnly hoje, IReadOnlyCollection<DayOfWeek> diasDePedido)
+    {
+        for (var d = 0; d < 7; d++)
+        {
+            if (diasDePedido.Contains(hoje.AddDays(-d).DayOfWeek))
+            {
+                return hoje.AddDays(-d);
+            }
+        }
+
+        return hoje;
+    }
+
+    /// <summary>
+    /// Estoque estimado agora a partir da última contagem: contado + recebido depois dela − saída estimada desde então
+    /// (média semanal × dias ÷ 7; sem média, nada sai). Nunca negativo. Sem descontar a saída, uma contagem antiga somada às
+    /// entregas faria o estoque só crescer e a sugestão ficar em 0.
+    /// </summary>
+    public static decimal EstoqueEstimado(int contadoUnidades, decimal recebidoDepois, decimal? saidaSemanal, decimal diasDesdeAContagem) =>
+        Math.Max(0, contadoUnidades + recebidoDepois - (saidaSemanal ?? 0) * Math.Max(0, diasDesdeAContagem) / 7m);
+
+    /// <summary>
     /// Unidades que faltam para cobrir os dias: média semanal × semanas − estoque. Sem histórico: estoque alvo − estoque
     /// (alvo nulo = 0). Nunca negativo. <paramref name="estoqueUnidades"/> = última contagem + o que chegou depois dela + o que
     /// está a caminho (pedido enviado e ainda não recebido).
     /// </summary>
-    public static decimal NecessidadeEmUnidades(decimal? saidaSemanal, int diasACobrir, int? estoqueUnidades, int? alvoUnidades)
+    public static decimal NecessidadeEmUnidades(decimal? saidaSemanal, int diasACobrir, decimal? estoqueUnidades, decimal? alvoUnidades)
     {
         var contado = estoqueUnidades ?? 0;
         var necessidade = saidaSemanal is { } media

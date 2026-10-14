@@ -185,6 +185,7 @@ public sealed class PedidoFornecedor : Entity
             Status == StatusPedido.Rascunho ? "Envie o pedido antes de conferir a entrega." : "Este pedido não está aguardando entrega.");
         var agora = Guard.Utc(agoraUtc, "a data da entrega");
         Guard.Contra(EnviadoEm is { } enviado && agora < enviado, "A entrega não pode ser anterior ao envio do pedido.");
+        var quemConferiu = Guard.NaoVazio(usuarioId, "quem conferiu");
 
         // Valida tudo antes de mudar qualquer linha: erro na conferência não deixa o pedido pela metade.
         var listaDiferencas = diferencas.ToList();
@@ -224,7 +225,7 @@ public sealed class PedidoFornecedor : Entity
 
         Status = StatusPedido.Recebido;
         RecebidoEm = agora;
-        RecebidoPorUsuarioId = Guard.NaoVazio(usuarioId, "quem conferiu");
+        RecebidoPorUsuarioId = quemConferiu;
         AtualizadoEm = agora;
         Recalcular();
 
@@ -341,7 +342,8 @@ public sealed class ItemPedidoFornecedor : Entity
         Passo = linha.Passo;
         PassoRecebimento = linha.Item.PassoEmbalagens;
         CustoEmbalagem = linha.Item.CustoEmbalagem;
-        Origem = linha.Origem;
+        // Item que a dona acrescentou continua "acrescentado" enquanto não houver motivo novo (aviso, falta).
+        Origem = Origem == OrigemLinhaPedido.AdicionadoPelaDona && linha.Origem == OrigemLinhaPedido.Sugestao ? Origem : linha.Origem;
         Observacao = Guard.TextoOpcional(linha.Observacao, "a observação", 200);
         SugeridoEmbalagens = Validar(linha.SugeridoEmbalagens, "A sugestão");
         PedidoEmbalagens = AlteradoPelaDona

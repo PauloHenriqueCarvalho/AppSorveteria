@@ -263,6 +263,61 @@ public class PedidoServiceTests
         Assert.Equal(terceiro.Id, remontado.Id);
         Assert.Equal("Sugestao", Linha(remontado, _uva).Origem);
         Assert.Null(Linha(remontado, _uva).Observacao);
+        // Uva nunca contada: as 2 caixas que chegaram neste ciclo já cobrem o alvo de 2.
+        Assert.Equal(0m, Linha(remontado, _uva).SugeridoEmbalagens);
+    }
+
+    [Fact]
+    public async Task Montar_DoisPedidosEnviadosEOPrimeiroChegaComFalta_FaltaVolta()
+    {
+        var primeiro = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(primeiro.Id, Ct);
+        // Pedido extra na quarta, antes de o primeiro chegar.
+        _clock.UtcNow = Agora.AddDays(2);
+        var extra = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(extra.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_copo.Id, 1m)]), Ct);
+        await _service.EnviarAsync(extra.Id, Ct);
+        // O primeiro chega na quinta sem a uva.
+        _clock.UtcNow = Agora.AddDays(3);
+        await _service.ReceberAsync(primeiro.Id, new ReceberPedidoRequest([new LinhaRecebidaRequest(_uva.Id, 0m)], null, null), _dona.Id, Ct);
+
+        _clock.UtcNow = Agora.AddDays(7);
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        Assert.Equal("FaltouAnterior", Linha(proximo, _uva).Origem);
+        Assert.Equal(2m, Linha(proximo, _uva).SugeridoEmbalagens);
+    }
+
+    [Fact]
+    public async Task Montar_ItemPuladoNasContagensSeguintes_DescontaASaidaEstimadaDesdeAContagem()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.EnviarAsync(pedido.Id, Ct);
+        _clock.UtcNow = Agora.AddDays(2);
+        await _service.ReceberAsync(pedido.Id, new ReceberPedidoRequest(null, null, null), _dona.Id, Ct);
+
+        // Duas semanas sem contar o limão: 14 contados + 28 que chegaram − 60 que saíram (28 por semana × 15 dias) = 0.
+        _clock.UtcNow = Agora.AddDays(14);
+        var proximo = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        var limao = Linha(proximo, _limao);
+        Assert.Equal(2m, limao.SugeridoEmbalagens); // 36 para os próximos 9 dias
+        Assert.Equal("Última contagem em 18/10", limao.Observacao);
+    }
+
+    [Fact]
+    public async Task Montar_DeNovo_InsumoAcrescentadoPelaDonaAcompanhaOCustoDoCatalogo()
+    {
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+        await _service.AlterarItensAsync(pedido.Id, new AlterarItensPedidoRequest([new LinhaAlteradaRequest(_copo.Id, 2m)]), Ct);
+        _copo.AlterarCusto(14m);
+
+        var remontado = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        var copo = Linha(remontado, _copo);
+        Assert.Equal(14m, copo.CustoEmbalagem);
+        Assert.Equal(2m, copo.PedidoEmbalagens);
+        Assert.Equal("AdicionadoPelaDona", copo.Origem);
     }
 
     [Fact]
