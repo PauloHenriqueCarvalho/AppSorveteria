@@ -95,7 +95,7 @@ Ana · 14/10 15:42
 Exemplo de resumo:
 
 ```
-Resumo de terça 14/10 — Sorveteria
+Resumo de quarta 14/10 — Sorveteria
 🔴 Urgente (1): Picolé ao leite Coco preto — acabou
 🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1 pacote
 🟡 Média (1): Massa Pistache — 1 balde

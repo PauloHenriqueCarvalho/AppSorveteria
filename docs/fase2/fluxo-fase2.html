@@ -427,7 +427,7 @@ function resumo(){
   function lista(p){ return abertos.filter(function(a){return a.prio===p;}).map(function(a){ return rotuloAviso(a)+" — "+(a.qtd===0?"acabou":a.qtd); }).join(" · "); }
   var u=abertos.filter(function(a){return a.prio==="Urgente";}).length, al=abertos.filter(function(a){return a.prio==="Alta";}).length, m=abertos.filter(function(a){return a.prio==="Media";}).length;
   var potes=S.itens.filter(function(it){ var a=avisoAberto(it.id); return it.modo==="SaldoPelaVenda" && it.min && it.ultima<=it.min && !(a && a.prio==="Urgente");}).map(function(it){return "Pote 1L "+it.nome+" ("+it.ultima+")";}).join(" · ");
-  var t="Resumo de terça 14/10 — Sorveteria\n";
+  var t="Resumo de quarta 14/10 — Sorveteria\n";
   if(u) t+="🔴 Urgente ("+u+"): "+lista("Urgente")+"\n";
   if(al) t+="🟠 Alta ("+al+"): "+lista("Alta")+"\n";
   if(m) t+="🟡 Média ("+m+"): "+lista("Media")+"\n";
