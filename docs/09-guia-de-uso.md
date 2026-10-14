@@ -15,7 +15,7 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
 
 ### 2. Vender
 
-- **➕ Nova comanda**: para quem senta ou pede mais de uma coisa. Toque nos produtos para adicionar (tocar de novo aumenta a quantidade). Use **📝 Observação** para recados ("sem calda").
+- **➕ Nova comanda**: para quem senta ou pede mais de uma coisa. Toque nos produtos para adicionar (tocar de novo aumenta a quantidade). Para muitas unidades (ex.: 50 picolés), **toque no número da quantidade** e digite. Use **📝 Observação** para recados ("sem calda").
 - **⚡ Venda rápida**: um produto, pagamento na hora. Vai direto para o pagamento.
 - **⚖️ Self-service (peso)**: digite o **valor que a balança mostrou** (em reais).
 - **🛵 Delivery**: igual à comanda, com a observação de endereço/telefone.

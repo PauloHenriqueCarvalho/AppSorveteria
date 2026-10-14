@@ -102,7 +102,7 @@ Detalhes em docs/07.
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
-- [ ] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, pode adiantar da Fase 2
+- [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — PR aberto para teste no tablet
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
@@ -114,7 +114,8 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 ### Sprint 5 — Catálogo, contagem e avisos
 - [ ] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso` + testes (RN-ES-01…07, RN-AV-01…05) + migração
 - [ ] API: catálogo (importar CSV), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
-- [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
+- [x] App: quantidade digitada na venda (RN-ES-04, adiantada para a Fase 1)
+- [ ] App: botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
 - [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
 - [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, catálogo com fornecedor/alvo/mínimo, cadastro de insumos e fornecedores, WhatsApp da dona
 

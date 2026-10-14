@@ -86,6 +86,7 @@ public class SelecaoProdutoViewModel : BindableObject
     public ICommand PrecoManualCommand { get; }
     public ICommand AumentarQtdeCommand { get; }
     public ICommand DiminuirQtdeCommand { get; }
+    public ICommand DigitarQtdeCommand { get; }
 
     public SelecaoProdutoViewModel(ComandaAppService comandas, ProdutoRepository produtos)
     {
@@ -97,6 +98,13 @@ public class SelecaoProdutoViewModel : BindableObject
 
         AumentarQtdeCommand = new Command(() => Quantidade++);
         DiminuirQtdeCommand = new Command(() => { if (Quantidade > 1) Quantidade--; });
+        DigitarQtdeCommand = new Command(async () =>
+        {
+            if (await PedirQuantidade.PerguntarAsync("Quantidade a lançar", Quantidade) is { } digitada)
+            {
+                Quantidade = digitada; // RN-ES-04
+            }
+        });
         BuscarCommand = new Command(AplicarFiltro);
 
         _ = CarregarProdutos();
