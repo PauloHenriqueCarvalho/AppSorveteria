@@ -28,12 +28,16 @@ public sealed class CatalogoEstoqueService
         ["categoria", "sabor", "unidade_compra", "unidades_por_embalagem", "custo_embalagem", "fornecedor"];
 
     private readonly IEstoqueRepository _estoque;
+    private readonly IProdutoRepository _produtos;
     private readonly IUnitOfWork _uow;
+    private readonly IClock _clock;
 
-    public CatalogoEstoqueService(IEstoqueRepository estoque, IUnitOfWork uow)
+    public CatalogoEstoqueService(IEstoqueRepository estoque, IProdutoRepository produtos, IUnitOfWork uow, IClock clock)
     {
         _estoque = estoque;
+        _produtos = produtos;
         _uow = uow;
+        _clock = clock;
     }
 
     /// <summary>Tudo de uma vez: o catálogo é pequeno (centenas de itens) e o painel e o app montam as telas a partir dele.</summary>
@@ -162,8 +166,21 @@ public sealed class CatalogoEstoqueService
         var grupo = await _estoque.ObterGrupoAsync(id, cancellationToken) ?? throw new EntidadeNaoEncontradaException("Grupo de estoque", id);
         await GarantirNomeDeGrupoLivreAsync(request.Nome, ignorarId: id, cancellationToken);
 
+        var modo = TextoEnum.Converter<ModoControle>(request.ModoControle, "Modo de controle");
+        if (modo != grupo.ModoControle)
+        {
+            // RN-PR-06: o app decide se pede sabor pelo modo do grupo — os produtos ligados descem de novo para ele.
+            var ligados = await _produtos.ListarDoGrupoEstoqueAsync(grupo.Id, cancellationToken);
+            Exigir.Que(modo != ModoControle.SoAviso || ligados.Count == 0,
+                $"Há produto de venda ligado a {grupo.Nome} ({string.Join(", ", ligados.Select(p => p.Nome))}): desligue no cadastro do produto antes de deixar o grupo só com aviso.");
+            foreach (var produto in ligados)
+            {
+                produto.GrupoDeEstoqueMudou(_clock.UtcNow);
+            }
+        }
+
         grupo.Renomear(request.Nome);
-        grupo.AlterarModo(TextoEnum.Converter<ModoControle>(request.ModoControle, "Modo de controle"));
+        grupo.AlterarModo(modo);
         grupo.AlterarOrdem(request.Ordem);
         await _uow.SaveChangesAsync(cancellationToken);
         return grupo.ToDto();

@@ -430,6 +430,25 @@ public class PedidoServiceTests
     }
 
     [Fact]
+    public async Task Montar_PoteSemVendaComSabor_UsaAContagemMenosASaidaEstimada()
+    {
+        // Pote ainda vendido sem sabor (o app não manda): o saldo não desconta as vendas, então vale a contagem.
+        var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);
+        var flocos = ItemEstoque.Criar(potes.Id, _fabrica.Id, "Flocos", UnidadeCompra.Unidade, 1, 14m, 1);
+        _estoque.Grupos.Add(potes);
+        _estoque.Itens.Add(flocos);
+        Contagem(Agora.AddDays(-17), (flocos, 48m));
+        Contagem(Agora.AddDays(-10), (flocos, 34m));
+        Contagem(Agora.AddDays(-3), (flocos, 20m));
+
+        var pedido = await _service.MontarAsync(_fabrica.Id, _dona.Id, cancellationToken: Ct);
+
+        // 14 por semana; desde a contagem saíram uns 6: 20 − 6 = 14 em estoque; 9 dias pedem 18 → 4 potes.
+        // Pelo saldo (20, nada descontado) não pediria nenhum.
+        Assert.Equal(4m, Linha(pedido, flocos).SugeridoEmbalagens);
+    }
+
+    [Fact]
     public async Task Receber_PoteQueVeio_EntraNoSaldo()
     {
         var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 4);

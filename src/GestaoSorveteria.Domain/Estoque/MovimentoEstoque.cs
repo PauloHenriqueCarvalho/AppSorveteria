@@ -46,9 +46,12 @@ public sealed class MovimentoEstoque : Entity
         RegistradoEm = Guard.Utc(registradoEmUtc, "a data do registro");
     }
 
-    /// <summary>RN-RC-03: o que veio na entrega conferida (já em unidades: embalagens × unidades por embalagem).</summary>
-    public static MovimentoEstoque Entrada(Guid itemEstoqueId, int unidades, Guid pedidoId, DateTime conferidoEmUtc) =>
-        new(itemEstoqueId, TipoMovimentoEstoque.Entrada, unidades, conferidoEmUtc, conferidoEmUtc)
+    /// <summary>
+    /// RN-RC-03: o que veio na entrega (já em unidades: embalagens × unidades por embalagem), na hora em que chegou na loja;
+    /// <paramref name="conferidoEmUtc"/> é quando a dona conferiu no sistema.
+    /// </summary>
+    public static MovimentoEstoque Entrada(Guid itemEstoqueId, int unidades, Guid pedidoId, DateTime chegouEmUtc, DateTime? conferidoEmUtc = null) =>
+        new(itemEstoqueId, TipoMovimentoEstoque.Entrada, unidades, chegouEmUtc, conferidoEmUtc ?? chegouEmUtc)
         {
             PedidoId = Guard.NaoVazio(pedidoId, "o pedido"),
         };

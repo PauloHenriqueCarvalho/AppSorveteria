@@ -58,6 +58,9 @@ internal sealed class ProdutoRepositoryFake : IProdutoRepository
 {
     public List<Produto> Produtos { get; } = new();
 
+    public Task<IReadOnlyList<Produto>> ListarDoGrupoEstoqueAsync(Guid grupoEstoqueId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Produto>>(Produtos.Where(p => p.GrupoEstoqueId == grupoEstoqueId).ToList());
+
     public Task<Produto?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Produtos.FirstOrDefault(p => p.Id == id));
 

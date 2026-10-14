@@ -56,7 +56,9 @@ public sealed class SaldoEstoqueService
         }
 
         var bases = await _contagens.UltimaContagemPorItemAsync(_clock.UtcNow.AddMinutes(1), cancellationToken);
-        var gravados = await _movimentos.ListarDosItensAsync(ids, cancellationToken: cancellationToken);
+        // Só os movimentos depois da base mais antiga (todos, se algum item nunca foi contado).
+        DateTime? desde = ids.All(bases.ContainsKey) ? ids.Min(id => bases[id].Em) : null;
+        var gravados = await _movimentos.ListarDosItensAsync(ids, desde, cancellationToken);
         var todos = gravados.Concat(aindaNaoGravados ?? []).DistinctBy(m => m.Id).ToList();
         return ids.ToDictionary(
             id => id,
@@ -123,7 +125,7 @@ public sealed class SaldoEstoqueService
             novos.Add(baixa);
         }
 
-        await AvisarPeloSaldoAsync(novos.Select(m => m.ItemEstoqueId).ToList(), novos, cancellationToken);
+        await AvisarPeloSaldoAsync(novos.Select(m => m.ItemEstoqueId).ToList(), vendidaEm, novos, cancellationToken);
     }
 
     /// <summary>Estorno da venda pelo painel (RN-CM-09): devolve cada baixa dela uma vez só.</summary>
@@ -158,27 +160,32 @@ public sealed class SaldoEstoqueService
                 continue;
             }
 
+            // Potes vêm por unidade; meia caixa com número ímpar perde a fração (a contagem corrige).
             var unidades = (int)Math.Floor(linha.RecebidoEmbalagens!.Value * item.UnidadesPorEmbalagem);
             if (unidades > 0)
             {
-                await _movimentos.AdicionarAsync(MovimentoEstoque.Entrada(item.Id, unidades, pedido.Id, chegouEm), cancellationToken);
+                await _movimentos.AdicionarAsync(
+                    MovimentoEstoque.Entrada(item.Id, unidades, pedido.Id, chegouEm, pedido.RecebidoEm), cancellationToken);
             }
         }
     }
 
     /// <summary>
-    /// RN-AV-04: pote que zerou vira aviso Urgente; que chegou no mínimo, Alta (autor "Sistema"). Item com aviso aberto não
-    /// ganha outro: a prioridade só sobe; o aviso que o próprio sistema abriu acompanha o saldo.
+    /// RN-AV-04: pote que zerou vira aviso Urgente; que chegou no mínimo, Alta (autor "Sistema"), na hora da venda
+    /// (<paramref name="emUtc"/>). Item com aviso aberto não ganha outro: a prioridade só sobe, e a quantidade só acompanha o
+    /// saldo enquanto a última informação for do sistema (o que a atendente informou fica).
     /// </summary>
     public async Task AvisarPeloSaldoAsync(
-        IReadOnlyCollection<Guid> itemEstoqueIds, IEnumerable<MovimentoEstoque>? aindaNaoGravados = null, CancellationToken cancellationToken = default)
+        IReadOnlyCollection<Guid> itemEstoqueIds,
+        DateTime emUtc,
+        IEnumerable<MovimentoEstoque>? aindaNaoGravados = null,
+        CancellationToken cancellationToken = default)
     {
         if (itemEstoqueIds.Count == 0)
         {
             return;
         }
 
-        var agora = _clock.UtcNow;
         var saldos = await SaldosAsync(itemEstoqueIds, aindaNaoGravados, cancellationToken);
         foreach (var (itemId, saldo) in saldos)
         {
@@ -188,15 +195,15 @@ public sealed class SaldoEstoqueService
                 continue;
             }
 
-            var quantidade = Math.Max(0, saldo);
+            var quantidade = Math.Clamp(saldo, 0, Aviso.QuantidadeMaxima);
             var aberto = await _avisos.ObterAbertoDoItemAsync(itemId, cancellationToken);
             if (aberto is null)
             {
-                await _avisos.AdicionarAsync(Aviso.DoItem(itemId, quantidade, prioridade, ObservacaoDoSistema, null, agora), cancellationToken);
+                await _avisos.AdicionarAsync(Aviso.DoItem(itemId, quantidade, prioridade, ObservacaoDoSistema, null, emUtc), cancellationToken);
             }
-            else if (prioridade > aberto.Prioridade || aberto.CriadoPeloSistema)
+            else
             {
-                aberto.ReceberAtualizacao(quantidade, prioridade, null, null, agora, aplicarMesmoSeMaisAntiga: true);
+                aberto.AtualizarPeloSaldo(quantidade, prioridade, emUtc < aberto.CriadoEm ? aberto.CriadoEm : emUtc);
             }
         }
     }

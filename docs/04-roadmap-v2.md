@@ -138,6 +138,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] Domain: produto ligado a grupo (RN-PR-06), sabor na linha da venda, movimentos de estoque e saldo com a contagem como base; hora em que a entrega chegou e em que cada item foi contado (RN-ES-08/09) — #81
 - [x] API: `ItemEstoqueId` opcional no sync com baixa no servidor, estorno, entrada na conferência, aviso automático de mínimo e zerado (RN-AV-04), `GET /api/estoque/saldos`, `PUT /api/produtos/{id}/estoque`, pedido dos potes pelo saldo e pelas vendas
 - [ ] Painel: produto ligado ao grupo, saldo dos potes, diferença da contagem (saldo × contado) e no resumo do dia
+- [ ] Virada: **fazer uma contagem dos potes antes de ligar os produtos de pote** (o saldo parte dela; entregas conferidas antes não têm entrada)
 - [ ] App: grade de sabores **só nos potes** (produto com `pedeSabor`), `itemEstoqueId` na venda, hora de cada item na contagem
 - [ ] Avaliar com a dona depois de 2 semanas: se as diferenças dos potes forem grandes, o grupo volta para `Contagem`
 

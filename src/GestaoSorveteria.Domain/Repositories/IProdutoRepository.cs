@@ -14,5 +14,8 @@ public interface IProdutoRepository
     /// <param name="nomeNormalizado">Já normalizado com <see cref="Produto.NormalizarNome"/>.</param>
     Task<bool> ExisteComNomeAsync(string nomeNormalizado, Guid? ignorarId = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Produtos de venda ligados ao grupo de estoque (RN-PR-06).</summary>
+    Task<IReadOnlyList<Produto>> ListarDoGrupoEstoqueAsync(Guid grupoEstoqueId, CancellationToken cancellationToken = default);
+
     Task AdicionarAsync(Produto produto, CancellationToken cancellationToken = default);
 }

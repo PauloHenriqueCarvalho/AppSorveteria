@@ -58,6 +58,20 @@ public class ComandaServiceTests
     }
 
     [Fact]
+    public async Task Estornar_VendaDePote_DevolveOPoteAoSaldo()
+    {
+        var venda = VendaEmDinheiro();
+        var baixa = GestaoSorveteria.Domain.Estoque.MovimentoEstoque.BaixaVenda(
+            Guid.NewGuid(), 1, venda.Id, venda.Itens.Single().Id, Venda, Venda);
+        _movimentos.Movimentos.Add(baixa);
+
+        await _service.EstornarAsync(venda.Id, new EstornarComandaRequest("Sabor errado"), _dona.Id, TestContext.Current.CancellationToken);
+
+        var estorno = Assert.Single(_movimentos.Movimentos, m => m.Tipo == GestaoSorveteria.Domain.Estoque.TipoMovimentoEstoque.EstornoVenda);
+        Assert.Equal(baixa.ItemComandaId, estorno.ItemComandaId);
+    }
+
+    [Fact]
     public async Task Estornar_NaoAltera_EsperadoDoCaixa()
     {
         // RN-CM-09 / RN-CX-07: o dinheiro entrou na gaveta; devolução ao cliente é sangria, registrada à parte.

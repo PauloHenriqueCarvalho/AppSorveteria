@@ -134,17 +134,46 @@ public class PotesServiceTests
     }
 
     [Fact]
-    public async Task Sync_AvisoDaAtendente_SoSobeAPrioridade()
+    public async Task Sync_AvisoDaAtendente_SobeAPrioridadeMasMantemOQueElaInformou()
     {
         await AbrirCaixa();
-        var daAna = Aviso.DoItem(_chocolate.Id, 1, PrioridadeAviso.Media, "último no freezer", _ana.Id, Abertura);
+        // Ana viu 2 no freezer (o sistema acha que tem 1).
+        var daAna = Aviso.DoItem(_chocolate.Id, 2, PrioridadeAviso.Media, "último sabor da prateleira", _ana.Id, Abertura);
         _avisos.Avisos.Add(daAna);
 
-        await Enviar(VendaDe(_pote, 1, _chocolate)); // 1 → 0
+        await Enviar(VendaDe(_pote, 1, _chocolate)); // saldo 1 → 0
 
         Assert.Single(_avisos.Avisos);
         Assert.Equal(PrioridadeAviso.Urgente, daAna.Prioridade);
-        Assert.Equal(_ana.Id, daAna.CriadoPorUsuarioId);
+        Assert.Equal(2, daAna.QuantidadeAtual);
+        Assert.Equal("último sabor da prateleira", daAna.Observacao);
+        Assert.Equal(_ana.Id, daAna.AtualizadoPorUsuarioId);
+    }
+
+    [Fact]
+    public async Task Sync_AvisoDoSistemaQueAAtendenteAtualizou_NaoVoltaParaOSaldo()
+    {
+        await AbrirCaixa();
+        await Enviar(VendaDe(_pote, 3, _flocos)); // 5 → 2: aviso Alta do sistema
+        var aviso = Assert.Single(_avisos.Avisos);
+        aviso.AindaFalta(4, PrioridadeAviso.Alta, "achei mais no fundo", _ana.Id, Venda.AddMinutes(30));
+
+        await Enviar(VendaDe(_pote, 1, _flocos)); // saldo 1
+
+        Assert.Equal(4, aviso.QuantidadeAtual);
+        Assert.Equal(PrioridadeAviso.Alta, aviso.Prioridade);
+    }
+
+    [Fact]
+    public async Task Sync_VendaComSaborRejeitadaPeloTotal_NaoBaixaNemAvisa()
+    {
+        await AbrirCaixa();
+        var errada = VendaDe(_pote, 5, _flocos) with { Total = 1m };
+
+        Assert.Equal(StatusSync.Rejeitada, await Enviar(errada));
+
+        Assert.Empty(_movimentos.Movimentos);
+        Assert.Empty(_avisos.Avisos);
     }
 
     [Fact]
@@ -175,7 +204,7 @@ public class PotesServiceTests
     }
 
     [Fact]
-    public async Task EstornarVenda_DevolveUmaVezSo()
+    public async Task EstornarVenda_ChamadoDuasVezes_DevolveUmaVezSo()
     {
         await AbrirCaixa();
         await Enviar(VendaDe(_doisPotes, 1, _flocos));
@@ -211,7 +240,7 @@ public class PotesServiceTests
     }
 
     [Fact]
-    public async Task Listar_SaldosDosPotesComAUltimaContagemEAsVendasDaSemana()
+    public async Task ListarAsync_DepoisDeUmaVenda_SaldoContagemEVendasDaSemana()
     {
         await AbrirCaixa();
         await Enviar(VendaDe(_doisPotes, 1, _flocos));

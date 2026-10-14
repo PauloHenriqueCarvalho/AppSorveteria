@@ -357,10 +357,14 @@ public sealed class PedidoService
                     .Select(x => new SugestaoPedido.Contado(x.Linha!.ContadoEm ?? x.ConcluidaEm!.Value, x.Linha!.ContadoUnidades!.Value))
                     .ToList();
                 var media = SugestaoPedido.SaidaSemanalMedia(historico, (de, ate) => RecebidoEntre(recebidos, item, de, ate));
-                var ehPote = saldosPotes.TryGetValue(item.Id, out var saldoPote);
+                // Pote só usa o saldo quando a venda já manda o sabor (há vendas com baixa): sem isso o saldo não desconta nada
+                // vendido e o pedido sairia baixo — segue a conta da contagem.
+                var mediaDasVendas = vendasPotes.GetValueOrDefault(item.Id);
+                var saldoPote = saldosPotes.GetValueOrDefault(item.Id);
+                var ehPote = mediaDasVendas is not null && saldosPotes.ContainsKey(item.Id);
                 if (ehPote)
                 {
-                    media = vendasPotes.GetValueOrDefault(item.Id) ?? media;
+                    media = mediaDasVendas;
                 }
 
                 // Estoque de agora: pote pelo saldo; o resto pela última contagem (menos a saída estimada desde ela) ou, sem
