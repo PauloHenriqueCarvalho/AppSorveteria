@@ -41,10 +41,36 @@ Sem isso, o caixa "não bate" no fim do dia.
 1. Feche ou cancele todas as comandas abertas.
 2. Toque em **Fechar caixa**. **Conte o dinheiro da gaveta** (notas e moedas, incluindo o fundo) e digite o total.
 3. O app mostra quanto **deveria ter** e a **diferença**. Confirme. Pronto — a dona vê o fechamento no painel.
+4. Logo depois o app pergunta se quer **enviar o resumo do dia para a dona**. Toque em **Enviar resumo**: o WhatsApp abre com a mensagem pronta (o que está acabando e o total vendido no dia). Toque em **enviar** no WhatsApp. Pode levar até 1 minuto se o sistema estava "dormindo".
+   Sem internet ou deu erro? O app avisa. Quando a internet voltar, abra a aba **Caixa** e toque em **📲 Enviar resumo do dia** (o botão fica lá a qualquer hora).
 
 **Internet caiu?** Continue vendendo normalmente. O tablet guarda tudo e envia quando a internet voltar. No alto da tela aparece "X vendas aguardando envio" até tudo subir. Deixe o Wi‑Fi ligado ao fim do turno.
 
 **Ver as vendas do turno:** aba **Turno**. Mostra cada venda paga ou cancelada, com a hora, o valor e se já foi enviada para o painel. Toque numa venda para ver os itens e o pagamento. Venda marcada em laranja foi **recusada pelo sistema**: ela continua guardada no tablet; mostre a mensagem para a dona.
+
+### 5. Está acabando: avisar a dona
+
+Na tela de comandas, toque no botão amarelo **📦 Está acabando**. Dá para avisar mesmo com o caixa fechado.
+
+1. **O que**: toque no grupo (ex.: **Picolé ao leite**) e depois no sabor. Ou digite o nome na busca (ex.: "coco", "copo 300"). Não achou? Toque em **Outro** e escreva.
+2. **Quanto tem agora**: use **−** e **+** ou digite o número. Conte na menor unidade (picolé, pote, balde, copo). Não tem nenhum? Toque em **Acabou**.
+3. **Prioridade**:
+
+| Prioridade | Quando usar | A dona recebe |
+|---|---|---|
+| 🔴 **Urgente** | Acabou, ou o cliente pediu e não tinha | **Na hora**, pelo WhatsApp |
+| 🟠 **Alta** | Acaba hoje ou amanhã | No resumo do fim do dia |
+| 🟡 **Média** | Está baixando, entra no próximo pedido | No resumo do fim do dia |
+
+4. Se quiser, escreva uma **observação** ("cliente pediu 3 vezes hoje") e toque em **Avisar**.
+
+**Urgente:** depois de avisar, o WhatsApp abre sozinho com a mensagem pronta para a dona. É só tocar em **enviar**. Se o WhatsApp abrir sem o contato dela, escolha a dona na lista e envie (e avise o Paulo para cadastrar o número). Se o WhatsApp não abrir, o app mostra a mensagem e o botão **Copiar mensagem**, para mandar de outro celular.
+
+**Já foi avisado?** Embaixo da tela ficam os **já avisados**. Se você escolher um item que já está na lista, aparece "Já avisado às 14:10 por Ana" e o botão vira **Ainda falta**: corrija a quantidade ou suba a prioridade (não dá para baixar). Também dá para tocar direto no aviso da lista. O aviso sai da lista sozinho quando a dona resolve (a entrega chegou ou ela comprou).
+
+**Sem internet?** Avise do mesmo jeito. O aviso fica guardado no tablet e sobe sozinho quando a internet voltar ("aguardando envio" aparece no aviso). No urgente o WhatsApp abre mesmo assim e envia a mensagem quando a conexão voltar.
+
+**Aviso em laranja** foi recusado pelo sistema, com o motivo escrito embaixo (por exemplo: a dona já tinha fechado esse aviso). Toque nele e escolha **Avisar de novo** (se ainda está faltando) ou **Tirar da lista**.
 
 ## Para a dona (no celular ou no computador)
 
@@ -70,6 +96,8 @@ Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produt
 | Situação | O que fazer |
 |---|---|
 | O tablet diz que não tem internet | Nada: continue vendendo. Confira se o Wi‑Fi está ligado no fim do turno |
+| O WhatsApp não abriu no aviso urgente ou no resumo do dia | O app mostra a mensagem: toque em **Copiar mensagem** e mande para a dona de outro celular. O aviso já está guardado |
+| O resumo do dia não saiu no fechamento | Com internet, aba **Caixa** → **📲 Enviar resumo do dia** |
 | O painel demora para abrir | Espere 1 minuto. Se passar de 2, confira a internet do celular |
 | Venda com valor errado já finalizada | Dona: painel → Vendas → Estornar (com motivo). Atendente: lança a venda certa de novo |
 | Atendente esqueceu de fechar o caixa | Dona: painel → Caixas → **Fechar pelo painel** (com motivo). O valor contado fica 0 e a diferença aparece para conferir no dia seguinte |
