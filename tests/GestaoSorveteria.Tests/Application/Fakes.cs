@@ -311,6 +311,12 @@ internal sealed class ContagemRepositoryFake : IContagemRepository
                 return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value, ultima.ContadoEm);
             }));
 
+    public Task<IReadOnlyList<Contagem>> ListarConcluidasEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Contagem>>(Contagens
+            .Where(c => c.ConcluidaEm >= deUtc && c.ConcluidaEm < ateUtc)
+            .OrderByDescending(c => c.ConcluidaEm)
+            .ToList());
+
     public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)
     {
         Contagens.Add(contagem);

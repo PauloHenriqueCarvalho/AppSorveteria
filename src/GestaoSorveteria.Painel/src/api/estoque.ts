@@ -5,6 +5,7 @@ import type {
   GrupoEstoqueDto,
   ImportarCatalogoResponse,
   ItemEstoqueDto,
+  SaldoPoteDto,
   SalvarFornecedorRequest,
   SalvarGrupoEstoqueRequest,
   SalvarItemEstoqueRequest,
@@ -49,6 +50,13 @@ export function salvarFornecedor(fornecedorId: string | undefined, dados: Salvar
 /** RN-PF-09: a API recusa desativar fornecedor com itens ativos. */
 export function alterarAtivoFornecedor(fornecedorId: string, ativo: boolean): Promise<FornecedorDto> {
   return requisicao<FornecedorDto>(`/api/fornecedores/${id(fornecedorId)}/${ativo ? 'ativar' : 'desativar'}`, { metodo: 'POST' })
+}
+
+export const CHAVE_SALDOS = ['estoque', 'saldos'] as const
+
+/** GET /api/estoque/saldos (Admin) — saldo dos potes (RN-ES-08). */
+export function listarSaldosPotes(): Promise<SaldoPoteDto[]> {
+  return requisicao<SaldoPoteDto[]>('/api/estoque/saldos')
 }
 
 /** RN-ES-10: `simular` = prévia sem gravar. */

@@ -25,5 +25,8 @@ public interface IContagemRepository
     /// </summary>
     Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default);
 
+    /// <summary>Contagens concluídas em [<paramref name="deUtc"/>, <paramref name="ateUtc"/>) pela conclusão, com as linhas, da mais nova para a mais antiga.</summary>
+    Task<IReadOnlyList<Contagem>> ListarConcluidasEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
+
     Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default);
 }
