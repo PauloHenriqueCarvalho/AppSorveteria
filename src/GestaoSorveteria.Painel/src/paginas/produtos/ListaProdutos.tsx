@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { CHAVE_PRODUTOS, listarProdutos } from '../../api/produtos.ts'
+import { CHAVE_CUSTOS, CHAVE_PRODUTOS, listarCustos, listarProdutos } from '../../api/produtos.ts'
 import type { GrupoEstoqueDto, ProdutoDto } from '../../api/tipos.ts'
 import Consulta from '../../componentes/Consulta.tsx'
 import { CabecalhoPagina, Selo } from '../../componentes/Ui.tsx'
@@ -45,6 +45,9 @@ export default function ListaProdutos() {
   const [categoria, setCategoria] = useState('')
   const produtos = useQuery({ queryKey: CHAVE_PRODUTOS, queryFn: listarProdutos })
   const catalogo = useCatalogoEstoque()
+  // RN-PR-07/RN-RL-04: custo e margem calculados pela API (só o painel vê).
+  const custos = useQuery({ queryKey: CHAVE_CUSTOS, queryFn: listarCustos })
+  const custoDe = new Map((custos.data ?? []).map((c) => [c.produtoId, c]))
   const grupos = new Map((catalogo.data?.grupos ?? []).map((g) => [g.id, g]))
 
   const ativos = produtos.data?.filter((p) => p.ativo).length ?? 0
@@ -142,11 +145,18 @@ export default function ListaProdutos() {
                       <th scope="col" className="numero">
                         Preço
                       </th>
+                      <th scope="col" className="numero so-largo">
+                        Custo
+                      </th>
+                      <th scope="col" className="numero so-largo">
+                        Margem
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {visiveis.map((p) => {
                       const estoque = descreverEstoque(p, grupos)
+                      const custo = custoDe.get(p.id)
                       return (
                         <tr key={p.id} className="linha-clicavel" onClick={() => navegar(`/produtos/${p.id}`)}>
                           <td className="numero suave so-largo">{p.ordem}</td>
@@ -165,6 +175,17 @@ export default function ListaProdutos() {
                           <td className="so-largo">{p.categoria}</td>
                           <td className="so-largo suave">{estoque ?? '—'}</td>
                           <td className="numero forte">{p.permiteValorLivre ? <span className="suave">Valor na hora</span> : formatarMoeda(p.preco)}</td>
+                          <td className="numero so-largo suave">{custo?.custoEstimado != null ? formatarMoeda(custo.custoEstimado) : 'n/d'}</td>
+                          <td className="numero so-largo">
+                            {custo?.margem != null ? (
+                              <>
+                                {formatarMoeda(custo.margem)}{' '}
+                                <span className="suave pequeno">{custo.margemPercentual?.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>
+                              </>
+                            ) : (
+                              <span className="suave">n/d</span>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
