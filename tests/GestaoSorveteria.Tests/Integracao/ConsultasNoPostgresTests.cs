@@ -117,8 +117,8 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
     public async Task VendasERelatorios_FiltrosRankingECusto_NoPostgres()
     {
         // Março: terça 10/03/2026.
-        var ana = Usuario.Criar("Ana Março", "ana-marco", "hash", PerfilUsuario.Atendente, Em(3, 1, 9));
-        var bia = Usuario.Criar("Bia Março", "bia-marco", "hash", PerfilUsuario.Atendente, Em(3, 1, 9));
+        var ana = Usuario.Criar("Ana Março", "ana_marco", "hash", PerfilUsuario.Atendente, Em(3, 1, 9));
+        var bia = Usuario.Criar("Bia Março", "bia_marco", "hash", PerfilUsuario.Atendente, Em(3, 1, 9));
         var fabrica = Fornecedor.Criar("Fábrica Março", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, true);
         var leite = GrupoEstoque.Criar("Picolé ao leite Março", ModoControle.Contagem, 1);
         var coco = ItemEstoque.Criar(leite.Id, fabrica.Id, "Coco", UnidadeCompra.Caixa, 28, 25.20m, 1);
@@ -182,8 +182,8 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
     public async Task Potes_SaldoContagemResumoEPedido_NoPostgres()
     {
         // Abril: domingo 05/04 contagem; segunda 06/04 vendas e nova contagem à noite.
-        var dona = Usuario.Criar("Dona Abril", "dona-abril", "hash", PerfilUsuario.Admin, Em(4, 1, 9));
-        var carla = Usuario.Criar("Carla Abril", "carla-abril", "hash", PerfilUsuario.Atendente, Em(4, 1, 9));
+        var dona = Usuario.Criar("Dona Abril", "dona_abril", "hash", PerfilUsuario.Admin, Em(4, 1, 9));
+        var carla = Usuario.Criar("Carla Abril", "carla_abril", "hash", PerfilUsuario.Atendente, Em(4, 1, 9));
         var fabrica = Fornecedor.Criar("Fábrica Abril", null, [DayOfWeek.Tuesday], 1, false, FormaEnvioPedido.Impresso, true);
         var potes = GrupoEstoque.Criar("Pote Abril", ModoControle.SaldoPelaVenda, 1);
         var flocos = ItemEstoque.Criar(potes.Id, fabrica.Id, "Flocos", UnidadeCompra.Unidade, 1, 14m, 1, minimoUnidades: 1);
