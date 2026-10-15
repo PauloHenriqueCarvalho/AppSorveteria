@@ -1,6 +1,8 @@
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Estoque;
 using SorveteriaMaui.Data;
+using SorveteriaMaui.Model;
 using SorveteriaMaui.Services.Api;
 using Comanda = GestaoSorveteria.Domain.Comandas.Comanda;
 using Produto = GestaoSorveteria.Domain.Produtos.Produto;
@@ -8,10 +10,29 @@ using Produto = GestaoSorveteria.Domain.Produtos.Produto;
 namespace SorveteriaMaui.Services;
 
 /// <summary>
+/// RN-ES-09: o que a tela precisa antes de lançar um produto. <paramref name="PedeSabor"/>: o produto é um pote (grupo
+/// <c>SaldoPelaVenda</c>) e a tela mostra a grade com os <paramref name="Sabores"/> ativos do grupo, na ordem da planilha.
+/// Pote sem sabor no tablet (catálogo de estoque ainda não baixado) vende sem sabor.
+/// </summary>
+public sealed record SaboresDoProduto(bool PedeSabor, IReadOnlyList<ItemEstoqueLocal> Sabores)
+{
+    public static readonly SaboresDoProduto Nenhum = new(false, []);
+
+    /// <summary>Pede sabor, mas o tablet ainda não tem nenhum sabor ativo do grupo: vende sem sabor e avisa.</summary>
+    public bool SemSaboresNoTablet => PedeSabor && Sabores.Count == 0;
+}
+
+/// <summary>
 /// Casos de uso da comanda no aparelho: carrega do SQLite → aplica a regra do Domain → grava tudo numa transação.
 /// Total, troco e validações vêm do Domain (mesmo código da API). Erros de regra saem como <see cref="DomainException"/>.
 /// </summary>
-public sealed class ComandaAppService(ComandaRepository comandas, ProdutoRepository produtos, CaixaRepository caixas, SessaoUsuario sessao, SyncService sync)
+public sealed class ComandaAppService(
+    ComandaRepository comandas,
+    ProdutoRepository produtos,
+    CaixaRepository caixas,
+    ItemEstoqueRepository itensEstoque,
+    SessaoUsuario sessao,
+    SyncService sync)
 {
     // Uma operação por vez: dois toques rápidos não podem ler a mesma versão da comanda
     // (item perdido, pagamento em dobro) nem pegar o mesmo número (RN-CM-02).
@@ -26,20 +47,63 @@ public sealed class ComandaAppService(ComandaRepository comandas, ProdutoReposit
             return comanda.Id;
         });
 
-    /// <summary>RN-CM-03/04: mesmo produto soma na linha existente.</summary>
-    public Task AdicionarProdutoAsync(Guid comandaId, Guid produtoId, int quantidade) =>
+    /// <summary>
+    /// RN-PR-06 / RN-ES-09: o produto pede sabor? Decide pelo modo do grupo baixado do catálogo de estoque (muda junto quando
+    /// a dona troca o modo); se o tablet ainda não conhece o grupo, vale o <c>PedeSabor</c> que veio com o produto.
+    /// Só lê o SQLite: funciona sem internet.
+    /// </summary>
+    public async Task<SaboresDoProduto> SaboresAsync(Guid produtoId)
+    {
+        var linha = await produtos.ObterAsync(produtoId);
+        if (linha?.GrupoEstoqueId is not { } grupoId)
+        {
+            return SaboresDoProduto.Nenhum;
+        }
+
+        var doGrupo = await itensEstoque.ListarDoGrupoAsync(grupoId);
+        ModoControle? modo = doGrupo.Count > 0 ? doGrupo[0].ModoControleGrupo : null;
+        if (!linha.PedeSaborNoModo(modo))
+        {
+            return SaboresDoProduto.Nenhum;
+        }
+
+        return new SaboresDoProduto(true, doGrupo.Where(i => i.Ativo).ToList());
+    }
+
+    /// <summary>
+    /// RN-CM-03/04: mesmo produto (e mesmo sabor) soma na linha existente. <paramref name="saborId"/>: RN-ES-09, o sabor
+    /// escolhido na grade do pote — o Domain confere que é do grupo do produto e está ativo, e cada sabor vira uma linha
+    /// ("Pote 1L · Flocos"). Nulo = sem sabor (picolé, massa, ou pote enquanto o tablet não tem os sabores).
+    /// A venda nunca é recusada por saldo de estoque.
+    /// </summary>
+    public Task AdicionarProdutoAsync(Guid comandaId, Guid produtoId, int quantidade, Guid? saborId = null) =>
         AlterarAsync(comandaId, async comanda =>
         {
             var linha = await produtos.ObterAsync(produtoId)
                 ?? throw new DomainException("Produto não encontrado. Atualize a lista de produtos.");
 
+            var agora = DateTime.UtcNow;
             var produto = Produto.Criar(linha.Nome, linha.Categoria, linha.Preco, linha.PermiteValorLivre, linha.Ordem, linha.CriadoEm, linha.Id);
-            if (!linha.Ativo)
+            if (linha.GrupoEstoqueId is { } grupoId && !linha.PermiteValorLivre)
             {
-                produto.Desativar(DateTime.UtcNow);
+                // RN-PR-06: mesmo produto da API, ligado ao grupo (o Domain confere o sabor contra ele)
+                produto.LigarAoEstoque(grupoId, Math.Clamp(linha.UnidadesPorVenda, 1, Produto.UnidadesPorVendaMaximo), agora);
             }
 
-            comanda.AdicionarProduto(produto, quantidade);
+            if (!linha.Ativo)
+            {
+                produto.Desativar(agora);
+            }
+
+            ItemEstoque? sabor = null;
+            if (saborId is { } id)
+            {
+                var saborLocal = await itensEstoque.ObterAsync(id)
+                    ?? throw new DomainException("Este sabor não está mais na lista do tablet. Toque no produto de novo.");
+                sabor = saborLocal.ParaDominio();
+            }
+
+            comanda.AdicionarProduto(produto, quantidade, sabor: sabor);
         });
 
     /// <summary>RN-CM-03: self-service / valor digitado, sem produto.</summary>

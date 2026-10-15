@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
              x:Class="SorveteriaMaui.View.SelecaoProdutoView"
              Title="Adicionar Produto"
              BackgroundColor="#F4F4F9">
@@ -79,6 +80,8 @@
                             <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
                                 <Label Text="{Binding Nome}" FontAttributes="Bold" FontSize="16" TextColor="#333"/>
                                 <Label Text="{Binding Preco, StringFormat='R$ {0:F2}'}" TextColor="#4CAF50" FontSize="14" FontAttributes="Bold"/>
+                                <!-- RN-ES-09: pote abre a grade de sabores -->
+                                <Label Text="escolhe o sabor" IsVisible="{Binding PedeSaborNaVenda}" FontSize="12" TextColor="#6200EE"/>
                             </VerticalStackLayout>
 
                             <Button Grid.Column="1"
@@ -95,6 +98,64 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+
+        <!-- RN-ES-09: grade de sabores, só nos potes. Cobre a busca e a lista; a quantidade (embaixo) continua valendo.
+             1 toque no sabor lança o pote; "Voltar" não lança nada. -->
+        <Grid Grid.Row="0"
+              Grid.RowSpan="2"
+              IsVisible="{Binding EscolhendoSabor}"
+              BackgroundColor="#F4F4F9"
+              RowDefinitions="Auto, *"
+              Padding="15,15,15,5">
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="0,0,0,10">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                    <Label Text="{Binding TituloSabor}" FontSize="22" FontAttributes="Bold" TextColor="#212121" />
+                    <Label Text="Qual sabor? Toque no sabor para adicionar." FontSize="15" TextColor="#616161" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1"
+                        Text="Voltar"
+                        FontSize="16"
+                        FontAttributes="Bold"
+                        HeightRequest="56"
+                        Padding="20,0"
+                        CornerRadius="10"
+                        BackgroundColor="#F0F0F0"
+                        TextColor="#333"
+                        VerticalOptions="Center"
+                        Command="{Binding CancelarSaborCommand}" />
+            </Grid>
+
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Sabores}" SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SaborParaEscolher">
+                        <Border StrokeShape="RoundRectangle 12"
+                                Stroke="#6200EE"
+                                StrokeThickness="2"
+                                BackgroundColor="White"
+                                Padding="10"
+                                HeightRequest="84">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                      Command="{Binding EscolherSaborCommand, Source={RelativeSource AncestorType={x:Type vm:SelecaoProdutoViewModel}}}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="{Binding Nome}"
+                                   FontSize="18"
+                                   FontAttributes="Bold"
+                                   TextColor="#4527A0"
+                                   HorizontalTextAlignment="Center"
+                                   VerticalTextAlignment="Center"
+                                   HorizontalOptions="Fill"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="WordWrap"
+                                   MaxLines="2" />
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
 
         <Border Grid.Row="2"
                 BackgroundColor="White"

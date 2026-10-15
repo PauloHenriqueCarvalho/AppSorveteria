@@ -20,6 +20,15 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
 - **⚖️ Self-service (peso)**: digite o **valor que a balança mostrou** (em reais).
 - **🛵 Delivery**: igual à comanda, com a observação de endereço/telefone.
 
+**Pote com sabor** (Pote 1L, 2L, 5L e potes de açaí — na lista aparece "escolhe o sabor"):
+
+1. Toque no pote. Aparecem os **sabores**, na ordem da planilha.
+2. Toque no sabor. Pronto: o pote entra na comanda com o sabor ("Pote 1L · Flocos").
+3. Mais de um do mesmo sabor? Ajuste a **quantidade** embaixo antes de tocar no sabor (ou use **+** na comanda depois). Sabores diferentes ficam em linhas separadas.
+4. Tocou no pote errado? **Voltar** (nada é lançado).
+
+Picolé e massa continuam sem sabor, como sempre. Se aparecer "adicionado sem sabor (os sabores ainda não chegaram ao tablet)", a venda está certa; com internet, vá na aba **Produtos** e toque em **Atualizar**. A venda nunca é bloqueada por falta de pote no sistema, nem sem internet.
+
 **Pagar:**
 
 1. Toque em **Pagar** e escolha a forma: **Dinheiro, Pix, Cartão débito ou Cartão crédito**.
@@ -84,6 +93,7 @@ Uma vez por semana, na **véspera do dia do pedido**, alguém conta o que tem no
 3. O número começa **vazio** de propósito: conte de verdade. Embaixo do nome aparece a **contagem anterior** (ex.: "Contagem anterior: 2,5 caixas (07/10)") só para comparar.
 4. Item contado fica verde. No alto aparece quanto falta (ex.: "32 de 123 contados · faltam 91").
 5. Precisou parar? Toque em **💾 Salvar e continuar depois**. Tudo o que você marcou já está guardado; quando voltar à tela, a contagem continua de onde parou (outra pessoa também pode continuar).
+   - Nos **potes**, conte cada sabor certinho: o sistema compara com o que foi vendido com sabor desde a última contagem, e a dona vê as diferenças.
 6. Terminou? Toque em **✅ Concluir contagem** e confirme. **Depois de concluir não dá para mudar.** Item que ficou sem número vai como "não contado" (não vira zero): se acabou, use **Não tem nenhum**. Errou algo depois de concluir? Faça uma nova contagem.
 
 **Sem internet?** Conte do mesmo jeito. A contagem fica no tablet e sobe sozinha para o painel quando a internet voltar ("contagem aguardando envio" aparece no alto da tela de comandas).
@@ -112,7 +122,7 @@ Abra o **endereço do painel** (no alto desta página) e entre com o usuário **
 | **Catálogo** (Estoque e compras) | O que a loja compra, separado por grupo como na planilha: sabor, fornecedor, embalagem, custo, mínimo e alvo | **Importar a planilha** (primeiro mostra a prévia, depois você confirma; o que já está cadastrado não muda), cadastrar item (copos, casquinhas, insumos), trocar o modo de controle do grupo, desativar sabor que saiu, exportar para o Excel |
 | **Fornecedores** | Quem vende para a loja, dia do pedido, prazo de entrega e como o pedido é enviado; no fornecedor, como ele atendeu nos últimos 30 dias e o que mais falta | Cadastrar, mudar o dia do pedido, WhatsApp, meia caixa, mostrar preços na folha. Fornecedor com itens ativos só é desativado depois de trocar ou desativar os itens |
 
-Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produtos para baixo: o cardápio novo chega na hora.
+Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produtos para baixo: o cardápio novo (e os sabores dos potes) chega na hora.
 
 ## Quando algo sai do normal
 
@@ -122,6 +132,7 @@ Mudou preço ou produto? No tablet, feche e abra o app, ou puxe a tela de produt
 | O WhatsApp não abriu no aviso urgente ou no resumo do dia | O app mostra a mensagem: toque em **Copiar mensagem** e mande para a dona de outro celular. O aviso já está guardado |
 | O resumo do dia não saiu no fechamento | Com internet, aba **Caixa** → **📲 Enviar resumo do dia** |
 | Não aparece "Hoje é dia de contagem" | O dia vem do **dia do pedido** do fornecedor (painel → Fornecedores): a contagem é na véspera. Confira o dia lá e abra o app com internet uma vez. Dá para contar a qualquer hora pelo botão **📋 Contagem** |
+| O pote não pede o sabor (ou pede e não devia) | O produto precisa estar ligado ao grupo do pote no painel (Produtos → Estoque) e o grupo precisa estar como "saldo pela venda" (Catálogo). Depois, no tablet, aba **Produtos** → **Atualizar** com internet |
 | A contagem do tablet não chegou ao painel | Deixe o tablet com internet por 1 minuto. Se ela aparecer em laranja na tela de contagem, foi recusada: leia o motivo e faça uma nova |
 | O painel demora para abrir | Espere 1 minuto. Se passar de 2, confira a internet do celular |
 | Venda com valor errado já finalizada | Dona: painel → Vendas → Estornar (com motivo). Atendente: lança a venda certa de novo |

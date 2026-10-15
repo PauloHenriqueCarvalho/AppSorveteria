@@ -11,6 +11,13 @@ namespace SorveteriaMaui.Model;
 [Table("itens_estoque")]
 public class ItemEstoqueLocal
 {
+    /// <summary>
+    /// O tablet não conhece o fornecedor (o atendente não vê custo nem fornecedor). O <see cref="ItemEstoque"/> montado por
+    /// <see cref="ParaDominio"/> serve só para aplicar as regras do Domain (quantidade na contagem, sabor na venda); o
+    /// fornecedor e o custo dele não são gravados nem enviados.
+    /// </summary>
+    private static readonly Guid FornecedorDesconhecidoNoTablet = new("5f0e2a51-0c0a-4c55-9a3e-7a3b51c0a7e1");
+
     [PrimaryKey, Column("id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -57,4 +64,24 @@ public class ItemEstoqueLocal
         UnidadeCompra.Pacote when UnidadesPorEmbalagem > 1 => $"Conte as unidades (1 pacote = {UnidadesPorEmbalagem}).",
         _ => "Conte as unidades.",
     };
+
+    /// <summary>
+    /// O item com as regras do Domain: passo e meia caixa na contagem (RN-ES-03/06), sabor do grupo e ativo na venda do pote
+    /// (RN-ES-09). Desativado continua desativado (a venda recusa; a contagem aceita o que já foi contado).
+    /// </summary>
+    public ItemEstoque ParaDominio()
+    {
+        var item = ItemEstoque.Criar(GrupoId, FornecedorDesconhecidoNoTablet, Nome, Unidade, UnidadesPorEmbalagem,
+            custoEmbalagem: 0m, Ordem, id: Id);
+        if (!Ativo)
+        {
+            item.Desativar();
+        }
+
+        return item;
+    }
+
+    /// <summary>O grupo do item com o modo de controle baixado (RN-ES-02).</summary>
+    public GrupoEstoque GrupoParaDominio() =>
+        GrupoEstoque.Criar(GrupoNome is { Length: >= 2 } nome ? nome : "Sem grupo", ModoControleGrupo, GrupoOrdem, GrupoId);
 }

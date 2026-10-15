@@ -2,17 +2,22 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 using System.Windows.Input;
+using GestaoSorveteria.Domain.Estoque;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
 
 namespace SorveteriaMaui.ViewModel;
 
+/// <summary>Botão da grade de sabores do pote (RN-ES-09), na ordem da planilha.</summary>
+public sealed record SaborParaEscolher(Guid Id, string Nome);
+
 [QueryProperty(nameof(ComandaAtual), "ComandaSelecionada")]
 public class SelecaoProdutoViewModel : BindableObject
 {
     private readonly ComandaAppService _comandas;
     private readonly ProdutoRepository _produtos;
+    private readonly ItemEstoqueRepository _itensEstoque;
     private Comanda? _comandaAtual;
 
     public Comanda? ComandaAtual
@@ -81,6 +86,38 @@ public class SelecaoProdutoViewModel : BindableObject
         }
     }
 
+    // ---------------------------------------------------------------- RN-ES-09: grade de sabores, só nos potes
+
+    /// <summary>O pote tocado, à espera do sabor. Nulo = grade fechada (ou o sabor já foi tocado e está sendo lançado).</summary>
+    private Produto? _produtoDoSabor;
+
+    private bool _escolhendoSabor;
+    public bool EscolhendoSabor
+    {
+        get => _escolhendoSabor;
+        set { _escolhendoSabor = value; OnPropertyChanged(); }
+    }
+
+    private string _tituloSabor = string.Empty;
+    public string TituloSabor
+    {
+        get => _tituloSabor;
+        set { _tituloSabor = value; OnPropertyChanged(); }
+    }
+
+    private IReadOnlyList<SaborParaEscolher> _sabores = [];
+    public IReadOnlyList<SaborParaEscolher> Sabores
+    {
+        get => _sabores;
+        set { _sabores = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>1 toque no sabor lança o pote com aquele sabor (na quantidade escolhida embaixo).</summary>
+    public ICommand EscolherSaborCommand { get; }
+
+    /// <summary>"Voltar" (ou o botão voltar do aparelho): fecha a grade sem lançar nada.</summary>
+    public ICommand CancelarSaborCommand { get; }
+
     // Comandos chamados pela Interface (XAML)
     public ICommand SelecionarProdutoCommand { get; }
     public ICommand PrecoManualCommand { get; }
@@ -88,13 +125,16 @@ public class SelecaoProdutoViewModel : BindableObject
     public ICommand DiminuirQtdeCommand { get; }
     public ICommand DigitarQtdeCommand { get; }
 
-    public SelecaoProdutoViewModel(ComandaAppService comandas, ProdutoRepository produtos)
+    public SelecaoProdutoViewModel(ComandaAppService comandas, ProdutoRepository produtos, ItemEstoqueRepository itensEstoque)
     {
         _comandas = comandas;
         _produtos = produtos;
+        _itensEstoque = itensEstoque;
 
         SelecionarProdutoCommand = new Command<Produto>(async (p) => await AdicionarItem(p));
         PrecoManualCommand = new Command(async () => await AdicionarPrecoManual());
+        EscolherSaborCommand = new Command<SaborParaEscolher>(async (s) => await EscolherSabor(s));
+        CancelarSaborCommand = new Command(FecharGradeDeSabores);
 
         AumentarQtdeCommand = new Command(() => Quantidade++);
         DiminuirQtdeCommand = new Command(() => { if (Quantidade > 1) Quantidade--; });
@@ -115,6 +155,14 @@ public class SelecaoProdutoViewModel : BindableObject
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _produtos.ListarAtivosAsync(); // cache do catálogo da API (C2)
+
+            // RN-ES-09: marca os potes ("escolhe o sabor") pelo modo do grupo que o tablet conhece
+            var modos = await _itensEstoque.ModosDosGruposAsync();
+            foreach (var produto in lista)
+            {
+                produto.PedeSaborNaVenda = produto.PedeSaborNoModo(ModoDoGrupo(modos, produto));
+            }
+
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 _todos = lista;
@@ -163,17 +211,76 @@ public class SelecaoProdutoViewModel : BindableObject
 
     async Task AdicionarItem(Produto produto)
     {
+        if (ComandaAtual == null || EscolhendoSabor) return;
+
+        // RN-ES-09: pote (grupo com saldo pela venda) abre a grade de sabores; picolé e massa entram direto, como sempre
+        SaboresDoProduto? sabores = null;
+        if (!await Operacao.CarregarAsync(async () => sabores = await _comandas.SaboresAsync(produto.Id)) || sabores is null)
+        {
+            return;
+        }
+
+        if (sabores.PedeSabor && sabores.Sabores.Count > 0)
+        {
+            AbrirGradeDeSabores(produto, sabores);
+            return;
+        }
+
+        // Pote sem sabores no tablet (a lista do estoque ainda não foi baixada): vende sem sabor e avisa sem travar
+        var aviso = sabores.SemSaboresNoTablet ? " sem sabor (os sabores ainda não chegaram ao tablet)" : string.Empty;
+        await Lancar(produto, saborId: null, descricao: produto.Nome, complemento: aviso);
+    }
+
+    private void AbrirGradeDeSabores(Produto produto, SaboresDoProduto sabores)
+    {
+        _produtoDoSabor = produto;
+        TituloSabor = produto.Nome;
+        Sabores = sabores.Sabores.Select(s => new SaborParaEscolher(s.Id, s.Nome)).ToList();
+        EscolhendoSabor = true;
+    }
+
+    private void FecharGradeDeSabores()
+    {
+        _produtoDoSabor = null;
+        EscolhendoSabor = false;
+        Sabores = [];
+    }
+
+    async Task EscolherSabor(SaborParaEscolher? sabor)
+    {
+        // Toque duplo no sabor: o segundo encontra a grade "ocupada" e não lança outra vez
+        var produto = _produtoDoSabor;
+        if (ComandaAtual == null || produto is null || sabor is null) return;
+        _produtoDoSabor = null;
+
+        try
+        {
+            await Lancar(produto, sabor.Id, $"{produto.Nome} · {sabor.Nome}", complemento: string.Empty);
+        }
+        finally
+        {
+            FecharGradeDeSabores(); // deu certo ou não (o alerta já apareceu): volta para a lista de produtos
+        }
+    }
+
+    /// <summary>Lança o produto (com o sabor, nos potes) e confirma com toast, sem toque extra (B11).</summary>
+    private async Task Lancar(Produto produto, Guid? saborId, string descricao, string complemento)
+    {
         if (ComandaAtual == null) return;
 
         var quantidade = Quantidade;
-        if (await Executar(() => _comandas.AdicionarProdutoAsync(ComandaAtual.Id, produto.Id, quantidade)))
+        var comandaId = ComandaAtual.Id;
+        if (await Executar(() => _comandas.AdicionarProdutoAsync(comandaId, produto.Id, quantidade, saborId)))
         {
-            AvisoRapido.Mostrar($"{quantidade}x {produto.Nome} adicionado"); // B11: sem toque extra
+            AvisoRapido.Mostrar($"{quantidade}x {descricao} adicionado{complemento}"); // B11: sem toque extra
 
             // Reseta a quantidade para 1 para o próximo clique
             Quantidade = 1;
         }
     }
+
+    private static ModoControle? ModoDoGrupo(IReadOnlyDictionary<Guid, ModoControle> modos, Produto produto) =>
+        produto.GrupoEstoqueId is { } grupoId && modos.TryGetValue(grupoId, out var modo) ? modo : null;
 
     private void AplicarFiltro()
     {
