@@ -29,7 +29,10 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   },
   {
     titulo: 'Análise',
-    itens: [{ para: '/relatorios', texto: 'Relatórios', icone: 'relatorios' }],
+    itens: [
+      { para: '/relatorios', texto: 'Relatórios', icone: 'relatorios' },
+      { para: '/clima-vendas', texto: 'Clima × vendas', icone: 'clima' },
+    ],
   },
   {
     titulo: 'Estoque e compras',

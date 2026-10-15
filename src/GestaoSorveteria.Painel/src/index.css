@@ -893,6 +893,224 @@ textarea {
   margin-top: 0.6rem;
 }
 
+/* Clima × vendas (RN-CL-06): pontos por dia — máxima na horizontal, faturamento na vertical (um eixo só). */
+.dispersao {
+  --cor-dia-util: #3a73b8;
+  --cor-dia-fds: var(--cor-marca);
+}
+
+.dispersao-chave {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+
+.dispersao-area {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 240px auto;
+  column-gap: 0.6rem;
+}
+
+.dispersao-plano {
+  position: relative;
+  margin: 0 10px;
+  border-bottom: 1px solid var(--cor-borda-forte);
+  border-left: 1px solid var(--cor-borda-forte);
+}
+
+.dispersao-ponto {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: 0 0 -13px -13px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* O alvo do mouse é maior que a marca: o ponto desenhado fica no centro, com anel na cor do fundo. */
+.dispersao-ponto::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  box-shadow: 0 0 0 2px var(--cor-cartao);
+}
+
+.dispersao-util::before,
+.dispersao-chave.dispersao-util {
+  border-radius: 50%;
+  background: var(--cor-dia-util);
+}
+
+.dispersao-fds::before,
+.dispersao-chave.dispersao-fds {
+  border-radius: 2px;
+  background: var(--cor-dia-fds);
+}
+
+.dispersao-ponto-ativo,
+.dispersao-ponto:focus-visible {
+  z-index: 3;
+}
+
+.dispersao-ponto-ativo::before {
+  inset: 5px;
+}
+
+.dispersao-ponto:focus-visible {
+  outline: 2px solid var(--cor-texto);
+  outline-offset: 0;
+  border-radius: 50%;
+}
+
+.dispersao-dica {
+  bottom: calc(100% + 4px);
+  left: 0;
+  transform: none;
+  text-align: left;
+}
+
+.dispersao-dica-esquerda {
+  left: auto;
+  right: 0;
+}
+
+.dispersao-dica-baixo {
+  bottom: auto;
+  top: calc(100% + 4px);
+}
+
+.dispersao-eixo-x {
+  grid-column: 2;
+  position: relative;
+  height: 1.4rem;
+  margin: 0 10px;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+
+.dispersao-eixo-x span {
+  position: absolute;
+  top: 0.35rem;
+  transform: translateX(-50%);
+}
+
+.dispersao-rodape {
+  margin: 0;
+  text-align: right;
+}
+
+/* Configurações → Local da loja (RN-CL-01). */
+.local-atual {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.local-atual svg {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--cor-marca);
+}
+
+.linha-busca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.linha-busca .campo {
+  flex: 1 1 260px;
+}
+
+.cartao-confirmacao {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cabecalho-tabela);
+}
+
+.cartao-confirmacao p {
+  margin: 0 0 0.4rem;
+}
+
+.situacao-clima {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-linha);
+}
+
+.situacao-clima p {
+  margin: 0;
+}
+
+.situacao-clima .rodape-formulario {
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Previsão dos próximos dias (RN-CL-03). */
+.previsao-dias {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.previsao-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.65rem 0.4rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cabecalho-tabela);
+  text-align: center;
+}
+
+.previsao-data {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--cor-texto-suave);
+}
+
+.previsao-simbolo {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.tabela-medias tbody th[scope='row'] {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--cor-texto);
+  background: none;
+  white-space: nowrap;
+}
+
+.tabela-medias .tabela-medias-grupo th {
+  padding-top: 0.9rem;
+  text-align: left;
+}
+
+.tabela-medias td.numero {
+  min-width: 7.5rem;
+}
+
+.tabela-medias td .barra {
+  margin-top: 0.3rem;
+}
+
 /* ---------------------------------------------------------------- tabela */
 
 .tabela-caixa {

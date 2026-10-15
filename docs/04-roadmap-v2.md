@@ -93,8 +93,8 @@ Plano detalhado em docs/06, seção 4.
 
 Detalhes em docs/07.
 
-- [ ] API no Render Free (Docker) + PostgreSQL no Neon Free; variáveis de ambiente; `/health`
-- [ ] Painel no Cloudflare Pages apontando para a API
+- [x] API no Render Free (Docker) + PostgreSQL no Neon Free; variáveis de ambiente; `/health` — publicado (o Render sobe a partir da `main`)
+- [x] Painel no Cloudflare Pages apontando para a API — `sorveteria-painel.pages.dev` (produção = `main`)
 - [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração — script `scripts/backup.ps1` e passo a passo de restauração prontos (docs/07, 07/10); falta agendar contra o Neon
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app — script `scripts/publicar-apk.ps1` e passo a passo (keystore fora do Git, link fixo, instalação) prontos (docs/07, 07/10); falta gerar o APK oficial e publicar o link
 - [x] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; entregue em 07/10/2026)
@@ -159,10 +159,10 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 
 Começar pequeno e guardar dados desde já: clima de cada dia e a previsão como estava, ao lado das vendas, para estimar vendas e pedido pela previsão quando houver meses de histórico (docs/02, seção 9b; docs/03, seção 5a). O clima é guardado por ponto (latitude/longitude), já pronto para uma segunda loja no futuro.
 
-- [ ] Domain: local da loja na configuração, ponto do clima, clima do dia (definitivo depois de 2 dias), previsão guardada, feriados nacionais (RN-CL-01/02/03/05) + testes
-- [ ] Application + Infrastructure: coleta que completa o que falta (API dormindo não perde nada), fonte Visual Crossing atrás de `IFonteClima`, tabelas `clima_dias` e `previsoes_clima`, `BackgroundService` a cada 3 h, endpoints `/api/clima/*` (RN-CL-04/07)
-- [ ] API: relatório Clima × vendas por dia, médias por faixa de temperatura e com/sem chuva (dias úteis × fins de semana e feriados), avisos urgentes do dia, próximos 7 dias (RN-CL-06)
-- [ ] Painel: local da loja em Configurações (procurar, confirmar, situação da coleta, "Atualizar agora") e tela Análise → Clima × vendas (gráfico, médias, tabela por dia, exportar Excel)
+- [x] Domain: local da loja na configuração, ponto do clima, clima do dia (definitivo depois de 2 dias inteiros), previsão guardada, feriados nacionais (RN-CL-01/02/03/05) + testes — #95
+- [x] Application + Infrastructure: coleta que completa o que falta (API dormindo não perde nada), fonte Visual Crossing atrás de `IFonteClima`, tabelas `clima_dias` e `previsoes_clima` (migração `ClimaDiario`), `BackgroundService` a cada 3 h, endpoints `/api/clima/*` (RN-CL-04/07) — #95
+- [x] API: relatório Clima × vendas por dia, médias por faixa de temperatura e com/sem chuva (dias úteis × fins de semana e feriados), avisos urgentes do dia, próximos 7 dias (RN-CL-06) — #95
+- [x] Painel: local da loja em Configurações (procurar, confirmar, situação da coleta, "Atualizar agora") e tela Análise → Clima × vendas (próximos dias, gráfico temperatura × faturamento, médias, dia a dia, exportar Excel)
 - [ ] Ligar em produção: criar a conta grátis no Visual Crossing, `Clima__ChaveApi` no Render, local da loja no painel (docs/07)
 
 Depois (a combinar): anotação do dia pela dona (evento na cidade, feriado municipal, loja fechada, faltou luz) e, com uns 3 meses de dados, a estimativa de vendas e do pedido pela previsão.

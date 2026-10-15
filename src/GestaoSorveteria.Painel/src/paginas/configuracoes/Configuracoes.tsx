@@ -6,14 +6,21 @@ import type { ConfiguracaoLojaDto } from '../../api/tipos.ts'
 import Consulta from '../../componentes/Consulta.tsx'
 import { CabecalhoPagina } from '../../componentes/Ui.tsx'
 import { formatarWhatsApp } from '../../estoque.ts'
+import LocalClima from './LocalClima.tsx'
 
-/** /configuracoes — RN-AV-10: nome nas mensagens e WhatsApp da dona (para onde vão o urgente e o resumo do dia). */
+/**
+ * /configuracoes — RN-AV-10: nome nas mensagens e WhatsApp da dona (para onde vão o urgente e o resumo do dia); RN-CL-01: local
+ * da loja para guardar o clima de cada dia.
+ */
 export default function Configuracoes() {
   const configuracao = useQuery({ queryKey: CHAVE_CONFIGURACAO, queryFn: obterConfiguracao })
   return (
     <>
-      <CabecalhoPagina titulo="Configurações" subtitulo="Para onde vão os avisos do balcão" />
-      <Consulta consulta={configuracao}>{(dados) => <Formulario key={JSON.stringify(dados)} dados={dados} />}</Consulta>
+      <CabecalhoPagina titulo="Configurações" subtitulo="Para onde vão os avisos do balcão e onde fica a loja" />
+      <div className="painel">
+        <Consulta consulta={configuracao}>{(dados) => <Formulario key={JSON.stringify(dados)} dados={dados} />}</Consulta>
+        <LocalClima />
+      </div>
     </>
   )
 }
