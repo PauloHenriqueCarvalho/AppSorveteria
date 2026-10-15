@@ -15,6 +15,7 @@ import ResumoDoDia from './paginas/avisos/ResumoDoDia.tsx'
 import Configuracoes from './paginas/configuracoes/Configuracoes.tsx'
 import EditarContagem from './paginas/contagens/EditarContagem.tsx'
 import ListaContagens from './paginas/contagens/ListaContagens.tsx'
+import ClimaVendas from './paginas/clima/ClimaVendas.tsx'
 import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
 import Relatorios from './paginas/relatorios/Relatorios.tsx'
 import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
           { path: 'vendas/:id', element: <DetalheVenda /> },
           { path: 'caixas', element: <ListaCaixas /> },
           { path: 'relatorios', element: <Relatorios /> },
+          { path: 'clima-vendas', element: <ClimaVendas /> },
           { path: 'caixas/:id', element: <DetalheCaixa /> },
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },

@@ -753,3 +753,134 @@ export interface PrimeirosPassosDto {
   contagemConcluida: boolean
   vendaDoTablet: boolean
 }
+
+// ---------------------------------------------------------------- Clima e calendário (docs/02, seção 9b)
+
+/** Local da loja para o clima (RN-CL-01): como o serviço de clima encontrou; coordenadas com 4 casas. */
+export interface LocalLojaDto {
+  nome: string
+  latitude: number
+  longitude: number
+}
+
+/** PUT /api/clima/local (Admin). */
+export interface DefinirLocalLojaRequest {
+  nome: string
+  latitude: number
+  longitude: number
+}
+
+/** GET /api/clima/situacao (Admin): coleta ligada, local, última coleta e o que já está guardado. */
+export interface SituacaoClimaDto {
+  chaveConfigurada: boolean
+  local: LocalLojaDto | null
+  /** Última coleta que deu certo (desde que a API ligou). */
+  ultimaColetaEm: string | null
+  ultimaTentativaEm: string | null
+  ultimoErro: string | null
+  primeiroDia: string | null
+  ultimoDia: string | null
+  diasComClima: number
+  fonte: string
+  atribuicao: string
+  atribuicaoLink: string
+}
+
+/** POST /api/clima/atualizar (Admin). */
+export interface ColetaClimaDto {
+  coletou: boolean
+  diasGravados: number
+  previsoesGravadas: number
+  mensagem: string
+  falhou: boolean
+}
+
+/** Clima de um dia (RN-CL-02): °C com 1 casa, chuva em mm, percentuais 0–100. */
+export interface ClimaDiaDto {
+  data: string
+  tempMax: number
+  tempMin: number
+  tempMedia: number
+  sensacaoMax: number | null
+  chuvaMm: number | null
+  chuvaHorasPct: number | null
+  nuvensPct: number | null
+  umidadePct: number | null
+  icone: string | null
+  condicao: string | null
+  /** Observado, Combinado ou Previsto. */
+  origem: string
+  definitivo: boolean
+}
+
+/** Previsão guardada de um dia (RN-CL-03). */
+export interface PrevisaoDiaDto {
+  data: string
+  feitaNoDia: string
+  tempMax: number
+  tempMin: number
+  chuvaMm: number | null
+  chanceChuvaPct: number | null
+  icone: string | null
+  condicao: string | null
+}
+
+export interface CategoriaNoDiaDto {
+  categoria: string
+  quantidade: number
+  total: number
+}
+
+/** Um dia do Clima × vendas (RN-CL-06). diaDaSemana: 0 = domingo. */
+export interface DiaClimaVendasDto {
+  data: string
+  diaDaSemana: number
+  feriado: string | null
+  feriadoFacultativo: boolean
+  fimDeSemanaOuFeriado: boolean
+  clima: ClimaDiaDto | null
+  faturamento: number
+  vendas: number
+  ticketMedio: number
+  porCategoria: CategoriaNoDiaDto[]
+  avisosUrgentes: number
+  /** Tem clima, teve venda e não é hoje. */
+  entraNasMedias: boolean
+}
+
+/** Média por dia; nulas quando nenhum dia entrou. */
+export interface MediaDiasDto {
+  dias: number
+  faturamentoMedio: number | null
+  vendasMedias: number | null
+}
+
+/** Faixa da máxima: `de` inclusive, `ate` exclusive; null = sem limite. */
+export interface FaixaTemperaturaDto {
+  faixa: string
+  de: number | null
+  ate: number | null
+  diasUteis: MediaDiasDto
+  fimDeSemanaEFeriado: MediaDiasDto
+}
+
+export interface ChuvaVendasDto {
+  situacao: string
+  comChuva: boolean
+  diasUteis: MediaDiasDto
+  fimDeSemanaEFeriado: MediaDiasDto
+}
+
+/** GET /api/relatorios/clima-vendas?de=&ate= (Admin, RN-CL-06). */
+export interface ClimaVendasDto {
+  de: string
+  ate: string
+  local: LocalLojaDto | null
+  dias: DiaClimaVendasDto[]
+  porTemperatura: FaixaTemperaturaDto[]
+  porChuva: ChuvaVendasDto[]
+  proximosDias: PrevisaoDiaDto[]
+  diasSemClima: number
+  atribuicao: string
+  atribuicaoLink: string
+}
