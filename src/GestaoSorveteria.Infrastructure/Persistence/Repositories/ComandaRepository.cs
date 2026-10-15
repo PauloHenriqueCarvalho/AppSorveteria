@@ -53,6 +53,13 @@ internal sealed class ComandaRepository : IComandaRepository
             .OrderBy(c => c.FechadaEm)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        await _db.Comandas
+            .AsNoTracking()
+            .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .Select(c => new VendaFechada(c.FechadaEm!.Value, c.Total))
+            .ToListAsync(cancellationToken);
+
     public async Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
         DateTime deUtc,
         DateTime ateUtc,

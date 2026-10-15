@@ -42,6 +42,11 @@ public sealed class RelatorioPeriodoService
     {
         var agora = _clock.UtcNow;
         var hoje = DiaComercial.DataDe(agora);
+        if (deDia > hoje)
+        {
+            throw new DomainException("A data inicial não pode passar de hoje.");
+        }
+
         var ate = ateDia ?? hoje;
         var de = deDia ?? new DateOnly(ate.Year, ate.Month, 1);
         PeriodoConsulta.Validar(de, ate, agora, MaximoDias);
@@ -135,22 +140,37 @@ public sealed class RelatorioPeriodoService
         return trechos;
     }
 
+    /// <summary>Período de comparação e os trechos dele, pareados por posição com os do período (RN-RL-09).</summary>
+    /// <param name="Cortavel">O último dia é o mesmo dia "deslocado" (não foi encurtado): pode contar só até o mesmo horário.</param>
+    public sealed record Comparacao(DateOnly De, DateOnly Ate, IReadOnlyList<(DateOnly De, DateOnly Ate)> Trechos, bool Cortavel);
+
     /// <summary>
-    /// RN-RL-09: período que começa no dia 1 e fica dentro do mês → o mesmo trecho do mês anterior (dia 1 ao mesmo dia,
-    /// limitado ao fim daquele mês); qualquer outro → os mesmos N dias logo antes.
+    /// RN-RL-09: menos de 7 dias → os mesmos dias da semana anterior (sábado com sábado); começa no dia 1 → os mesmos meses
+    /// logo antes (meses inteiros contra meses inteiros; mês pela metade contra o mesmo trecho, limitado ao fim do mês);
+    /// qualquer outro → os mesmos N dias logo antes.
     /// </summary>
-    public static (DateOnly De, DateOnly Ate) PeriodoAnterior(DateOnly de, DateOnly ate)
+    public static Comparacao PeriodoAnterior(DateOnly de, DateOnly ate, Agrupamento agrupamento)
     {
         var dias = ate.DayNumber - de.DayNumber + 1;
-        if (de.Day == 1 && de.Year == ate.Year && de.Month == ate.Month)
+        var trechos = Trechos(de, ate, agrupamento);
+        if (dias < 7)
         {
-            var inicio = de.AddMonths(-1);
-            var ultimoDoMes = new DateOnly(inicio.Year, inicio.Month, DateTime.DaysInMonth(inicio.Year, inicio.Month));
-            var fim = inicio.AddDays(dias - 1);
-            return (inicio, fim > ultimoDoMes ? ultimoDoMes : fim);
+            return Deslocar(7);
         }
 
-        return (de.AddDays(-dias), de.AddDays(-1));
+        if (de.Day == 1)
+        {
+            var meses = (ate.Year * 12 + ate.Month) - (de.Year * 12 + de.Month) + 1;
+            var deAntes = de.AddMonths(-meses);
+            var ultimoDoMes = ate.Day == DateTime.DaysInMonth(ate.Year, ate.Month);
+            var ateAntes = ultimoDoMes ? de.AddDays(-1) : ate.AddMonths(-meses); // AddMonths encurta 30/03 → 28/02
+            return new Comparacao(deAntes, ateAntes, Trechos(deAntes, ateAntes, agrupamento), !ultimoDoMes && ateAntes.Day == ate.Day);
+        }
+
+        return Deslocar(dias);
+
+        Comparacao Deslocar(int diasAntes) =>
+            new(de.AddDays(-diasAntes), ate.AddDays(-diasAntes), trechos.Select(t => (t.De.AddDays(-diasAntes), t.Ate.AddDays(-diasAntes))).ToList(), true);
     }
 
     private async Task<ComparativoPeriodoDto> AnteriorAsync(
@@ -164,46 +184,51 @@ public sealed class RelatorioPeriodoService
         decimal ticketMedio,
         CancellationToken cancellationToken)
     {
-        var (deAntes, ateAntes) = PeriodoAnterior(de, ate);
-        var (inicioUtc, fimUtc) = DiaComercial.IntervaloUtc(deAntes, ateAntes);
-        // Período até hoje: o último dia do anterior conta só até o mesmo horário (como no RN-RL-07).
-        var ateMesmoHorario = ate == hoje;
+        var anterior = PeriodoAnterior(de, ate, agrupamento);
+        var (inicioUtc, fimUtc) = DiaComercial.IntervaloUtc(anterior.De, anterior.Ate);
+        // Período até hoje: o último dia do anterior conta só até o mesmo horário (como no RN-RL-07) — se for o mesmo dia
+        // deslocado; mês anterior encurtado (30/03 → 28/02) conta inteiro.
+        var ateMesmoHorario = ate == hoje && anterior.Cortavel;
         if (ateMesmoHorario)
         {
-            fimUtc = DiaComercial.IntervaloUtc(ateAntes).InicioUtc + (agora - DiaComercial.IntervaloUtc(hoje).InicioUtc);
+            fimUtc = DiaComercial.IntervaloUtc(anterior.Ate).InicioUtc + (agora - DiaComercial.IntervaloUtc(hoje).InicioUtc);
         }
 
-        var vendas = await _comandas.ListarFechadasParaLeituraAsync(inicioUtc, fimUtc, cancellationToken);
-        var fechadas = vendas.Where(c => c.Status == StatusComanda.Fechada).ToList();
-        var totalAntes = Moeda.Arredondar(fechadas.Sum(c => c.Total));
-        var ticketAntes = CalculoRelatorio.TicketMedio(totalAntes, fechadas.Count);
+        // Só fechamento e total: o anterior não precisa de itens nem pagamentos.
+        var vendas = await _comandas.ListarTotaisDasFechadasAsync(inicioUtc, fimUtc, cancellationToken);
+        var totalAntes = Moeda.Arredondar(vendas.Sum(v => v.Total));
+        var ticketAntes = CalculoRelatorio.TicketMedio(totalAntes, vendas.Count);
+        var porDia = vendas.ToLookup(v => DiaComercial.DataDe(v.FechadaEm));
 
         return new ComparativoPeriodoDto(
-            deAntes,
-            ateAntes,
+            anterior.De,
+            anterior.Ate,
             ateMesmoHorario,
             totalAntes,
-            fechadas.Count,
+            vendas.Count,
             ticketAntes,
             CalculoRelatorio.Variacao(total, totalAntes),
-            CalculoRelatorio.Variacao(quantidade, fechadas.Count),
+            CalculoRelatorio.Variacao(quantidade, vendas.Count),
             CalculoRelatorio.Variacao(ticketMedio, ticketAntes),
-            PorTrecho(fechadas, deAntes, ateAntes, agrupamento));
+            anterior.Trechos.Select(t => SomarTrecho(t, porDia)).ToList());
+    }
+
+    private static VendasNoTrechoDto SomarTrecho((DateOnly De, DateOnly Ate) trecho, ILookup<DateOnly, VendaFechada> porDia)
+    {
+        var doTrecho = Enumerable.Range(0, trecho.Ate.DayNumber - trecho.De.DayNumber + 1).SelectMany(d => porDia[trecho.De.AddDays(d)]).ToList();
+        return new VendasNoTrechoDto(trecho.De, trecho.Ate, Moeda.Arredondar(doTrecho.Sum(v => v.Total)), doTrecho.Count);
     }
 
     private static IReadOnlyList<VendasNoTrechoDto> PorTrecho(IReadOnlyList<Comanda> fechadas, DateOnly de, DateOnly ate, Agrupamento agrupamento)
     {
-        var porDia = fechadas.ToLookup(c => DiaComercial.DataDe(c.FechadaEm!.Value));
-        return Trechos(de, ate, agrupamento)
-            .Select(t =>
-            {
-                var doTrecho = Enumerable.Range(0, t.Ate.DayNumber - t.De.DayNumber + 1).SelectMany(d => porDia[t.De.AddDays(d)]).ToList();
-                return new VendasNoTrechoDto(t.De, t.Ate, Moeda.Arredondar(doTrecho.Sum(c => c.Total)), doTrecho.Count);
-            })
-            .ToList();
+        var porDia = fechadas.ToLookup(c => DiaComercial.DataDe(c.FechadaEm!.Value), c => new VendaFechada(c.FechadaEm!.Value, c.Total));
+        return Trechos(de, ate, agrupamento).Select(t => SomarTrecho(t, porDia)).ToList();
     }
 
-    /// <summary>RN-RL-10: segunda a domingo, só os dias da semana que o período tem (mesmo sem venda).</summary>
+    /// <summary>
+    /// RN-RL-10: segunda a domingo, só os dias da semana que o período tem (mesmo sem venda). Hoje conta como um dia, mesmo
+    /// ainda aberto.
+    /// </summary>
     private static IReadOnlyList<VendasNoDiaDaSemanaDto> PorDiaDaSemana(IReadOnlyList<Comanda> fechadas, DateOnly de, DateOnly ate)
     {
         var diasNoPeriodo = Enumerable.Range(0, ate.DayNumber - de.DayNumber + 1)
@@ -254,7 +279,10 @@ public sealed class RelatorioPeriodoService
             .ThenBy(c => c.Categoria, StringComparer.CurrentCulture)
             .ToList();
 
-    /// <summary>RN-RL-03: sabores escolhidos na venda (potes, RN-ES-09), por unidades; empate → faturamento, depois nome.</summary>
+    /// <summary>
+    /// RN-RL-03: sabores escolhidos na venda (potes, RN-ES-09), por unidades; empate → faturamento, depois nome. Unidades pelo
+    /// "quantos saem por venda" atual do produto (mudou o cadastro, o histórico acompanha).
+    /// </summary>
     private async Task<IReadOnlyList<SaborNoRankingDto>> RankingSaboresAsync(
         IReadOnlyList<Comanda> fechadas, IReadOnlyDictionary<Guid, Domain.Produtos.Produto> produtos, CancellationToken cancellationToken)
     {

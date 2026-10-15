@@ -82,7 +82,8 @@ public sealed record RelatorioPeriodoDto(
 /// <summary>
 /// RN-RL-09: período de comparação. <paramref name="AteMesmoHorario"/>: o período consultado termina hoje, então o último dia do
 /// anterior conta só até o mesmo horário de agora. Variações como no RN-RL-07 (<c>null</c> quando a base é zero).
-/// <paramref name="PorTrecho"/>: mesmos trechos (dia/semana/mês) do anterior, para desenhar junto.
+/// <paramref name="PorTrecho"/>: trechos do anterior pareados <b>por posição</b> com os do período (o 1º com o 1º…), para desenhar
+/// junto; comparando com o mês anterior pode ter um trecho a menos ou a mais (meses de tamanhos diferentes).
 /// </summary>
 public sealed record ComparativoPeriodoDto(
     DateOnly De,

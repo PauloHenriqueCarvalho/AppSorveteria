@@ -20,6 +20,9 @@ public interface IComandaRepository
     /// </summary>
     Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 
+    /// <summary>Fechamento e total das comandas <c>Fechada</c> (sem as estornadas) com fechamento em [de, ate) — comparativos.</summary>
+    Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Vendas para o painel: comandas cuja data da venda (fechamento, senão cancelamento, senão criação) está em
     /// [<paramref name="deUtc"/>, <paramref name="ateUtc"/>), mais recente primeiro, paginadas. Devolve também o total sem paginação.

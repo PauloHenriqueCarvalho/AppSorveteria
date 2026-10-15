@@ -129,13 +129,89 @@ public class RelatorioPeriodoServiceTests
     }
 
     [Theory]
-    [InlineData("2026-03-01", "2026-03-31", "2026-02-01", "2026-02-28")] // mês de 31 contra fevereiro
-    [InlineData("2026-10-01", "2026-10-14", "2026-09-01", "2026-09-14")] // começo do mês
-    [InlineData("2026-10-10", "2026-10-14", "2026-10-05", "2026-10-09")] // 5 dias quaisquer
-    [InlineData("2026-09-01", "2026-10-14", "2026-07-19", "2026-08-31")] // dois meses: os 44 dias antes
-    public void PeriodoAnterior_PeloInicioDoPeriodo(string de, string ate, string deAntes, string ateAntes)
+    [InlineData("2026-03-01", "2026-03-31", "2026-02-01", "2026-02-28", false)] // mês inteiro contra fevereiro inteiro
+    [InlineData("2028-03-01", "2028-03-31", "2028-02-01", "2028-02-29", false)] // ano bissexto
+    [InlineData("2026-09-01", "2026-09-30", "2026-08-01", "2026-08-31", false)] // setembro contra agosto inteiro
+    [InlineData("2026-07-01", "2026-09-30", "2026-04-01", "2026-06-30", false)] // trimestre contra trimestre
+    [InlineData("2026-01-01", "2026-01-31", "2025-12-01", "2025-12-31", false)] // virada do ano
+    [InlineData("2026-10-01", "2026-10-14", "2026-09-01", "2026-09-14", true)]  // começo do mês
+    [InlineData("2026-09-01", "2026-10-14", "2026-07-01", "2026-08-14", true)]  // mês e meio
+    [InlineData("2026-03-01", "2026-03-30", "2026-02-01", "2026-02-28", false)] // 30/03 → fevereiro encurtado
+    [InlineData("2026-10-10", "2026-10-14", "2026-10-03", "2026-10-07", true)]  // menos de 7 dias: semana anterior
+    [InlineData("2026-10-14", "2026-10-14", "2026-10-07", "2026-10-07", true)]  // um dia: o mesmo dia da semana passada
+    [InlineData("2026-10-05", "2026-10-18", "2026-09-21", "2026-10-04", true)]  // 14 dias quaisquer: os 14 antes
+    public void PeriodoAnterior_ConformeInicioEFim_DevolveOPeriodoDeComparacao(string de, string ate, string deAntes, string ateAntes, bool cortavel)
     {
-        Assert.Equal((DateOnly.Parse(deAntes), DateOnly.Parse(ateAntes)), PeriodoAnterior(DateOnly.Parse(de), DateOnly.Parse(ate)));
+        var anterior = PeriodoAnterior(DateOnly.Parse(de), DateOnly.Parse(ate), Agrupamento.Dia);
+
+        Assert.Equal((DateOnly.Parse(deAntes), DateOnly.Parse(ateAntes), cortavel), (anterior.De, anterior.Ate, anterior.Cortavel));
+    }
+
+    [Fact]
+    public void PeriodoAnterior_TrimestrePorMes_TrechosPareadosMesAMes()
+    {
+        var anterior = PeriodoAnterior(new DateOnly(2026, 7, 1), new DateOnly(2026, 9, 30), Agrupamento.Mes);
+
+        Assert.Equal(
+            new[]
+            {
+                (new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30)),
+                (new DateOnly(2026, 5, 1), new DateOnly(2026, 5, 31)),
+                (new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 30)),
+            },
+            anterior.Trechos);
+    }
+
+    [Fact]
+    public void PeriodoAnterior_DezDiasPorSemana_MesmosTamanhosNaMesmaOrdem()
+    {
+        // Período: [05–11/10, 12–14/10]; o anterior é deslocado 10 dias, trecho a trecho.
+        var anterior = PeriodoAnterior(new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 14), Agrupamento.Semana);
+
+        Assert.Equal(
+            new[] { (new DateOnly(2026, 9, 25), new DateOnly(2026, 10, 1)), (new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 4)) },
+            anterior.Trechos);
+    }
+
+    [Fact]
+    public async Task Obter_EsteMesNoDia31ContraMesDe30_ComparaComOMesAnteriorInteiro()
+    {
+        _clock.UtcNow = Em(10, 31, 15);
+        Venda(Em(10, 31, 10), 20m);
+        Venda(Em(9, 30, 20), 30m); // 30/09 às 20h: conta, o mês anterior vai inteiro
+
+        var relatorio = await _service.ObterAsync(null, null, null, Ct);
+
+        Assert.Equal((new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), false),
+            (relatorio.Anterior.De, relatorio.Anterior.Ate, relatorio.Anterior.AteMesmoHorario));
+        Assert.Equal(30m, relatorio.Anterior.TotalVendido);
+        Assert.Equal(31, relatorio.PorTrecho.Count);
+        Assert.Equal(30, relatorio.Anterior.PorTrecho.Count);
+    }
+
+    [Fact]
+    public async Task Obter_VendasEspalhadas_SomaDosTrechosEIgualAoTotal()
+    {
+        Venda(Em(8, 31, 23), 7.35m);
+        Venda(Em(9, 1), 12.10m);
+        Venda(Em(9, 15, 21), 9.99m);
+        Venda(Em(10, 14, 9), 4.56m);
+
+        var relatorio = await _service.ObterAsync(new DateOnly(2026, 8, 20), new DateOnly(2026, 10, 14), "semana", Ct);
+
+        Assert.Equal(relatorio.TotalVendido, relatorio.PorTrecho.Sum(t => t.Total));
+        Assert.Equal(relatorio.QuantidadeComandas, relatorio.PorTrecho.Sum(t => t.Quantidade));
+        Assert.Equal(relatorio.TotalVendido, relatorio.PorDiaDaSemana.Sum(d => d.Total));
+        Assert.Equal(relatorio.TotalVendido, relatorio.PorHora.Sum(h => h.Total));
+        Assert.Equal(34.00m, relatorio.TotalVendido);
+    }
+
+    [Fact]
+    public async Task Obter_InicioNoFuturoSemDataFinal_DizQueAInicialPassouDeHoje()
+    {
+        var erro = await Assert.ThrowsAsync<DomainException>(() => _service.ObterAsync(new DateOnly(2026, 10, 20), null, null, Ct));
+
+        Assert.Equal("A data inicial não pode passar de hoje.", erro.Message);
     }
 
     [Theory]
