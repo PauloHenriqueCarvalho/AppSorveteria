@@ -27,6 +27,9 @@ internal sealed class ProdutoConfiguration : IEntityTypeConfiguration<Produto>
         builder.Property(p => p.UnidadesPorVenda).HasDefaultValue(1).IsRequired();
         builder.HasOne<GrupoEstoque>().WithMany().HasForeignKey(p => p.GrupoEstoqueId).OnDelete(DeleteBehavior.Restrict);
 
+        // RN-PR-07: custo por unidade vendida informado à mão (nulo = sem custo).
+        builder.Property(p => p.CustoInformado).HasPrecision(12, 2);
+
         // RN-PR-01: nome único sem diferenciar maiúsculas/minúsculas.
         builder.HasIndex(p => p.NomeNormalizado).IsUnique();
         builder.HasIndex(p => new { p.Ativo, p.Ordem });

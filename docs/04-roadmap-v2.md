@@ -149,7 +149,8 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] Painel: tela Relatórios (Análise → Relatórios): período com atalhos, gráfico por dia/semana/mês com o período anterior, horários e dias de pico, produtos (por valor ou quantidade), categorias, formas de pagamento e sabores, exportar Excel e imprimir
 
 ### Sprint 9 — Lucro e exportação
-- [ ] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque), margem por produto, por sabor e por período
+- [x] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque ou informado), margem por produto, por sabor e por período (RN-RL-04): API (`GET /api/produtos/custos`, `PUT /api/produtos/{id}/custo`, margem no relatório de período)
+- [ ] Painel: custo e margem no produto, na lista de produtos e nos Relatórios
 - [ ] Exportação CSV/Excel por período; relatório de fechamentos de caixa
 
 ## Fase 4 — Expansões (a combinar)

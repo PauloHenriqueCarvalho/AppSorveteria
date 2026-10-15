@@ -305,6 +305,48 @@ public class RelatorioPeriodoServiceTests
     }
 
     [Fact]
+    public async Task Obter_Margem_SoComOsProdutosQueTemCustoEOResto_SemCusto()
+    {
+        var fabrica = Fornecedor.Criar("Fábrica", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, true);
+        var grupo = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 1);
+        var flocos = ItemEstoque.Criar(grupo.Id, fabrica.Id, "Flocos", UnidadeCompra.Unidade, 1, 14m, 1);
+        var chocolate = ItemEstoque.Criar(grupo.Id, fabrica.Id, "Chocolate", UnidadeCompra.Unidade, 1, 15m, 2);
+        _estoque.Grupos.Add(grupo);
+        _estoque.Itens.AddRange([flocos, chocolate]);
+        var pote = Produto.Criar("Pote 1L", "Potes", 28m, false, 1, Agora.AddDays(-60));
+        pote.LigarAoEstoque(grupo.Id, 1, Agora.AddDays(-60));
+        var picole = Produto.Criar("Picolé de morango", "Picolés", 5m, false, 2, Agora.AddDays(-60));
+        picole.InformarCusto(1.20m);
+        var shake = Produto.Criar("Milk-shake", "Bebidas", 18m, false, 3, Agora.AddDays(-60)); // sem custo
+        _produtos.Produtos.AddRange([pote, picole, shake]);
+
+        VendaCom(Em(10, 2), c =>
+        {
+            c.AdicionarProduto(pote, 1, sabor: flocos);     // 28 − 14
+            c.AdicionarProduto(pote, 1, sabor: chocolate);  // 28 − 15
+            c.AdicionarProduto(picole, 3);                  // 15 − 3,60
+            c.AdicionarProduto(shake, 1);                   // 18, n/d
+            c.AdicionarItemLivre("Self-service", 9.40m);    // n/d
+        });
+
+        var relatorio = await _service.ObterAsync(null, null, null, Ct);
+
+        Assert.Equal(98.40m, relatorio.TotalVendido);
+        var porNome = relatorio.Produtos.ToDictionary(p => p.Descricao);
+        Assert.Equal((29m, 27m, 48.2m), (porNome["Pote 1L"].CustoEstimado, porNome["Pote 1L"].Margem, porNome["Pote 1L"].MargemPercentual));
+        Assert.Equal((3.60m, 11.40m, 76.0m), (porNome["Picolé de morango"].CustoEstimado, porNome["Picolé de morango"].Margem, porNome["Picolé de morango"].MargemPercentual));
+        Assert.Null(porNome["Milk-shake"].Margem); // RN-RL-04: sem custo é "n/d", nunca zero
+        Assert.Null(porNome["Self-service / venda avulsa"].CustoEstimado);
+        // Período: 71 com custo (56 + 15), custo 32,60, margem 38,40 (54,1%); 27,40 sem custo.
+        Assert.Equal((71m, 32.60m, 38.40m, 54.1m, 27.40m),
+            (relatorio.Margem.FaturamentoComCusto, relatorio.Margem.CustoEstimado, relatorio.Margem.MargemEstimada, relatorio.Margem.MargemPercentual,
+             relatorio.Margem.FaturamentoSemCusto));
+        var sabores = relatorio.Sabores.ToDictionary(s => s.Descricao);
+        Assert.Equal((14m, 14m), (sabores["Pote 1L Flocos"].CustoEstimado, sabores["Pote 1L Flocos"].Margem));
+        Assert.Equal((15m, 13m), (sabores["Pote 1L Chocolate"].CustoEstimado, sabores["Pote 1L Chocolate"].Margem));
+    }
+
+    [Fact]
     public async Task Obter_SemVendas_ZeraSemDividirPorZero()
     {
         var relatorio = await _service.ObterAsync(new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 11), "semana", Ct);
@@ -315,5 +357,6 @@ public class RelatorioPeriodoServiceTests
         Assert.Empty(relatorio.Produtos);
         Assert.Empty(relatorio.Sabores);
         Assert.All(relatorio.PorDiaDaSemana, d => Assert.Equal(0m, d.MediaPorDia));
+        Assert.Equal((0m, 0m, (decimal?)null), (relatorio.Margem.FaturamentoComCusto, relatorio.Margem.MargemEstimada, relatorio.Margem.MargemPercentual));
     }
 }

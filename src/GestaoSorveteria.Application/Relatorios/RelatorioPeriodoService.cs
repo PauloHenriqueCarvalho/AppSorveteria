@@ -5,6 +5,7 @@ using GestaoSorveteria.Contracts.Relatorios;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
 using GestaoSorveteria.Domain.Estoque;
+using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 
 namespace GestaoSorveteria.Application.Relatorios;
@@ -66,8 +67,11 @@ public sealed class RelatorioPeriodoService
         var ticketMedio = CalculoRelatorio.TicketMedio(total, fechadas.Count);
 
         var anterior = await AnteriorAsync(de, ate, hoje, agora, agrupamento, total, fechadas.Count, ticketMedio, cancellationToken);
-        var produtos = (await _produtos.ListarAsync(somenteAtivos: false, cancellationToken)).ToDictionary(p => p.Id);
-        var rankingProdutos = RankingProdutos(fechadas, produtos, total);
+        var catalogo = new Catalogo(
+            await _produtos.ListarAsync(somenteAtivos: false, cancellationToken),
+            await _estoque.ListarGruposAsync(cancellationToken),
+            await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken));
+        var rankingProdutos = RankingProdutos(fechadas, catalogo, total);
 
         return new RelatorioPeriodoDto(
             de,
@@ -85,7 +89,8 @@ public sealed class RelatorioPeriodoService
             PorDiaDaSemana(fechadas, de, ate),
             rankingProdutos,
             RankingCategorias(rankingProdutos, total),
-            await RankingSaboresAsync(fechadas, produtos, cancellationToken));
+            RankingSabores(fechadas, catalogo),
+            Margem(rankingProdutos, total));
     }
 
     /// <summary>Como o período é dividido nas barras (RN-RL-08).</summary>
@@ -248,23 +253,56 @@ public sealed class RelatorioPeriodoService
             .ToList();
     }
 
-    /// <summary>RN-RL-03: todos os produtos vendidos, por faturamento; empate → mais unidades, depois nome.</summary>
-    private static IReadOnlyList<ProdutoNoRankingDto> RankingProdutos(
-        IReadOnlyList<Comanda> fechadas, IReadOnlyDictionary<Guid, Domain.Produtos.Produto> produtos, decimal total) =>
+    /// <summary>
+    /// RN-RL-03: todos os produtos vendidos, por faturamento; empate → mais unidades, depois nome. RN-RL-04: custo e margem
+    /// estimados com os custos de hoje (RN-PR-07); se alguma venda do produto não tem custo, o produto fica sem (n/d).
+    /// </summary>
+    private static IReadOnlyList<ProdutoNoRankingDto> RankingProdutos(IReadOnlyList<Comanda> fechadas, Catalogo catalogo, decimal total) =>
         fechadas
             .SelectMany(c => c.Itens.Select(i => (Comanda: c, Item: i)))
             .GroupBy(x => x.Item.ProdutoId)
             .Select(g =>
             {
-                var (descricao, categoria) = CalculoRelatorio.NomeECategoria(g.Key, produtos, g.MaxBy(x => x.Comanda.FechadaEm).Item.Descricao);
+                var (descricao, categoria) = CalculoRelatorio.NomeECategoria(g.Key, catalogo.Produtos, g.MaxBy(x => x.Comanda.FechadaEm).Item.Descricao);
                 var totalDoProduto = Moeda.Arredondar(g.Sum(x => x.Item.Subtotal));
+                var (custo, margem, percentual) = CustoEMargem(g.Select(x => x.Item), totalDoProduto, catalogo);
                 return new ProdutoNoRankingDto(
-                    g.Key, descricao, categoria, g.Sum(x => x.Item.Quantidade), totalDoProduto, CalculoRelatorio.Percentual(totalDoProduto, total));
+                    g.Key, descricao, categoria, g.Sum(x => x.Item.Quantidade), totalDoProduto, CalculoRelatorio.Percentual(totalDoProduto, total),
+                    custo, margem, percentual);
             })
             .OrderByDescending(p => p.Total)
             .ThenByDescending(p => p.Quantidade)
             .ThenBy(p => p.Descricao, StringComparer.CurrentCulture)
             .ToList();
+
+    /// <summary>Soma do custo das linhas; uma linha sem custo deixa tudo sem (n/d, RN-RL-04). Margem % sobre o faturamento.</summary>
+    private static (decimal? Custo, decimal? Margem, decimal? Percentual) CustoEMargem(IEnumerable<ItemComanda> linhas, decimal total, Catalogo catalogo)
+    {
+        var custos = linhas.Select(catalogo.CustoDaLinha).ToList();
+        if (custos.Count == 0 || custos.Any(c => c is null))
+        {
+            return (null, null, null);
+        }
+
+        var custo = Moeda.Arredondar(custos.Sum(c => c!.Value));
+        var margem = Moeda.Arredondar(total - custo);
+        return (custo, margem, total == 0m ? null : CalculoRelatorio.Percentual(margem, total));
+    }
+
+    /// <summary>RN-RL-04: margem do período só com os produtos que têm custo; o resto aparece como faturamento sem custo.</summary>
+    private static MargemPeriodoDto Margem(IReadOnlyList<ProdutoNoRankingDto> produtos, decimal total)
+    {
+        var comCusto = produtos.Where(p => p.CustoEstimado is not null).ToList();
+        var faturamento = Moeda.Arredondar(comCusto.Sum(p => p.Total));
+        var custo = Moeda.Arredondar(comCusto.Sum(p => p.CustoEstimado!.Value));
+        var margem = Moeda.Arredondar(faturamento - custo);
+        return new MargemPeriodoDto(
+            faturamento,
+            custo,
+            margem,
+            faturamento == 0m ? null : CalculoRelatorio.Percentual(margem, faturamento),
+            Moeda.Arredondar(total - faturamento));
+    }
 
     private static IReadOnlyList<CategoriaNoRankingDto> RankingCategorias(IReadOnlyList<ProdutoNoRankingDto> produtos, decimal total) =>
         produtos
@@ -281,33 +319,65 @@ public sealed class RelatorioPeriodoService
 
     /// <summary>
     /// RN-RL-03: sabores escolhidos na venda (potes, RN-ES-09), por unidades; empate → faturamento, depois nome. Unidades pelo
-    /// "quantos saem por venda" atual do produto (mudou o cadastro, o histórico acompanha).
+    /// "quantos saem por venda" atual do produto (mudou o cadastro, o histórico acompanha). Custo pelo sabor (RN-PR-07).
     /// </summary>
-    private async Task<IReadOnlyList<SaborNoRankingDto>> RankingSaboresAsync(
-        IReadOnlyList<Comanda> fechadas, IReadOnlyDictionary<Guid, Domain.Produtos.Produto> produtos, CancellationToken cancellationToken)
-    {
-        var comSabor = fechadas.SelectMany(c => c.Itens).Where(i => i.ItemEstoqueId is not null).ToList();
-        if (comSabor.Count == 0)
-        {
-            return [];
-        }
-
-        var grupos = (await _estoque.ListarGruposAsync(cancellationToken)).ToDictionary(g => g.Id);
-        var itens = (await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken)).ToDictionary(i => i.Id);
-        return comSabor
+    private static IReadOnlyList<SaborNoRankingDto> RankingSabores(IReadOnlyList<Comanda> fechadas, Catalogo catalogo) =>
+        fechadas
+            .SelectMany(c => c.Itens)
+            .Where(i => i.ItemEstoqueId is not null)
             .GroupBy(i => i.ItemEstoqueId!.Value)
             .Select(g =>
             {
-                var item = itens.GetValueOrDefault(g.Key);
+                var item = catalogo.Itens.GetValueOrDefault(g.Key);
                 var descricao = item is null
                     ? g.First().Descricao
-                    : MensagensWhatsApp.DescricaoDoItem(grupos.GetValueOrDefault(item.GrupoId)?.Nome, item.Nome);
-                var unidades = g.Sum(i => i.Quantidade * (i.ProdutoId is { } id && produtos.TryGetValue(id, out var p) ? p.UnidadesPorVenda : 1));
-                return new SaborNoRankingDto(g.Key, descricao, unidades, Moeda.Arredondar(g.Sum(i => i.Subtotal)));
+                    : MensagensWhatsApp.DescricaoDoItem(catalogo.Grupos.GetValueOrDefault(item.GrupoId)?.Nome, item.Nome);
+                var unidades = g.Sum(i => i.Quantidade * (i.ProdutoId is { } id && catalogo.Produtos.TryGetValue(id, out var p) ? p.UnidadesPorVenda : 1));
+                var total = Moeda.Arredondar(g.Sum(i => i.Subtotal));
+                var (custo, margem, percentual) = CustoEMargem(g, total, catalogo);
+                return new SaborNoRankingDto(g.Key, descricao, unidades, total, custo, margem, percentual);
             })
             .OrderByDescending(s => s.Unidades)
             .ThenByDescending(s => s.Total)
             .ThenBy(s => s.Descricao, StringComparer.CurrentCulture)
             .ToList();
+
+    /// <summary>Cadastro de hoje (produtos e catálogo de estoque) para nomes e custos; guarda o custo por produto e sabor.</summary>
+    private sealed class Catalogo
+    {
+        private readonly ILookup<Guid, ItemEstoque> _itensPorGrupo;
+        private readonly Dictionary<(Guid Produto, Guid? Sabor), decimal?> _custoPorUnidade = new();
+
+        public Catalogo(IReadOnlyList<Produto> produtos, IReadOnlyList<GrupoEstoque> grupos, IReadOnlyList<ItemEstoque> itens)
+        {
+            Produtos = produtos.ToDictionary(p => p.Id);
+            Grupos = grupos.ToDictionary(g => g.Id);
+            Itens = itens.ToDictionary(i => i.Id);
+            _itensPorGrupo = itens.ToLookup(i => i.GrupoId);
+        }
+
+        public IReadOnlyDictionary<Guid, Produto> Produtos { get; }
+        public IReadOnlyDictionary<Guid, GrupoEstoque> Grupos { get; }
+        public IReadOnlyDictionary<Guid, ItemEstoque> Itens { get; }
+
+        /// <summary>RN-PR-07: custo estimado da linha (quantidade × custo por unidade vendida); nulo = sem custo.</summary>
+        public decimal? CustoDaLinha(ItemComanda linha)
+        {
+            if (linha.ProdutoId is not { } produtoId || !Produtos.TryGetValue(produtoId, out var produto))
+            {
+                return null;
+            }
+
+            var chave = (produtoId, linha.ItemEstoqueId);
+            if (!_custoPorUnidade.TryGetValue(chave, out var porUnidade))
+            {
+                var sabor = linha.ItemEstoqueId is { } saborId ? Itens.GetValueOrDefault(saborId) : null;
+                var doGrupo = produto.GrupoEstoqueId is { } grupoId ? _itensPorGrupo[grupoId] : [];
+                porUnidade = CustoEstimado.PorUnidadeVendida(produto, doGrupo, sabor)?.Custo;
+                _custoPorUnidade[chave] = porUnidade;
+            }
+
+            return porUnidade is { } valor ? Moeda.Arredondar(valor * linha.Quantidade) : null;
+        }
     }
 }

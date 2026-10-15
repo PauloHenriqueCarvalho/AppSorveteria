@@ -1,0 +1,49 @@
+using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Estoque;
+
+namespace GestaoSorveteria.Domain.Produtos;
+
+/// <summary>
+/// RN-PR-07: custo estimado de uma unidade vendida, com os custos de hoje do catálogo de estoque.
+/// <list type="bullet">
+/// <item>Produto ligado a um grupo de estoque: custo da embalagem ÷ unidades por embalagem × unidades por venda — do sabor
+/// escolhido na venda (potes) ou, sem sabor, a média dos itens ativos do grupo (picolé ao leite: R$ 25,20 ÷ 28 = R$ 0,90).
+/// Item com custo zero conta como "sem custo".</item>
+/// <item>Sem vínculo, ou grupo sem custo no catálogo: o custo informado no produto.</item>
+/// <item>Nada disso: sem custo (nulo) — a margem fica "n/d", nunca zero (RN-RL-04).</item>
+/// </list>
+/// Arredondado a 2 casas por unidade vendida.
+/// </summary>
+public static class CustoEstimado
+{
+    /// <summary>De onde veio o custo: do catálogo de estoque ou informado no produto.</summary>
+    public enum Origem
+    {
+        Estoque,
+        Informado,
+    }
+
+    /// <param name="itensDoGrupo">Itens do grupo ligado ao produto (os inativos são ignorados na média).</param>
+    /// <param name="sabor">O item de estoque escolhido na venda (potes), se houver.</param>
+    public static (decimal Custo, Origem Origem)? PorUnidadeVendida(Produto produto, IEnumerable<ItemEstoque> itensDoGrupo, ItemEstoque? sabor = null)
+    {
+        if (produto.GrupoEstoqueId is { } grupoId)
+        {
+            var unitario = sabor is { CustoEmbalagem: > 0 } && sabor.GrupoId == grupoId
+                ? sabor.CustoEmbalagem / sabor.UnidadesPorEmbalagem
+                : MediaDoGrupo(itensDoGrupo.Where(i => i.GrupoId == grupoId));
+            if (unitario is { } valor)
+            {
+                return (Moeda.Arredondar(valor * produto.UnidadesPorVenda), Origem.Estoque);
+            }
+        }
+
+        return produto.CustoInformado is { } informado ? (informado, Origem.Informado) : null;
+    }
+
+    private static decimal? MediaDoGrupo(IEnumerable<ItemEstoque> itens)
+    {
+        var comCusto = itens.Where(i => i.Ativo && i.CustoEmbalagem > 0).Select(i => i.CustoEmbalagem / i.UnidadesPorEmbalagem).ToList();
+        return comCusto.Count == 0 ? null : comCusto.Average();
+    }
+}
