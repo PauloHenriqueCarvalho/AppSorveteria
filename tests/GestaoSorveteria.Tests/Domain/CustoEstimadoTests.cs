@@ -110,4 +110,42 @@ public class CustoEstimadoTests
         Assert.Null(produto.CustoInformado);
         Assert.Equal(atualizadoEm, produto.AtualizadoEm);
     }
+
+    [Fact]
+    public void PorUnidadeVendida_SaborQueMudouDeGrupo_UsaOCustoDoProprioSabor()
+    {
+        var pote = NovoProduto("Pote 1L", 28m, _potes.Id);
+        var flocos = Pote("Flocos", 14m);
+        flocos.MoverParaGrupo(_leite.Id); // a dona reorganizou o catálogo depois da venda
+
+        Assert.Equal(14m, CustoEstimado.PorUnidadeVendida(pote, [Pote("Chocolate", 16m)], flocos)?.Custo);
+    }
+
+    [Fact]
+    public void PorUnidadeVendida_CustoQueArredondaParaZero_ContaComoSemCusto()
+    {
+        var picole = NovoProduto("Picolé ao leite", 5m, _leite.Id);
+
+        // 0,10 ÷ 28 = 0,0036 → R$ 0,00: não vira margem de 100%.
+        Assert.Null(CustoEstimado.PorUnidadeVendida(picole, [Caixa("Coco", 0.10m)]));
+    }
+
+    [Fact]
+    public void PorUnidadeVendida_ProdutoQueVirouValorLivre_SemCustoMesmoComOInformado()
+    {
+        var produto = NovoProduto("Açaí no peso", 10m);
+        produto.InformarCusto(3m);
+        produto.Atualizar("Açaí no peso", "Açaí", 0m, permiteValorLivre: true, 1, Cenario.Agora);
+
+        Assert.Null(CustoEstimado.PorUnidadeVendida(produto, []));
+    }
+
+    [Fact]
+    public void InformarCusto_ProdutoDeValorLivre_Lanca()
+    {
+        var selfService = Produto.Criar("Self-service (kg)", "Self-service", 69.90m, true, 3, Cenario.Agora);
+
+        var erro = Assert.Throws<DomainException>(() => selfService.InformarCusto(20m));
+        Assert.Contains("valor livre", erro.Message);
+    }
 }

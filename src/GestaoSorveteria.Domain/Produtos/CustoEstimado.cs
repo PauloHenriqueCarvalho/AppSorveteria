@@ -7,12 +7,13 @@ namespace GestaoSorveteria.Domain.Produtos;
 /// RN-PR-07: custo estimado de uma unidade vendida, com os custos de hoje do catálogo de estoque.
 /// <list type="bullet">
 /// <item>Produto ligado a um grupo de estoque: custo da embalagem ÷ unidades por embalagem × unidades por venda — do sabor
-/// escolhido na venda (potes) ou, sem sabor, a média dos itens ativos do grupo (picolé ao leite: R$ 25,20 ÷ 28 = R$ 0,90).
-/// Item com custo zero conta como "sem custo".</item>
+/// escolhido na venda (potes; é o item que saiu, mesmo que depois tenha mudado de grupo) ou, sem sabor ou com o sabor sem custo,
+/// a média dos itens ativos do grupo (picolé ao leite: R$ 25,20 ÷ 28 = R$ 0,90). Item com custo zero conta como "sem custo".</item>
 /// <item>Sem vínculo, ou grupo sem custo no catálogo: o custo informado no produto.</item>
-/// <item>Nada disso: sem custo (nulo) — a margem fica "n/d", nunca zero (RN-RL-04).</item>
+/// <item>Nada disso, ou produto de valor livre (self-service: a quantidade não diz o peso): sem custo (nulo) — a margem fica
+/// "n/d", nunca zero (RN-RL-04).</item>
 /// </list>
-/// Arredondado a 2 casas por unidade vendida.
+/// Arredondado a 2 casas por unidade vendida; um custo que arredonda para R$ 0,00 conta como sem custo.
 /// </summary>
 public static class CustoEstimado
 {
@@ -27,14 +28,19 @@ public static class CustoEstimado
     /// <param name="sabor">O item de estoque escolhido na venda (potes), se houver.</param>
     public static (decimal Custo, Origem Origem)? PorUnidadeVendida(Produto produto, IEnumerable<ItemEstoque> itensDoGrupo, ItemEstoque? sabor = null)
     {
+        if (produto.PermiteValorLivre)
+        {
+            return null;
+        }
+
         if (produto.GrupoEstoqueId is { } grupoId)
         {
-            var unitario = sabor is { CustoEmbalagem: > 0 } && sabor.GrupoId == grupoId
+            var unitario = sabor is { CustoEmbalagem: > 0 }
                 ? sabor.CustoEmbalagem / sabor.UnidadesPorEmbalagem
                 : MediaDoGrupo(itensDoGrupo.Where(i => i.GrupoId == grupoId));
-            if (unitario is { } valor)
+            if (unitario is { } valor && Moeda.Arredondar(valor * produto.UnidadesPorVenda) is > 0m and var custo)
             {
-                return (Moeda.Arredondar(valor * produto.UnidadesPorVenda), Origem.Estoque);
+                return (custo, Origem.Estoque);
             }
         }
 

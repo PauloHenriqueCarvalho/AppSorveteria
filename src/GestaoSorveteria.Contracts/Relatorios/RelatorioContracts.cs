@@ -83,13 +83,14 @@ public sealed record RelatorioPeriodoDto(
 /// <summary>
 /// RN-RL-04: margem estimada do período com os custos de hoje (RN-PR-07), só sobre os produtos que têm custo:
 /// <paramref name="MargemEstimada"/> = <paramref name="FaturamentoComCusto"/> − <paramref name="CustoEstimado"/>;
-/// <paramref name="MargemPercentual"/> sobre esse faturamento (1 casa; nulo sem ele). <paramref name="FaturamentoSemCusto"/>: o que
-/// ficou de fora por falta de custo (self-service, venda avulsa, produto sem custo cadastrado).
+/// <paramref name="MargemPercentual"/> sobre esse faturamento (1 casa). Nenhum produto vendido com custo → custo e margens nulos ("n/d",
+/// nunca zero). <paramref name="FaturamentoSemCusto"/>: o que ficou de fora por falta de custo (self-service, venda avulsa, produto
+/// sem custo cadastrado).
 /// </summary>
 public sealed record MargemPeriodoDto(
     decimal FaturamentoComCusto,
-    decimal CustoEstimado,
-    decimal MargemEstimada,
+    decimal? CustoEstimado,
+    decimal? MargemEstimada,
     decimal? MargemPercentual,
     decimal FaturamentoSemCusto);
 

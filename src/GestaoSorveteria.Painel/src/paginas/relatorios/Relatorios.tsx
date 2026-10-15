@@ -214,7 +214,7 @@ function percentualOuNada(valor: number | null): string {
 /** RN-RL-04: margem só com o que tem custo; o que ficou de fora aparece no detalhe. */
 function IndicadorMargem({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
   const m = relatorio.margem
-  if (m.faturamentoComCusto === 0) {
+  if (m.margemEstimada === null) {
     return (
       <Indicador
         rotulo="Margem estimada"
@@ -229,7 +229,7 @@ function IndicadorMargem({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
   ]
     .filter(Boolean)
     .join(' · ')
-  return <Indicador rotulo="Margem estimada" valor={formatarMoeda(m.margemEstimada)} detalhe={detalhe} />
+  return <Indicador rotulo="Margem estimada" valor={dinheiroOuNd(m.margemEstimada)} detalhe={detalhe} />
 }
 
 function DiasDaSemana({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
@@ -436,7 +436,9 @@ function exportar(r: RelatorioPeriodoDto) {
     ['Vendas', r.quantidadeComandas, r.anterior.quantidadeComandas],
     ['Ticket médio (R$)', celulaDinheiro(r.ticketMedio), celulaDinheiro(r.anterior.ticketMedio)],
     ['Estornos (R$)', celulaDinheiro(r.totalEstornado)],
-    ['Margem estimada (R$)', celulaDinheiro(r.margem.margemEstimada), 'sobre (R$)', celulaDinheiro(r.margem.faturamentoComCusto)],
+    r.margem.margemEstimada === null
+      ? ['Margem estimada (R$)', 'n/d (nenhum produto vendido tem custo)']
+      : ['Margem estimada (R$)', celulaDinheiro(r.margem.margemEstimada), 'sobre (R$)', celulaDinheiro(r.margem.faturamentoComCusto)],
     ['Faturamento sem custo (R$)', celulaDinheiro(r.margem.faturamentoSemCusto)],
     [],
     [nomeTrecho, 'Total (R$)', 'Vendas', 'Anterior', 'Total anterior (R$)'],

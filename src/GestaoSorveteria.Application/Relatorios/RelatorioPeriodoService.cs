@@ -294,6 +294,12 @@ public sealed class RelatorioPeriodoService
     {
         var comCusto = produtos.Where(p => p.CustoEstimado is not null).ToList();
         var faturamento = Moeda.Arredondar(comCusto.Sum(p => p.Total));
+        if (comCusto.Count == 0)
+        {
+            // Nenhum produto vendido tem custo: margem "n/d", nunca zero.
+            return new MargemPeriodoDto(0m, null, null, null, total);
+        }
+
         var custo = Moeda.Arredondar(comCusto.Sum(p => p.CustoEstimado!.Value));
         var margem = Moeda.Arredondar(faturamento - custo);
         return new MargemPeriodoDto(

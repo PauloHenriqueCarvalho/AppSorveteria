@@ -270,7 +270,6 @@ itens_pedido_fornecedor (id, pedido_id FK, item_estoque_id FK, sugerido_embalage
 
 produtos            + grupo_estoque_id FK uuid null, + unidades_por_venda int default 1   -- RN-PR-06 (Sprint 7)
 produtos            + custo_informado numeric(12,2) null                                  -- RN-PR-07 (Sprint 9)
-                    + custo_manual numeric(12,2) null    -- Fase 3
 itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-ES-09); só em item de produto
 ```
 

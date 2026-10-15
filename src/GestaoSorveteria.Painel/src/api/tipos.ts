@@ -670,10 +670,11 @@ export interface RelatorioPeriodoDto {
   margem: MargemPeriodoDto
 }
 
+/** Nenhum produto vendido com custo → custoEstimado e margemEstimada null ("n/d", nunca zero). */
 export interface MargemPeriodoDto {
   faturamentoComCusto: number
-  custoEstimado: number
-  margemEstimada: number
+  custoEstimado: number | null
+  margemEstimada: number | null
   margemPercentual: number | null
   faturamentoSemCusto: number
 }

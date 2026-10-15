@@ -347,6 +347,37 @@ public class RelatorioPeriodoServiceTests
     }
 
     [Fact]
+    public async Task Obter_VendasSemNenhumCusto_MargemNdENuncaZero()
+    {
+        Venda(Em(10, 2), 10m);
+
+        var relatorio = await _service.ObterAsync(null, null, null, Ct);
+
+        // RN-RL-04: sem custo é "n/d"; o que foi vendido aparece todo como faturamento sem custo.
+        Assert.Equal((0m, (decimal?)null, (decimal?)null, (decimal?)null, 10m),
+            (relatorio.Margem.FaturamentoComCusto, relatorio.Margem.CustoEstimado, relatorio.Margem.MargemEstimada, relatorio.Margem.MargemPercentual,
+             relatorio.Margem.FaturamentoSemCusto));
+    }
+
+    [Fact]
+    public async Task Obter_CustoDaLinha_CustoPorUnidadeEmCentavosVezesAQuantidade()
+    {
+        var fabrica = Fornecedor.Criar("Fábrica", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, true);
+        var leite = GrupoEstoque.Criar("Picolé ao leite", ModoControle.Contagem, 1);
+        _estoque.Grupos.Add(leite);
+        _estoque.Itens.Add(ItemEstoque.Criar(leite.Id, fabrica.Id, "Coco", UnidadeCompra.Caixa, 28, 25m, 1));
+        var picole = Produto.Criar("Picolé ao leite", "Picolés", 5m, false, 1, Agora.AddDays(-60));
+        picole.LigarAoEstoque(leite.Id, 1, Agora.AddDays(-60));
+        _produtos.Produtos.Add(picole);
+        VendaCom(Em(10, 2), c => c.AdicionarProduto(picole, 3));
+
+        var relatorio = await _service.ObterAsync(null, null, null, Ct);
+
+        // 25,00 ÷ 28 = 0,892… → 0,89 por picolé; 3 × 0,89 = 2,67 (e não 3 × 0,892… = 2,68).
+        Assert.Equal((2.67m, 12.33m), (relatorio.Produtos.Single().CustoEstimado, relatorio.Produtos.Single().Margem));
+    }
+
+    [Fact]
     public async Task Obter_SemVendas_ZeraSemDividirPorZero()
     {
         var relatorio = await _service.ObterAsync(new DateOnly(2026, 10, 5), new DateOnly(2026, 10, 11), "semana", Ct);
@@ -357,6 +388,6 @@ public class RelatorioPeriodoServiceTests
         Assert.Empty(relatorio.Produtos);
         Assert.Empty(relatorio.Sabores);
         Assert.All(relatorio.PorDiaDaSemana, d => Assert.Equal(0m, d.MediaPorDia));
-        Assert.Equal((0m, 0m, (decimal?)null), (relatorio.Margem.FaturamentoComCusto, relatorio.Margem.MargemEstimada, relatorio.Margem.MargemPercentual));
+        Assert.Equal((0m, (decimal?)null, (decimal?)null), (relatorio.Margem.FaturamentoComCusto, relatorio.Margem.MargemEstimada, relatorio.Margem.MargemPercentual));
     }
 }

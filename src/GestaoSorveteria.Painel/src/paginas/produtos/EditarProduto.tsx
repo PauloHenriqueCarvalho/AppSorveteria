@@ -344,6 +344,15 @@ function CustoEMargem({ produto }: { produto: ProdutoDto }) {
     salvar.mutate(valor)
   }
 
+  if (produto.permiteValorLivre) {
+    return (
+      <div className="cartao formulario">
+        <h2>Custo e margem</h2>
+        <p className="suave">Produto de valor digitado (self-service) não tem custo por unidade: o valor muda a cada venda, e a margem fica “n/d”.</p>
+      </div>
+    )
+  }
+
   const doEstoque = atual?.origem === 'Estoque'
   const mudou = (texto ?? null) !== null && campo.trim() !== (atual?.custoInformado != null ? precoParaCampo(atual.custoInformado) : '')
 
@@ -372,7 +381,7 @@ function CustoEMargem({ produto }: { produto: ProdutoDto }) {
             </div>
             <div className="ficha-linha">
               <dt>Margem</dt>
-              <dd>{produto.permiteValorLivre ? <span className="suave">n/d — o valor muda a cada venda</span> : atual ? descreverMargem(atual) : 'n/d'}</dd>
+              <dd>{atual ? descreverMargem(atual) : 'n/d'}</dd>
             </div>
           </dl>
           <label className="campo">

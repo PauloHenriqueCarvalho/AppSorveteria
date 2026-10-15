@@ -129,6 +129,8 @@ public sealed class Produto : Entity
     /// </summary>
     public void InformarCusto(decimal? custo)
     {
+        Guard.Contra(custo is not null && PermiteValorLivre,
+            $"\"{Nome}\" tem valor livre (self-service): o valor muda a cada venda e o custo por unidade não se aplica.");
         CustoInformado = custo is null ? null : Guard.Dinheiro(custo.Value, "o custo", permiteZero: false);
     }
 
