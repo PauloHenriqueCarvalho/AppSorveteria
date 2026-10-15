@@ -45,4 +45,21 @@ public static class Conversoes
         valor = lido;
         return true;
     }
+
+    /// <summary>
+    /// RN-ES-04: quantidade digitada no teclado numérico ("50"). Aceita de 1 a
+    /// <see cref="GestaoSorveteria.Domain.Comandas.ItemComanda.QuantidadeMaxima"/>; o Domain confere de novo ao gravar.
+    /// </summary>
+    public static bool TentarLerQuantidade(string? texto, out int quantidade)
+    {
+        quantidade = 0;
+        if (!int.TryParse(texto?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var lida)
+            || lida < 1 || lida > GestaoSorveteria.Domain.Comandas.ItemComanda.QuantidadeMaxima)
+        {
+            return false;
+        }
+
+        quantidade = lida;
+        return true;
+    }
 }

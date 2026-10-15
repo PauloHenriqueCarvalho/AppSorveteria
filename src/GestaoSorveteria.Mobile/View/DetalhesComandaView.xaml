@@ -61,10 +61,21 @@
                     Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DiminuirQuantidadeCommand}"
                     CommandParameter="{Binding .}" />
 
-                                    <Label Text="{Binding Quantidade}"
-                   VerticalOptions="Center"
-                   FontSize="16"
-                   HorizontalOptions="CenterAndExpand" TextColor="Gray"/>
+                                    <!-- RN-ES-04: tocar no número abre o teclado numérico -->
+                                    <Button Text="{Binding Quantidade}"
+                    VerticalOptions="Center"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    WidthRequest="56"
+                    HeightRequest="40"
+                    CornerRadius="10"
+                    BackgroundColor="White"
+                    BorderColor="#BDBDBD"
+                    BorderWidth="1"
+                    TextColor="#333"
+                    SemanticProperties.Description="Digitar a quantidade"
+                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DigitarQuantidadeCommand}"
+                    CommandParameter="{Binding .}" />
 
                                     <Button Text="+"
                     WidthRequest="40"

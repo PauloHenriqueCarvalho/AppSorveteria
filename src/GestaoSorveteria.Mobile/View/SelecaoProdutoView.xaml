@@ -105,12 +105,13 @@
             <Grid ColumnDefinitions="*, Auto">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
                     <Label Text="Quantidade a lançar:" FontSize="14" TextColor="Gray" />
-                    <Label Text="Selecione abaixo e depois adicione o item." FontSize="11" TextColor="#888"/>
+                    <Label Text="Toque no número para digitar (ex.: 50)." FontSize="11" TextColor="#888"/>
                 </VerticalStackLayout>
 
                 <HorizontalStackLayout Grid.Column="1" Spacing="15" VerticalOptions="Center">
                     <Button Text="-" Command="{Binding DiminuirQtdeCommand}" WidthRequest="50" HeightRequest="50" CornerRadius="25" BackgroundColor="#F0F0F0" TextColor="#333" FontSize="24" FontAttributes="Bold"/>
-                    <Label Text="{Binding Quantidade}" VerticalOptions="Center" FontSize="26" FontAttributes="Bold" WidthRequest="30" HorizontalTextAlignment="Center" TextColor="#333"/>
+                    <!-- RN-ES-04: tocar no número abre o teclado numérico -->
+                    <Button Text="{Binding Quantidade}" Command="{Binding DigitarQtdeCommand}" VerticalOptions="Center" FontSize="24" FontAttributes="Bold" WidthRequest="72" HeightRequest="50" CornerRadius="12" BackgroundColor="White" BorderColor="#BDBDBD" BorderWidth="1" TextColor="#333" SemanticProperties.Description="Digitar a quantidade"/>
                     <Button Text="+" Command="{Binding AumentarQtdeCommand}" WidthRequest="50" HeightRequest="50" CornerRadius="25" BackgroundColor="#E3F2FD" TextColor="#1976D2" FontSize="24" FontAttributes="Bold"/>
                 </HorizontalStackLayout>
             </Grid>
