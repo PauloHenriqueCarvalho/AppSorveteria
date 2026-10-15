@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Testes de domínio e aplicação (xUnit v3 sobre o Microsoft Testing Platform — ver "test.runner" no
-       global.json; roda com `dotnet test` e no Test Explorer). Sem banco: repositórios são fakes em memória. -->
+       global.json; roda com `dotnet test` e no Test Explorer). Domínio e aplicação sem banco: repositórios são fakes em
+       memória. Integracao/: PostgreSQL de verdade, só com a variável SORVETERIA_TESTES_PG (no CI vem do serviço postgres). -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>GestaoSorveteria.Tests</RootNamespace>

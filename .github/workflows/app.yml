@@ -26,7 +26,7 @@ on:
 jobs:
   android:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45  # runner Windows com o workload do MAUI leva de 15 a 30 min; com 30 um build já foi cancelado
     steps:
       - uses: actions/checkout@v7
 

@@ -59,7 +59,9 @@ Quadro de tarefas: Trello "Sorveteria" (listas Backlog, A fazer, Em Andamento, C
 ```powershell
 docker compose up -d                                   # PostgreSQL local (localhost:5433, sorveteria/postgres/postgres — 5433 para não brigar com PostgreSQL instalado no Windows)
 dotnet build src/GestaoSorveteria.Server               # API
-dotnet test  tests/GestaoSorveteria.Tests              # testes
+dotnet test  tests/GestaoSorveteria.Tests              # testes (os de integração pulam sem banco)
+$env:SORVETERIA_TESTES_PG="Host=localhost;Port=5433;Username=postgres;Password=postgres;Database=postgres"
+dotnet test  tests/GestaoSorveteria.Tests              # + integração: cria um banco temporário no PostgreSQL do docker compose, migra e apaga
 dotnet run --project src/GestaoSorveteria.Server       # Swagger: http://localhost:5080/swagger (admin / admin12345 em Development)
 
 # Migrações (sempre com -p Infrastructure -s Server)
@@ -125,7 +127,7 @@ Contracts ──────┘            Mobile → Domain, Contracts        T
 - **Permissões:** `.claude/settings.json` libera build/test/ef/docker/git/gh sem perguntar e **bloqueia** push na `main`, `--force`, `reset --hard`, `rm -rf` e apagar o banco.
 - **Duas frentes em paralelo:** use `git worktree` (ex.: `../AppSorveteria-app` na branch do app) e uma sessão do Claude Code em cada pasta, para API e app não se atropelarem.
 - **Migração sem `dotnet ef` à mão** (ex.: sessão na nuvem com NuGet bloqueado): commit numa branch `feature/**` com `[gerar-migracao: NomeEmPascalCase]` na mensagem; o workflow `Gerar migração EF` gera a migração + snapshot, confere que não sobrou mudança pendente, mostra o SQL no log e faz o commit na branch. Revise como manda a skill `migracao-ef`. O teste `Modelo_ComparadoComAsMigracoes_NaoTemMudancaPendente` reprova o CI quando o modelo muda sem migração.
-- **CI:** `CI` (API + testes, Ubuntu) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam; `Painel` (npm ci, lint, testes, build) quando `src/GestaoSorveteria.Painel` muda. O `App Android` só dispara sozinho em PR para `main`/`develop`; num PR empilhado rode `gh api repos/PauloHenriqueCarvalho/AppSorveteria/actions/workflows/app.yml/dispatches -f ref=<branch>`.
+- **CI:** `CI` (API + testes, Ubuntu, com um PostgreSQL de serviço para `tests/.../Integracao`) em todo push/PR; `App Android` (build do MAUI, Windows) quando o app, Domain ou Contracts mudam; `Painel` (npm ci, lint, testes, build) quando `src/GestaoSorveteria.Painel` muda. O `App Android` só dispara sozinho em PR para `main`/`develop`; num PR empilhado rode `gh api repos/PauloHenriqueCarvalho/AppSorveteria/actions/workflows/app.yml/dispatches -f ref=<branch>`.
 - **Merge na `main`:** só o Paulo, por PR da `develop`.
 
 ## Como trabalhar aqui (para o Claude)
