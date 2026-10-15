@@ -99,102 +99,122 @@ function Planilha({ contagem, nova }: { contagem: ContagemDto; nova: boolean }) 
         acoes={<Selo tom={concluida ? 'bom' : 'atencao'}>{concluida ? `Concluída ${quando(contagem.concluidaEm!)}` : 'Em andamento'}</Selo>}
       />
 
-      {!concluida && (
+      {contagem.linhas.length === 0 && (
+        <section className="secao vazio">
+          <h2>Nenhum item para contar</h2>
+          <p className="suave">
+            A contagem usa o catálogo de estoque: os sabores e itens de cada grupo, na ordem da planilha. O catálogo ainda está vazio
+            (ou todos os grupos estão como “só aviso”, que não entram na contagem).
+          </p>
+          <p className="pagina-acoes">
+            <Link to="/estoque/importar" className="botao">
+              Importar a planilha
+            </Link>
+            <Link to="/estoque" className="botao botao-secundario">
+              Abrir o catálogo
+            </Link>
+          </p>
+        </section>
+      )}
+
+      {!concluida && contagem.linhas.length > 0 && (
         <p className="alerta alerta-aviso">
           Conte o que tem no freezer agora. A contagem anterior aparece só como referência; deixe em branco o que não contou e use 0 para
           “não tem nenhum”. Caixas vão de meia em meia (2,5).
         </p>
       )}
 
-      <section className="secao secao-tabela">
-        <div className="tabela-caixa">
-          <table className="tabela tabela-contagem">
-            <thead>
-              <tr>
-                <th scope="col">Item</th>
-                <th scope="col" className="numero so-largo">
-                  Anterior
-                </th>
-                <th scope="col" className="numero">
-                  {concluida ? 'Contado' : 'Agora'}
-                </th>
-              </tr>
-            </thead>
-            {grupos.map(([grupoId, grupoNome]) => (
-              <tbody key={grupoId}>
-                <tr className="linha-grupo">
-                  <th scope="rowgroup" colSpan={3}>
-                    <span className="linha-grupo-conteudo">
-                      <strong>{grupoNome}</strong>
-                    </span>
+      {contagem.linhas.length > 0 && (
+        <section className="secao secao-tabela">
+          <div className="tabela-caixa">
+            <table className="tabela tabela-contagem">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col" className="numero so-largo">
+                    Anterior
+                  </th>
+                  <th scope="col" className="numero">
+                    {concluida ? 'Contado' : 'Agora'}
                   </th>
                 </tr>
-                {contagem.linhas
-                  .filter((l) => l.grupoId === grupoId)
-                  .map((l) => (
-                    <tr key={l.itemEstoqueId}>
-                      <td>
-                        <strong>{l.itemNome}</strong>
-                        {concluida && l.saldoSistemaUnidades !== null && l.contadoUnidades !== null &&
-                          Math.abs(l.contadoUnidades - l.saldoSistemaUnidades) > 1 && (
-                            <>
-                              {' '}
-                              <Selo tom="atencao">
-                                {Math.abs(l.contadoUnidades - l.saldoSistemaUnidades)}{' '}
-                                {l.contadoUnidades > l.saldoSistemaUnidades ? 'a mais' : 'a menos'} que o sistema
-                              </Selo>
-                            </>
-                          )}
-                        <span className="suave bloco pequeno">
-                          {l.unidadesPorEmbalagem > 1 ? `${l.unidade.toLowerCase()} com ${l.unidadesPorEmbalagem}` : l.unidade.toLowerCase()}
-                          {l.anteriorEmbalagens !== null && (
-                            <span className="so-estreito">
-                              {' '}
-                              · antes {formatarEmbalagens(l.anteriorEmbalagens)}
+              </thead>
+              {grupos.map(([grupoId, grupoNome]) => (
+                <tbody key={grupoId}>
+                  <tr className="linha-grupo">
+                    <th scope="rowgroup" colSpan={3}>
+                      <span className="linha-grupo-conteudo">
+                        <strong>{grupoNome}</strong>
+                      </span>
+                    </th>
+                  </tr>
+                  {contagem.linhas
+                    .filter((l) => l.grupoId === grupoId)
+                    .map((l) => (
+                      <tr key={l.itemEstoqueId}>
+                        <td>
+                          <strong>{l.itemNome}</strong>
+                          {concluida && l.saldoSistemaUnidades !== null && l.contadoUnidades !== null &&
+                            Math.abs(l.contadoUnidades - l.saldoSistemaUnidades) > 1 && (
+                              <>
+                                {' '}
+                                <Selo tom="atencao">
+                                  {Math.abs(l.contadoUnidades - l.saldoSistemaUnidades)}{' '}
+                                  {l.contadoUnidades > l.saldoSistemaUnidades ? 'a mais' : 'a menos'} que o sistema
+                                </Selo>
+                              </>
+                            )}
+                          <span className="suave bloco pequeno">
+                            {l.unidadesPorEmbalagem > 1 ? `${l.unidade.toLowerCase()} com ${l.unidadesPorEmbalagem}` : l.unidade.toLowerCase()}
+                            {l.anteriorEmbalagens !== null && (
+                              <span className="so-estreito">
+                                {' '}
+                                · antes {formatarEmbalagens(l.anteriorEmbalagens)}
+                              </span>
+                            )}
+                            {/* RN-ES-06: o número do sistema só aparece depois de contar, para não contar "pelo sistema". */}
+                            {l.saldoSistemaUnidades !== null && (concluida || l.contadoUnidades !== null) && <> · sistema {l.saldoSistemaUnidades}</>}
+                          </span>
+                        </td>
+                        <td className="numero so-largo suave">
+                          {formatarEmbalagens(l.anteriorEmbalagens)}{' '}
+                          {l.anteriorEmbalagens !== null && nomeDaEmbalagem(l.unidade, l.anteriorEmbalagens)}
+                        </td>
+                        <td className="numero">
+                          {concluida ? (
+                            <span className="forte">
+                              {l.contadoEmbalagens === null
+                                ? 'não contado'
+                                : `${formatarEmbalagens(l.contadoEmbalagens)} ${nomeDaEmbalagem(l.unidade, l.contadoEmbalagens)}`}
+                            </span>
+                          ) : (
+                            <span className="contador-campo">
+                              <button type="button" className="botao botao-secundario" aria-label={`Menos ${l.itemNome}`} onClick={() => somar(l, -l.passoEmbalagens)}>
+                                −
+                              </button>
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${l.itemNome} em ${embalagemNoPlural(l.unidade)}`}
+                                placeholder="—"
+                                value={valores[l.itemEstoqueId] ?? ''}
+                                onChange={(e) => definir(l, e.target.value)}
+                              />
+                              <button type="button" className="botao botao-secundario" aria-label={`Mais ${l.itemNome}`} onClick={() => somar(l, l.passoEmbalagens)}>
+                                +
+                              </button>
                             </span>
                           )}
-                          {/* RN-ES-06: o número do sistema só aparece depois de contar, para não contar "pelo sistema". */}
-                          {l.saldoSistemaUnidades !== null && (concluida || l.contadoUnidades !== null) && <> · sistema {l.saldoSistemaUnidades}</>}
-                        </span>
-                      </td>
-                      <td className="numero so-largo suave">
-                        {formatarEmbalagens(l.anteriorEmbalagens)}{' '}
-                        {l.anteriorEmbalagens !== null && nomeDaEmbalagem(l.unidade, l.anteriorEmbalagens)}
-                      </td>
-                      <td className="numero">
-                        {concluida ? (
-                          <span className="forte">
-                            {l.contadoEmbalagens === null
-                              ? 'não contado'
-                              : `${formatarEmbalagens(l.contadoEmbalagens)} ${nomeDaEmbalagem(l.unidade, l.contadoEmbalagens)}`}
-                          </span>
-                        ) : (
-                          <span className="contador-campo">
-                            <button type="button" className="botao botao-secundario" aria-label={`Menos ${l.itemNome}`} onClick={() => somar(l, -l.passoEmbalagens)}>
-                              −
-                            </button>
-                            <input
-                              inputMode="decimal"
-                              aria-label={`${l.itemNome} em ${embalagemNoPlural(l.unidade)}`}
-                              placeholder="—"
-                              value={valores[l.itemEstoqueId] ?? ''}
-                              onChange={(e) => definir(l, e.target.value)}
-                            />
-                            <button type="button" className="botao botao-secundario" aria-label={`Mais ${l.itemNome}`} onClick={() => somar(l, l.passoEmbalagens)}>
-                              +
-                            </button>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            ))}
-          </table>
-        </div>
-      </section>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              ))}
+            </table>
+          </div>
+        </section>
+      )}
 
-      {!concluida && (
+      {!concluida && contagem.linhas.length > 0 && (
         <section className="secao rodape-acao">
           {erro && <p className="alerta alerta-erro">{erro}</p>}
           {salvar.isError && <p className="alerta alerta-erro">{mensagemDoErro(salvar.error)}</p>}

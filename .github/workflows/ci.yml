@@ -1,6 +1,5 @@
-# Roda a cada push/PR: compila o backend em Release e executa os testes.
-# O app MAUI (src/GestaoSorveteria.Mobile) fica fora do CI por enquanto: exige o workload
-# do .NET MAUI/Android. Compile-o no Visual Studio. (Um job Android pode entrar no Sprint 4.)
+# Roda a cada push/PR: compila o backend em Release e executa os testes (os de integração usam o PostgreSQL do serviço abaixo).
+# O app MAUI tem o workflow dele (app.yml, runner Windows com o workload do .NET MAUI).
 name: CI
 
 on:
@@ -12,6 +11,21 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # PostgreSQL de verdade para os testes de integração (tests/.../Integracao): migrações do zero e consultas do EF Core.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SORVETERIA_TESTES_PG: Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=postgres
     steps:
       - uses: actions/checkout@v7
 

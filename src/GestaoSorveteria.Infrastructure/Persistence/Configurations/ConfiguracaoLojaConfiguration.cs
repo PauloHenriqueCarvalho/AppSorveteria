@@ -14,5 +14,11 @@ internal sealed class ConfiguracaoLojaConfiguration : IEntityTypeConfiguration<C
         builder.Property(c => c.NomeLoja).HasMaxLength(60).IsRequired();
         builder.Property(c => c.WhatsAppDona).HasColumnName("whatsapp_dona").HasMaxLength(13);
         builder.Property(c => c.AtualizadoEm).IsRequired();
+
+        // RN-CL-01: local da loja para o clima.
+        builder.Property(c => c.LocalNome).HasMaxLength(120);
+        builder.Property(c => c.Latitude).HasPrecision(7, 4);
+        builder.Property(c => c.Longitude).HasPrecision(7, 4);
+        builder.Ignore(c => c.PontoClima);
     }
 }

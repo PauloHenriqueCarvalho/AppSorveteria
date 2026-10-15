@@ -156,3 +156,31 @@ Content-Type: application/json
 {
   "motivo": "Atendente esqueceu de fechar o caixa"
 }
+
+### ---------- Clima (docs/02, seção 9b) — precisa de Clima:ChaveApi (user-secrets) ----------
+### Situação da coleta (Admin)
+GET {{host}}/api/clima/situacao
+Authorization: Bearer {{token}}
+
+### Procurar o local da loja (Admin, RN-CL-01)
+GET {{host}}/api/clima/procurar-local?texto=Ribeirão Preto, SP
+Authorization: Bearer {{token}}
+
+### Gravar o local confirmado e já coletar (Admin, RN-CL-01/04)
+PUT {{host}}/api/clima/local
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Ribeirão Preto, SP, Brasil",
+  "latitude": -21.1775,
+  "longitude": -47.8103
+}
+
+### Atualizar agora (Admin, RN-CL-04)
+POST {{host}}/api/clima/atualizar
+Authorization: Bearer {{token}}
+
+### Clima × vendas (Admin, RN-CL-06) — sem datas = últimos 30 dias
+GET {{host}}/api/relatorios/clima-vendas
+Authorization: Bearer {{token}}

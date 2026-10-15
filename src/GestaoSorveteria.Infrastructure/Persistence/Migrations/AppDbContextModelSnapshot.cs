@@ -171,6 +171,183 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.ToTable("movimentos_caixa", (string)null);
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Clima.ClimaDia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("ChuvaHorasPct")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("chuva_horas_pct");
+
+                    b.Property<decimal?>("ChuvaMm")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("chuva_mm");
+
+                    b.Property<DateTime>("ColetadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("coletado_em");
+
+                    b.Property<string>("Condicao")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("condicao");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date")
+                        .HasColumnName("data");
+
+                    b.Property<bool>("Definitivo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("definitivo");
+
+                    b.Property<string>("Fonte")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fonte");
+
+                    b.Property<string>("Icone")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("icone");
+
+                    b.Property<decimal>("Latitude")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("latitude");
+
+                    b.Property<decimal>("Longitude")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("longitude");
+
+                    b.Property<decimal?>("NuvensPct")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("nuvens_pct");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("origem");
+
+                    b.Property<decimal?>("SensacaoMax")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("sensacao_max");
+
+                    b.Property<decimal>("TempMax")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("temp_max");
+
+                    b.Property<decimal>("TempMedia")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("temp_media");
+
+                    b.Property<decimal>("TempMin")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("temp_min");
+
+                    b.Property<decimal?>("UmidadePct")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("umidade_pct");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clima_dias");
+
+                    b.HasIndex("Latitude", "Longitude", "Data")
+                        .IsUnique()
+                        .HasDatabaseName("ux_clima_dias_por_ponto_e_dia");
+
+                    b.ToTable("clima_dias", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Clima.PrevisaoClima", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("ChanceChuvaPct")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("chance_chuva_pct");
+
+                    b.Property<decimal?>("ChuvaMm")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("chuva_mm");
+
+                    b.Property<string>("Condicao")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("condicao");
+
+                    b.Property<DateOnly>("Data")
+                        .HasColumnType("date")
+                        .HasColumnName("data");
+
+                    b.Property<DateTime>("FeitaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("feita_em");
+
+                    b.Property<DateOnly>("FeitaNoDia")
+                        .HasColumnType("date")
+                        .HasColumnName("feita_no_dia");
+
+                    b.Property<string>("Fonte")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fonte");
+
+                    b.Property<string>("Icone")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("icone");
+
+                    b.Property<decimal>("Latitude")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("latitude");
+
+                    b.Property<decimal>("Longitude")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("longitude");
+
+                    b.Property<decimal>("TempMax")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("temp_max");
+
+                    b.Property<decimal>("TempMin")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)")
+                        .HasColumnName("temp_min");
+
+                    b.HasKey("Id")
+                        .HasName("pk_previsoes_clima");
+
+                    b.HasIndex("Latitude", "Longitude", "Data")
+                        .HasDatabaseName("ix_previsoes_clima_latitude_longitude_data");
+
+                    b.HasIndex("Latitude", "Longitude", "FeitaNoDia", "Data")
+                        .IsUnique()
+                        .HasDatabaseName("ux_previsoes_clima_por_ponto_feita_e_dia");
+
+                    b.ToTable("previsoes_clima", (string)null);
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Comandas.Comanda", b =>
                 {
                     b.Property<Guid>("Id")
@@ -975,6 +1152,21 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("AtualizadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("atualizado_em");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("numeric(7,4)")
+                        .HasColumnName("latitude");
+
+                    b.Property<string>("LocalNome")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("local_nome");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("numeric(7,4)")
+                        .HasColumnName("longitude");
 
                     b.Property<string>("NomeLoja")
                         .IsRequired()

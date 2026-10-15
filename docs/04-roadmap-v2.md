@@ -93,16 +93,17 @@ Plano detalhado em docs/06, seção 4.
 
 Detalhes em docs/07.
 
-- [ ] API no Render Free (Docker) + PostgreSQL no Neon Free; variáveis de ambiente; `/health`
-- [ ] Painel no Cloudflare Pages apontando para a API
+- [x] API no Render Free (Docker) + PostgreSQL no Neon Free; variáveis de ambiente; `/health` — publicado (o Render sobe a partir da `main`)
+- [x] Painel no Cloudflare Pages apontando para a API — `sorveteria-painel.pages.dev` (produção = `main`)
 - [ ] `pg_dump` semanal guardado fora da nuvem; testar a restauração — script `scripts/backup.ps1` e passo a passo de restauração prontos (docs/07, 07/10); falta agendar contra o Neon
 - [ ] APK assinado + link de instalação; `/api/versao` e aviso de atualização no app — script `scripts/publicar-apk.ps1` e passo a passo (keystore fora do Git, link fixo, instalação) prontos (docs/07, 07/10); falta gerar o APK oficial e publicar o link
 - [x] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; entregue em 07/10/2026)
   - [x] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada; caixa marcado `fechamento_forcado` (migração `CaixaFechamentoForcado`) (#51)
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
+- [x] Painel: **Primeiros passos** no Início (catálogo, cardápio, atendentes, WhatsApp, primeira contagem, primeira venda do tablet — RN-LJ-01), para a implantação não travar em "lista vazia"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
-- [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — PR aberto para teste no tablet
+- [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — #67
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
@@ -119,7 +120,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] API: contagens pelo painel (modelo, rascunho, concluir) e `POST /api/sync/contagens`; `diasDeContagem` para o lembrete do app (RN-ES-05/06) — 14/10
 - [x] Saída da semana (RN-ES-07): média por semana entre contagens, somando o que foi recebido no intervalo — entra no pedido sugerido (Sprint 6) — 14/10
 - [x] Diferenças da contagem dos potes no resumo do dia (sistema × contado, mais de 1) — Sprint 7
-- [ ] App: quantidade digitada na venda (RN-ES-04) — PR #67
+- [x] App: quantidade digitada na venda (RN-ES-04) — #67
 - [x] App: botão **"Está acabando"** (busca em todos os grupos ou "Outro", quantidade, prioridade, sem duplicar com "Ainda falta"); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa (e botão na aba Caixa); avisos na fila de envio com recusado em laranja; cache do catálogo de estoque, WhatsApp da dona e dias de contagem no tablet (RN-AV-01/02/03/06/07/08/09) — PR aberto para teste no tablet (14/10)
 - [x] App: tela de **contagem semanal** na ordem da planilha (− e + de meia em meia caixa, toque no número para digitar, "não tem nenhum", contagem anterior do tablet só como referência, salvar parcial e continuar, concluir pelas regras do Domain); fila de envio `POST /api/sync/contagens` com recusada em laranja; lembrete **"Hoje é dia de contagem"** na véspera do pedido (tela de comandas e aba Caixa) (RN-ES-05/06) — PR aberto para teste no tablet, empilhado no do "Está acabando" (14/10)
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
@@ -153,6 +154,18 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque ou informado), margem por produto, por sabor e por período (RN-RL-04): API (`GET /api/produtos/custos`, `PUT /api/produtos/{id}/custo`, margem no relatório de período)
 - [x] Painel: custo e margem no produto (Custo e margem, com o custo informado) e nos Relatórios (indicador, produtos por margem, sabores, Excel)
 - [x] Exportação CSV/Excel por período (Vendas, Caixas, Catálogo e Relatórios — tudo numa planilha) e relatório de fechamento imprimível no detalhe do caixa
+
+### Sprint 10 — Base para vender mais: clima e calendário (15/10/2026)
+
+Começar pequeno e guardar dados desde já: clima de cada dia e a previsão como estava, ao lado das vendas, para estimar vendas e pedido pela previsão quando houver meses de histórico (docs/02, seção 9b; docs/03, seção 5a). O clima é guardado por ponto (latitude/longitude), já pronto para uma segunda loja no futuro.
+
+- [x] Domain: local da loja na configuração, ponto do clima, clima do dia (definitivo depois de 2 dias inteiros), previsão guardada, feriados nacionais (RN-CL-01/02/03/05) + testes — #95
+- [x] Application + Infrastructure: coleta que completa o que falta (API dormindo não perde nada), fonte Visual Crossing atrás de `IFonteClima`, tabelas `clima_dias` e `previsoes_clima` (migração `ClimaDiario`), `BackgroundService` a cada 3 h, endpoints `/api/clima/*` (RN-CL-04/07) — #95
+- [x] API: relatório Clima × vendas por dia, médias por faixa de temperatura e com/sem chuva (dias úteis × fins de semana e feriados), avisos urgentes do dia, próximos 7 dias (RN-CL-06) — #95
+- [x] Painel: local da loja em Configurações (procurar, confirmar, situação da coleta, "Atualizar agora") e tela Análise → Clima × vendas (próximos dias, gráfico temperatura × faturamento, médias, dia a dia, exportar Excel)
+- [ ] Ligar em produção: criar a conta grátis no Visual Crossing, `Clima__ChaveApi` no Render, local da loja no painel (docs/07)
+
+Depois (a combinar): anotação do dia pela dona (evento na cidade, feriado municipal, loja fechada, faltou luz) e, com uns 3 meses de dados, a estimativa de vendas e do pedido pela previsão.
 
 ## Fase 4 — Expansões (a combinar)
 Ficha técnica de insumos (se a dona quiser controlar insumo além do produto pronto) · fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.

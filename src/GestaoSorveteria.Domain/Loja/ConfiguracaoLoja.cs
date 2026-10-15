@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Clima;
 using GestaoSorveteria.Domain.Common;
 
 namespace GestaoSorveteria.Domain.Loja;
@@ -19,6 +20,19 @@ public sealed class ConfiguracaoLoja : Entity
     public string? WhatsAppDona { get; private set; }
 
     public DateTime AtualizadoEm { get; private set; }
+
+    /// <summary>RN-CL-01: o lugar da loja como o serviço de clima encontrou (ex.: "Ribeirão Preto, SP, Brasil"); nulo = não informado.</summary>
+    public string? LocalNome { get; private set; }
+
+    /// <summary>RN-CL-01: latitude do local, 4 casas.</summary>
+    public decimal? Latitude { get; private set; }
+
+    /// <summary>RN-CL-01: longitude do local, 4 casas.</summary>
+    public decimal? Longitude { get; private set; }
+
+    /// <summary>Onde o clima da loja é coletado (RN-CL-01); nulo enquanto a dona não informou o local.</summary>
+    public PontoClima? PontoClima =>
+        Latitude is { } latitude && Longitude is { } longitude ? Clima.PontoClima.De(latitude, longitude) : null;
 
     // EF Core
     private ConfiguracaoLoja()
@@ -43,6 +57,22 @@ public sealed class ConfiguracaoLoja : Entity
 
         NomeLoja = nome;
         WhatsAppDona = whatsApp;
+        AtualizadoEm = agora;
+    }
+
+    /// <summary>
+    /// RN-CL-01: o local da loja confirmado pela dona (o que o serviço de clima encontrou). Coordenadas com 4 casas; o clima é
+    /// guardado pelo ponto com 2 (<see cref="Clima.PontoClima"/>).
+    /// </summary>
+    public void DefinirLocal(string nome, decimal latitude, decimal longitude, DateTime agoraUtc)
+    {
+        var texto = Guard.Texto(nome, "o nome do local", 2, 120);
+        Coordenadas.Validar(latitude, longitude);
+        var agora = Guard.Utc(agoraUtc, "a data");
+
+        LocalNome = texto;
+        Latitude = Math.Round(latitude, 4, MidpointRounding.AwayFromZero);
+        Longitude = Math.Round(longitude, 4, MidpointRounding.AwayFromZero);
         AtualizadoEm = agora;
     }
 }
