@@ -16,6 +16,7 @@ import Configuracoes from './paginas/configuracoes/Configuracoes.tsx'
 import EditarContagem from './paginas/contagens/EditarContagem.tsx'
 import ListaContagens from './paginas/contagens/ListaContagens.tsx'
 import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
+import Relatorios from './paginas/relatorios/Relatorios.tsx'
 import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
 import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
 import ImportarCatalogo from './paginas/estoque/ImportarCatalogo.tsx'
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
           { path: 'vendas', element: <ListaVendas /> },
           { path: 'vendas/:id', element: <DetalheVenda /> },
           { path: 'caixas', element: <ListaCaixas /> },
+          { path: 'relatorios', element: <Relatorios /> },
           { path: 'caixas/:id', element: <DetalheCaixa /> },
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },

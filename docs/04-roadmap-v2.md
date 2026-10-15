@@ -146,7 +146,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 
 ### Sprint 8 — Gráficos e ranking
 - [x] API: `GET /api/relatorios/periodo` — vendas por dia/semana/mês, comparativo com o período anterior, horários e dias de pico (RN-RL-08/09/10); ranking de produtos (quantidade e valor), por categoria e por sabor dos potes (RN-RL-03)
-- [ ] Painel: tela Relatórios (período com atalhos, gráfico por trecho com o anterior, picos, rankings, exportar e imprimir)
+- [x] Painel: tela Relatórios (Análise → Relatórios): período com atalhos, gráfico por dia/semana/mês com o período anterior, horários e dias de pico, produtos (por valor ou quantidade), categorias, formas de pagamento e sabores, exportar Excel e imprimir
 
 ### Sprint 9 — Lucro e exportação
 - [ ] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque), margem por produto, por sabor e por período

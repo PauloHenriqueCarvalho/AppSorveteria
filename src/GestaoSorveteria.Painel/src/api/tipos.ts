@@ -599,3 +599,83 @@ export interface ItemQueMaisFaltaDto {
   vezesQueFaltou: number
   embalagensQueFaltaram: number
 }
+
+/** Contracts/Relatorios/RelatorioPeriodoDto — GET /api/relatorios/periodo. Tudo calculado na API (RN-RL-01/03/08/09/10). */
+export interface RelatorioPeriodoDto {
+  de: string
+  ate: string
+  agrupamento: AgrupamentoRelatorio
+  totalVendido: number
+  quantidadeComandas: number
+  ticketMedio: number
+  totalEstornado: number
+  quantidadeEstornos: number
+  porFormaPagamento: TotalPorFormaDto[]
+  anterior: ComparativoPeriodoDto
+  /** Um por dia/semana/mês do período, inclusive os sem venda. */
+  porTrecho: VendasNoTrechoDto[]
+  porHora: VendasNaHoraDto[]
+  /** Segunda a domingo (0 = domingo), só os dias da semana que o período tem. */
+  porDiaDaSemana: VendasNoDiaDaSemanaDto[]
+  produtos: ProdutoNoRankingDto[]
+  categorias: CategoriaNoRankingDto[]
+  sabores: SaborNoRankingDto[]
+}
+
+export type AgrupamentoRelatorio = 'Dia' | 'Semana' | 'Mes'
+
+/** RN-RL-09: período de comparação; trechos pareados por posição com os do período. */
+export interface ComparativoPeriodoDto {
+  de: string
+  ate: string
+  ateMesmoHorario: boolean
+  totalVendido: number
+  quantidadeComandas: number
+  ticketMedio: number
+  variacaoTotalPercentual: number | null
+  variacaoQuantidadePercentual: number | null
+  variacaoTicketPercentual: number | null
+  porTrecho: VendasNoTrechoDto[]
+}
+
+export interface VendasNoTrechoDto {
+  de: string
+  ate: string
+  total: number
+  quantidade: number
+}
+
+export interface VendasNoDiaDaSemanaDto {
+  /** 0 = domingo … 6 = sábado. */
+  diaDaSemana: number
+  /** Quantos desses dias o período tem. */
+  dias: number
+  total: number
+  quantidade: number
+  mediaPorDia: number
+}
+
+/** produtoId nulo = self-service / venda avulsa. Percentual = parte do faturamento (1 casa). */
+export interface ProdutoNoRankingDto {
+  produtoId: string | null
+  descricao: string
+  categoria: string
+  quantidade: number
+  total: number
+  percentual: number
+}
+
+export interface CategoriaNoRankingDto {
+  categoria: string
+  quantidade: number
+  total: number
+  percentual: number
+}
+
+/** Sabor dos potes ("Pote 1L Flocos"); unidades = potes que saíram. */
+export interface SaborNoRankingDto {
+  itemEstoqueId: string
+  descricao: string
+  unidades: number
+  total: number
+}
