@@ -16,6 +16,7 @@ public class RelatorioServiceTests
     private readonly ComandasEmMemoria _comandas = new();
     private readonly UsuarioRepositoryFake _usuarios = new();
     private readonly ClockFake _clock = new() { UtcNow = Meio17 };
+    private readonly ProdutoRepositoryFake _produtos = new();
     private readonly Caixa _caixa;
     private readonly RelatorioService _service;
 
@@ -23,7 +24,7 @@ public class RelatorioServiceTests
     {
         _usuarios.Usuarios.Add(Cenario.Admin());
         var consultaCaixas = new CaixaConsultaService(_caixas, _comandas, _usuarios, _clock);
-        _service = new RelatorioService(_comandas, consultaCaixas, _clock);
+        _service = new RelatorioService(_comandas, _produtos, consultaCaixas, _clock);
         _caixa = Caixa.Abrir(_usuarios.Usuarios[0].Id, 100m, Meio17.AddHours(-4));
         _caixas.Caixas.Add(_caixa);
     }

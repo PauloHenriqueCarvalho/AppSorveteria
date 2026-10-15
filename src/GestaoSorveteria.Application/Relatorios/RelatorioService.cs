@@ -12,12 +12,14 @@ namespace GestaoSorveteria.Application.Relatorios;
 public sealed class RelatorioService
 {
     private readonly IComandaRepository _comandas;
+    private readonly IProdutoRepository _produtos;
     private readonly CaixaConsultaService _caixas;
     private readonly IClock _clock;
 
-    public RelatorioService(IComandaRepository comandas, CaixaConsultaService caixas, IClock clock)
+    public RelatorioService(IComandaRepository comandas, IProdutoRepository produtos, CaixaConsultaService caixas, IClock clock)
     {
         _comandas = comandas;
+        _produtos = produtos;
         _caixas = caixas;
         _clock = clock;
     }
@@ -34,7 +36,7 @@ public sealed class RelatorioService
         var fechadas = vendas.Where(c => c.Status == StatusComanda.Fechada).ToList();
         var estornadas = vendas.Where(c => c.Status == StatusComanda.Estornada).ToList();
         var total = Moeda.Arredondar(fechadas.Sum(c => c.Total));
-        var ticketMedio = fechadas.Count == 0 ? 0m : Moeda.Arredondar(total / fechadas.Count);
+        var ticketMedio = CalculoRelatorio.TicketMedio(total, fechadas.Count);
 
         var (_, canceladas) = await _comandas.ListarPorPeriodoAsync(
             inicioUtc, fimUtc, new FiltroVendas(StatusComanda.Cancelada), pular: 0, quantidade: 1, cancellationToken);
@@ -50,23 +52,15 @@ public sealed class RelatorioService
             canceladas,
             fechadas.Count(c => c.RecebidaAposFechamentoCaixa),
             await _caixas.ObterAtualAsync(cancellationToken),
-            PorHora(fechadas),
+            CalculoRelatorio.PorHora(fechadas),
             await SemanaPassadaAsync(data, total, fechadas.Count, ticketMedio, cancellationToken),
-            MaisVendidos(fechadas));
+            await MaisVendidosAsync(fechadas, cancellationToken));
     }
 
     /// <summary>Rótulo dos itens livres no ranking (RN-RL-03).</summary>
-    public const string RotuloItemLivre = "Self-service / venda avulsa";
+    public const string RotuloItemLivre = CalculoRelatorio.RotuloItemLivre;
 
     private const int QuantidadeMaisVendidos = 5;
-
-    /// <summary>RN-RL-06: comandas pagas por hora local do fechamento; só as horas com venda.</summary>
-    private static IReadOnlyList<VendasNaHoraDto> PorHora(IEnumerable<Comanda> fechadas) =>
-        fechadas
-            .GroupBy(c => TimeZoneInfo.ConvertTimeFromUtc(c.FechadaEm!.Value, DiaComercial.Fuso).Hour)
-            .OrderBy(g => g.Key)
-            .Select(g => new VendasNaHoraDto(g.Key, Moeda.Arredondar(g.Sum(c => c.Total)), g.Count()))
-            .ToList();
 
     /// <summary>
     /// RN-RL-07: mesmo dia da semana anterior. Hoje → só até o mesmo horário de agora, para não comparar
@@ -86,7 +80,7 @@ public sealed class RelatorioService
         var vendas = await _comandas.ListarFechadasAsync(inicioUtc, fimUtc, cancellationToken);
         var fechadas = vendas.Where(c => c.Status == StatusComanda.Fechada).ToList();
         var totalAntes = Moeda.Arredondar(fechadas.Sum(c => c.Total));
-        var ticketAntes = fechadas.Count == 0 ? 0m : Moeda.Arredondar(totalAntes / fechadas.Count);
+        var ticketAntes = CalculoRelatorio.TicketMedio(totalAntes, fechadas.Count);
 
         return new ComparativoDiaDto(
             anterior,
@@ -94,26 +88,25 @@ public sealed class RelatorioService
             totalAntes,
             fechadas.Count,
             ticketAntes,
-            Variacao(total, totalAntes),
-            Variacao(quantidade, fechadas.Count),
-            Variacao(ticketMedio, ticketAntes),
-            PorHora(fechadas));
+            CalculoRelatorio.Variacao(total, totalAntes),
+            CalculoRelatorio.Variacao(quantidade, fechadas.Count),
+            CalculoRelatorio.Variacao(ticketMedio, ticketAntes),
+            CalculoRelatorio.PorHora(fechadas));
     }
 
-    /// <summary>(atual − anterior) ÷ anterior × 100, 1 casa; anterior zero → null (RN-RL-07).</summary>
-    private static decimal? Variacao(decimal atual, decimal anterior) =>
-        anterior == 0m ? null : Math.Round((atual - anterior) / anterior * 100m, 1, MidpointRounding.AwayFromZero);
-
-    /// <summary>RN-RL-03: até 5 por faturamento; itens livres juntos; empate → mais unidades, depois nome.</summary>
-    private static IReadOnlyList<ProdutoVendidoDto> MaisVendidos(IEnumerable<Comanda> fechadas) =>
-        fechadas
+    /// <summary>
+    /// RN-RL-03: até 5 por faturamento; itens livres juntos; empate → mais unidades, depois nome. Nome do cadastro atual
+    /// (a linha do pote traz o sabor e não serve de nome do produto).
+    /// </summary>
+    private async Task<IReadOnlyList<ProdutoVendidoDto>> MaisVendidosAsync(IReadOnlyList<Comanda> fechadas, CancellationToken cancellationToken)
+    {
+        var produtos = (await _produtos.ListarAsync(somenteAtivos: false, cancellationToken)).ToDictionary(p => p.Id);
+        return fechadas
             .SelectMany(c => c.Itens.Select(i => (Comanda: c, Item: i)))
             .GroupBy(x => x.Item.ProdutoId)
             .Select(g =>
             {
-                var descricao = g.Key is null
-                    ? RotuloItemLivre
-                    : g.OrderByDescending(x => x.Comanda.FechadaEm).First().Item.Descricao;
+                var (descricao, _) = CalculoRelatorio.NomeECategoria(g.Key, produtos, g.MaxBy(x => x.Comanda.FechadaEm).Item.Descricao);
                 return new ProdutoVendidoDto(g.Key, descricao, g.Sum(x => x.Item.Quantidade), Moeda.Arredondar(g.Sum(x => x.Item.Subtotal)));
             })
             .OrderByDescending(p => p.Total)
@@ -121,4 +114,5 @@ public sealed class RelatorioService
             .ThenBy(p => p.Descricao, StringComparer.CurrentCulture)
             .Take(QuantidadeMaisVendidos)
             .ToList();
+    }
 }

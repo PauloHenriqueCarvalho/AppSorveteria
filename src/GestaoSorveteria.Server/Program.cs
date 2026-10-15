@@ -62,6 +62,7 @@ builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<ComandaConsultaService>();
 builder.Services.AddScoped<ComandaService>();
 builder.Services.AddScoped<RelatorioService>();
+builder.Services.AddScoped<RelatorioPeriodoService>();
 builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<CatalogoEstoqueService>();
 builder.Services.AddScoped<AvisoService>();

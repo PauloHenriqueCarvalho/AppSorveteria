@@ -145,11 +145,14 @@ Desenho e motivo em **docs/10** (revisto em 14/10). A loja compra sorvete **pron
 |---|---|---|
 | RN-RL-01 | Faturamento = soma das comandas **fechadas** (as `Estornada` ficam à parte, somadas como estornos no dia da venda) | F3 |
 | RN-RL-02 | Períodos (dia/semana/mês) usam o dia comercial em `America/Sao_Paulo` | F3 |
-| RN-RL-03 | Ranking por quantidade e por valor; itens livres agrupados como "Self-service / venda avulsa". No dashboard do dia (adiantado em 14/10/2026): até 5 produtos por faturamento das comandas pagas (estornadas fora); empate → mais unidades, depois nome | F1/F3 |
+| RN-RL-03 | Ranking por quantidade e por valor; itens livres agrupados como "Self-service / venda avulsa". Nome e categoria do **cadastro atual** do produto (a linha do pote traz o sabor, "Pote 1L · Flocos", e não serve de nome); produto fora do cadastro usa a descrição da venda mais recente. No dashboard do dia (adiantado em 14/10/2026): até 5 produtos por faturamento das comandas pagas (estornadas fora); empate → mais unidades, depois nome. No relatório de período: todos os produtos, com a parte do faturamento (%, 1 casa), a soma por categoria e os **sabores** dos potes (RN-ES-09) por unidades que saíram (quantidade × unidades por venda) | F1/F3 |
 | RN-RL-04 | Margem estimada = preço praticado − custo estimado (RN-PR-07); sem custo → "n/d", nunca zero | F3 |
 | RN-RL-05 | Exportação em CSV/Excel de qualquer período | F3 |
 | RN-RL-06 | **Vendas por hora** do dia: comandas pagas agrupadas pela hora local do fechamento (0–23, America/Sao_Paulo); só as horas com venda | F1 |
 | RN-RL-07 | **Comparativo** com o mesmo dia da semana anterior (hoje − 7 dias). Se o dia consultado é hoje, a semana passada conta só até o mesmo horário. Variação % = (atual − anterior) ÷ anterior × 100, 1 casa; anterior zero → sem variação ("—"), nunca 100% | F1 |
+| RN-RL-08 | **Relatório de período**: de–até em dias comerciais, inclusive, até 366 dias, sem passar de hoje; sem datas = este mês até hoje. Dividido por **dia** (até 93 dias), **semana** (segunda a domingo) ou **mês**, recortados nas pontas do período; todo trecho aparece, mesmo sem venda. Sem escolha: dia até 31 dias, semana até 92, mês acima | F3 |
+| RN-RL-09 | **Comparativo do período**: período que começa no dia 1 e fica dentro do mês → o mesmo trecho do mês anterior (1 a N, limitado ao fim daquele mês: "este mês" compara com o começo do mês passado); qualquer outro → os mesmos N dias logo antes. Se o período termina hoje, o último dia do anterior conta só até o mesmo horário. Variação como no RN-RL-07 | F3 |
+| RN-RL-10 | **Picos**: vendas pagas do período por hora local do fechamento (RN-RL-06) e por dia da semana (segunda a domingo, só os dias que o período tem), com a **média por dia** = total ÷ quantos desses dias o período tem | F3 |
 
 ## 8. Sincronização offline (app do atendente)
 
