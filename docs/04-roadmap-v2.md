@@ -102,7 +102,7 @@ Detalhes em docs/07.
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
-- [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — PR aberto para teste no tablet
+- [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — #67
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
@@ -119,7 +119,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] API: contagens pelo painel (modelo, rascunho, concluir) e `POST /api/sync/contagens`; `diasDeContagem` para o lembrete do app (RN-ES-05/06) — 14/10
 - [x] Saída da semana (RN-ES-07): média por semana entre contagens, somando o que foi recebido no intervalo — entra no pedido sugerido (Sprint 6) — 14/10
 - [x] Diferenças da contagem dos potes no resumo do dia (sistema × contado, mais de 1) — Sprint 7
-- [ ] App: quantidade digitada na venda (RN-ES-04) — PR #67
+- [x] App: quantidade digitada na venda (RN-ES-04) — #67
 - [x] App: botão **"Está acabando"** (busca em todos os grupos ou "Outro", quantidade, prioridade, sem duplicar com "Ainda falta"); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa (e botão na aba Caixa); avisos na fila de envio com recusado em laranja; cache do catálogo de estoque, WhatsApp da dona e dias de contagem no tablet (RN-AV-01/02/03/06/07/08/09) — PR aberto para teste no tablet (14/10)
 - [x] App: tela de **contagem semanal** na ordem da planilha (− e + de meia em meia caixa, toque no número para digitar, "não tem nenhum", contagem anterior do tablet só como referência, salvar parcial e continuar, concluir pelas regras do Domain); fila de envio `POST /api/sync/contagens` com recusada em laranja; lembrete **"Hoje é dia de contagem"** na véspera do pedido (tela de comandas e aba Caixa) (RN-ES-05/06) — PR aberto para teste no tablet, empilhado no do "Está acabando" (14/10)
 - [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
