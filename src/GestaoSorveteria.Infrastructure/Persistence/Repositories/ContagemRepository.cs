@@ -46,6 +46,13 @@ internal sealed class ContagemRepository : IContagemRepository
             });
     }
 
+    public async Task<IReadOnlyList<Contagem>> ListarConcluidasEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        await _db.Contagens
+            .Include(c => c.Itens)
+            .Where(c => c.ConcluidaEm != null && c.ConcluidaEm >= deUtc && c.ConcluidaEm < ateUtc)
+            .OrderByDescending(c => c.ConcluidaEm)
+            .ToListAsync(cancellationToken);
+
     public async Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default) =>
         await _db.Contagens.AddAsync(contagem, cancellationToken);
 }

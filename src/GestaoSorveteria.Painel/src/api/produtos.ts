@@ -1,5 +1,5 @@
 import { requisicao } from './cliente.ts'
-import type { CatalogoProdutosResponse, ProdutoDto, SalvarProdutoRequest } from './tipos.ts'
+import type { CatalogoProdutosResponse, LigarProdutoEstoqueRequest, ProdutoDto, SalvarProdutoRequest } from './tipos.ts'
 
 /** Chave do TanStack Query para a lista; o produto único usa [...CHAVE_PRODUTOS, id]. */
 export const CHAVE_PRODUTOS = ['produtos'] as const
@@ -23,6 +23,11 @@ export function criarProduto(dados: SalvarProdutoRequest): Promise<ProdutoDto> {
 /** PUT /api/produtos/{id} (Admin) */
 export function atualizarProduto(id: string, dados: SalvarProdutoRequest): Promise<ProdutoDto> {
   return requisicao<ProdutoDto>(`/api/produtos/${encodeURIComponent(id)}`, { metodo: 'PUT', corpo: dados })
+}
+
+/** PUT /api/produtos/{id}/estoque (Admin) — RN-PR-06: liga ao grupo de estoque (nulo = desliga). */
+export function ligarProdutoAoEstoque(id: string, dados: LigarProdutoEstoqueRequest): Promise<ProdutoDto> {
+  return requisicao<ProdutoDto>(`/api/produtos/${encodeURIComponent(id)}/estoque`, { metodo: 'PUT', corpo: dados })
 }
 
 /** POST /api/produtos/{id}/ativar ou /desativar (Admin). Produto nunca é apagado (RN-PR-03). */

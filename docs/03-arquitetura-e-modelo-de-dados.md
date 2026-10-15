@@ -245,7 +245,7 @@ movimentos_estoque  (id, item_estoque_id FK, tipo varchar(15) -- Entrada | Baixa
 
 contagens           (id, usuario_id, iniciada_em, concluida_em?, origem varchar(10) -- App | Painel)
 itens_contagem      (id, contagem_id FK, item_estoque_id FK, contado_unidades int?,  -- null = não contado
-                     saldo_sistema_unidades int?,  -- potes: para mostrar a diferença
+                     saldo_sistema_unidades int?,  -- reservado: o saldo esperado é calculado na leitura (RN-ES-08)
                      contado_em timestamptz?)      -- quando o item foi contado (base do saldo); null = vale concluida_em
                                                    -- único (contagem_id, item_estoque_id)
 

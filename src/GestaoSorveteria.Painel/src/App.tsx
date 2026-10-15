@@ -19,6 +19,7 @@ import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
 import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
 import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
 import ImportarCatalogo from './paginas/estoque/ImportarCatalogo.tsx'
+import SaldosPotes from './paginas/estoque/SaldosPotes.tsx'
 import EditarFornecedor from './paginas/fornecedores/EditarFornecedor.tsx'
 import ListaFornecedores from './paginas/fornecedores/ListaFornecedores.tsx'
 import ConferirEntrega from './paginas/pedidos/ConferirEntrega.tsx'
@@ -74,6 +75,7 @@ const router = createBrowserRouter([
           { path: 'pedidos', element: <ListaPedidos /> },
           { path: 'pedidos/:id', element: <DetalhePedido /> },
           { path: 'pedidos/:id/conferir', element: <ConferirEntrega /> },
+          { path: 'potes', element: <SaldosPotes /> },
           { path: 'estoque', element: <CatalogoEstoque /> },
           { path: 'estoque/importar', element: <ImportarCatalogo /> },
           { path: 'estoque/itens/novo', element: <EditarItemEstoque /> },
