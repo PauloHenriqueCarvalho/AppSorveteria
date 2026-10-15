@@ -331,6 +331,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | POST | `/api/sync/comandas` | qualquer | lote de comandas **fechadas ou canceladas** com itens e pagamentos; idempotente pelo `id`; a API reconstrói o agregado com as regras do Domain e devolve, por comanda, `aceita`/`já recebida`/`rejeitada` + motivo |
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |
 | GET | `/api/relatorios/dia?data=` | Admin | resumo do dia para o painel |
+| GET | `/api/relatorios/periodo?de=&ate=&agrupar=` | Admin | relatório de período (Sprint 8) |
 | GET | `/api/caixas?de=&ate=` | Admin | histórico de fechamentos |
 | POST | `/api/caixas/{id}/fechar-forcado` | Admin | RN-CX-09: `{ "motivo": "..." }`; contado = 0, vendas em dinheiro = as já recebidas, diferença gravada; caixa já fechado → 400; corrida com a sincronização → 409 (xmin) |
 | GET | `/api/versao` | público | `versaoApi`, `versaoMinimaApp`, `versaoAtualApp`, `linkApk` (configuração `App:*`); abaixo da mínima o app exige atualizar, abaixo da atual só avisa |
@@ -344,6 +345,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
 | GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte; vendas por hora, mesmo dia da semana anterior e mais vendidos desde 14/10 — RN-RL-03/06/07) | `ResumoDiaDto` |
+| GET | `/api/relatorios/periodo?de=&ate=&agrupar=` | Relatório de período — **pronto** (sem datas = este mês até hoje; até 366 dias; `agrupar` = dia, semana ou mes; faturamento por trecho, período anterior, por hora, por dia da semana e rankings de produtos, categorias e sabores — RN-RL-03/08/09/10) | `RelatorioPeriodoDto` |
 | GET | `/api/comandas?de=&ate=&status=&atendente=&forma=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; `atendente` = Id de quem vendeu; `forma` = Dinheiro, Pix, CartaoDebito ou CartaoCredito — venda com pelo menos um pagamento nela, então o pagamento dividido aparece nas duas; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09) — **pronto** (corpo `{ "motivo": "..." }`; não altera o caixa) | `ComandaDetalheDto` |

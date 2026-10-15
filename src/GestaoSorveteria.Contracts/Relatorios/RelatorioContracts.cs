@@ -51,3 +51,72 @@ public sealed record ComparativoDiaDto(
 /// (<paramref name="ProdutoId"/> nulo).
 /// </summary>
 public sealed record ProdutoVendidoDto(Guid? ProdutoId, string Descricao, int Quantidade, decimal Total);
+
+/// <summary>
+/// GET /api/relatorios/periodo?de=&amp;ate=&amp;agrupar= — vendas de um período (dias comerciais, inclusive; até 366 dias, sem passar
+/// de hoje). Tudo calculado na API (RN-RL-01/03/08/09/10); o painel só mostra.
+/// <paramref name="Agrupamento"/>: "Dia", "Semana" (segunda a domingo, recortada no período) ou "Mes" (recortado) — RN-RL-08.
+/// <paramref name="PorTrecho"/>: um por dia/semana/mês do período, inclusive os sem venda.
+/// <paramref name="Anterior"/>: o período de comparação (RN-RL-09).
+/// <paramref name="PorHora"/>/<paramref name="PorDiaDaSemana"/>: horários e dias de pico (RN-RL-10).
+/// <paramref name="Produtos"/>, <paramref name="Categorias"/>, <paramref name="Sabores"/>: rankings das vendas pagas (RN-RL-03).
+/// </summary>
+public sealed record RelatorioPeriodoDto(
+    DateOnly De,
+    DateOnly Ate,
+    string Agrupamento,
+    decimal TotalVendido,
+    int QuantidadeComandas,
+    decimal TicketMedio,
+    decimal TotalEstornado,
+    int QuantidadeEstornos,
+    IReadOnlyList<TotalPorFormaDto> PorFormaPagamento,
+    ComparativoPeriodoDto Anterior,
+    IReadOnlyList<VendasNoTrechoDto> PorTrecho,
+    IReadOnlyList<VendasNaHoraDto> PorHora,
+    IReadOnlyList<VendasNoDiaDaSemanaDto> PorDiaDaSemana,
+    IReadOnlyList<ProdutoNoRankingDto> Produtos,
+    IReadOnlyList<CategoriaNoRankingDto> Categorias,
+    IReadOnlyList<SaborNoRankingDto> Sabores);
+
+/// <summary>
+/// RN-RL-09: período de comparação. <paramref name="AteMesmoHorario"/>: o período consultado termina hoje, então o último dia do
+/// anterior conta só até o mesmo horário de agora. Variações como no RN-RL-07 (<c>null</c> quando a base é zero).
+/// <paramref name="PorTrecho"/>: trechos do anterior pareados <b>por posição</b> com os do período (o 1º com o 1º…), para desenhar
+/// junto; comparando com o mês anterior pode ter um trecho a menos ou a mais (meses de tamanhos diferentes).
+/// </summary>
+public sealed record ComparativoPeriodoDto(
+    DateOnly De,
+    DateOnly Ate,
+    bool AteMesmoHorario,
+    decimal TotalVendido,
+    int QuantidadeComandas,
+    decimal TicketMedio,
+    decimal? VariacaoTotalPercentual,
+    decimal? VariacaoQuantidadePercentual,
+    decimal? VariacaoTicketPercentual,
+    IReadOnlyList<VendasNoTrechoDto> PorTrecho);
+
+/// <summary>Vendas pagas de um trecho do período (um dia, uma semana ou um mês, recortados em <paramref name="De"/>–<paramref name="Ate"/>).</summary>
+public sealed record VendasNoTrechoDto(DateOnly De, DateOnly Ate, decimal Total, int Quantidade);
+
+/// <summary>
+/// RN-RL-10: vendas pagas num dia da semana (<paramref name="DiaDaSemana"/>: 0 = domingo … 6 = sábado).
+/// <paramref name="Dias"/>: quantos desses dias o período tem; <paramref name="MediaPorDia"/> = total ÷ dias, 2 casas.
+/// </summary>
+public sealed record VendasNoDiaDaSemanaDto(int DiaDaSemana, int Dias, decimal Total, int Quantidade, decimal MediaPorDia);
+
+/// <summary>
+/// RN-RL-03: produto no ranking do período. Nome e categoria do cadastro atual; itens livres juntos como
+/// "Self-service / venda avulsa" (<paramref name="ProdutoId"/> nulo). <paramref name="Percentual"/>: parte do faturamento, 1 casa.
+/// </summary>
+public sealed record ProdutoNoRankingDto(Guid? ProdutoId, string Descricao, string Categoria, int Quantidade, decimal Total, decimal Percentual);
+
+/// <summary>RN-RL-03: soma dos produtos de uma categoria; <paramref name="Percentual"/>: parte do faturamento, 1 casa.</summary>
+public sealed record CategoriaNoRankingDto(string Categoria, int Quantidade, decimal Total, decimal Percentual);
+
+/// <summary>
+/// RN-RL-03: sabor (item de estoque escolhido na venda, RN-ES-09) — "Pote 1L Flocos". <paramref name="Unidades"/>: potes que
+/// saíram (quantidade × unidades por venda do produto).
+/// </summary>
+public sealed record SaborNoRankingDto(Guid ItemEstoqueId, string Descricao, int Unidades, decimal Total);
