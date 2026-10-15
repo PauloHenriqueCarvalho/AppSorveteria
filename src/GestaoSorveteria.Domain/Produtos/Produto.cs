@@ -35,6 +35,12 @@ public sealed class Produto : Entity
 
     public const int UnidadesPorVendaMaximo = 50;
 
+    /// <summary>
+    /// RN-PR-07: custo de uma unidade vendida informado à mão — para o produto sem vínculo de estoque, ou cujo grupo não tem
+    /// custo no catálogo. Nulo = sem custo (a margem fica "n/d", nunca zero — RN-RL-04). Não vai para o app.
+    /// </summary>
+    public decimal? CustoInformado { get; private set; }
+
     public DateTime CriadoEm { get; private set; }
     public DateTime? AtualizadoEm { get; private set; }
 
@@ -115,6 +121,17 @@ public sealed class Produto : Entity
         GrupoEstoqueId = grupoEstoqueId;
         UnidadesPorVenda = unidades;
         AtualizadoEm = agora;
+    }
+
+    /// <summary>
+    /// RN-PR-07: informa (ou apaga, com nulo) o custo de uma unidade vendida. Maior que zero, 2 casas. Não marca AtualizadoEm:
+    /// o custo é só do painel e o app não precisa baixar o produto de novo.
+    /// </summary>
+    public void InformarCusto(decimal? custo)
+    {
+        Guard.Contra(custo is not null && PermiteValorLivre,
+            $"\"{Nome}\" tem valor livre (self-service): o valor muda a cada venda e o custo por unidade não se aplica.");
+        CustoInformado = custo is null ? null : Guard.Dinheiro(custo.Value, "o custo", permiteZero: false);
     }
 
     /// <summary>

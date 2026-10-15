@@ -5,15 +5,19 @@ import { mensagemDoErro } from '../../api/erros.ts'
 import {
   alterarAtivo,
   atualizarProduto,
+  CHAVE_CUSTOS,
   CHAVE_PRODUTOS,
   criarProduto,
+  informarCusto,
   ligarProdutoAoEstoque,
+  listarCustos,
   listarProdutos,
   obterProduto,
 } from '../../api/produtos.ts'
-import type { ProdutoDto, SalvarProdutoRequest } from '../../api/tipos.ts'
+import type { CustoProdutoDto, ProdutoDto, SalvarProdutoRequest } from '../../api/tipos.ts'
 import ConectandoServidor from '../../componentes/ConectandoServidor.tsx'
 import { lerPreco, precoParaCampo } from '../../entrada.ts'
+import { formatarMoeda } from '../../formatacao.ts'
 import { useCatalogoEstoque } from '../estoque/useCatalogoEstoque.ts'
 
 /** /produtos/novo (sem id) e /produtos/:id. */
@@ -176,6 +180,8 @@ function Formulario({ produto }: { produto?: ProdutoDto }) {
 
       {produto && <LigarAoEstoque key={produto.id} produto={produto} />}
 
+      {produto && <CustoEMargem key={produto.id} produto={produto} />}
+
       {produto && (
         <div className="cartao formulario">
           <p className="suave">
@@ -217,6 +223,8 @@ function LigarAoEstoque({ produto }: { produto: ProdutoDto }) {
     onSuccess: (atualizado) => {
       queryClient.setQueryData([...CHAVE_PRODUTOS, atualizado.id], atualizado)
       void queryClient.invalidateQueries({ queryKey: CHAVE_PRODUTOS, exact: true })
+      // O custo pode passar a vir do estoque (ou deixar de vir).
+      void queryClient.invalidateQueries({ queryKey: CHAVE_CUSTOS })
       setSalvo(true)
     },
   })
@@ -283,6 +291,120 @@ function LigarAoEstoque({ produto }: { produto: ProdutoDto }) {
       <button type="submit" className="botao botao-secundario" disabled={ligar.isPending || !mudou}>
         {ligar.isPending ? 'Salvando…' : 'Salvar estoque'}
       </button>
+    </form>
+  )
+}
+
+/** "R$ 4,10 (82%)" — margem calculada pela API (RN-RL-04). */
+function descreverMargem(custo: CustoProdutoDto): string {
+  if (custo.margem === null) {
+    return 'n/d'
+  }
+  const percentual = custo.margemPercentual === null ? '' : ` (${custo.margemPercentual.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%)`
+  return `${formatarMoeda(custo.margem)}${percentual}`
+}
+
+/**
+ * RN-PR-07/RN-RL-04: quanto custa uma unidade vendida e quanto sobra do preço. Ligado ao estoque, o custo vem do catálogo
+ * (custo da embalagem); sem vínculo, ou com o grupo sem custo, a dona informa aqui. Só no painel: o tablet não vê custo.
+ */
+function CustoEMargem({ produto }: { produto: ProdutoDto }) {
+  const queryClient = useQueryClient()
+  const custos = useQuery({ queryKey: CHAVE_CUSTOS, queryFn: listarCustos })
+  const atual = custos.data?.find((c) => c.produtoId === produto.id)
+  const [texto, setTexto] = useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [salvo, setSalvo] = useState(false)
+  const campo = texto ?? (atual?.custoInformado != null ? precoParaCampo(atual.custoInformado) : '')
+
+  const salvar = useMutation({
+    mutationFn: (custo: number | null) => informarCusto(produto.id, { custo }),
+    onSuccess: (atualizado) => {
+      queryClient.setQueryData<CustoProdutoDto[]>(CHAVE_CUSTOS, (lista) =>
+        lista?.map((c) => (c.produtoId === atualizado.produtoId ? atualizado : c)),
+      )
+      setTexto(null)
+      setSalvo(true)
+    },
+  })
+
+  function enviar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    setErro(null)
+    setSalvo(false)
+    if (campo.trim() === '') {
+      salvar.mutate(null)
+      return
+    }
+    const valor = lerPreco(campo)
+    if (valor === null || valor <= 0) {
+      setErro('Custo inválido. Escreva só o valor, por exemplo 1,20 (ou deixe em branco para apagar).')
+      return
+    }
+    salvar.mutate(valor)
+  }
+
+  if (produto.permiteValorLivre) {
+    return (
+      <div className="cartao formulario">
+        <h2>Custo e margem</h2>
+        <p className="suave">Produto de valor digitado (self-service) não tem custo por unidade: o valor muda a cada venda, e a margem fica “n/d”.</p>
+      </div>
+    )
+  }
+
+  const doEstoque = atual?.origem === 'Estoque'
+  const mudou = (texto ?? null) !== null && campo.trim() !== (atual?.custoInformado != null ? precoParaCampo(atual.custoInformado) : '')
+
+  return (
+    <form className="cartao formulario" onSubmit={enviar}>
+      <h2>Custo e margem</h2>
+      {custos.isPending ? (
+        <p className="suave">Carregando o custo…</p>
+      ) : custos.isError ? (
+        <p className="alerta alerta-erro">{mensagemDoErro(custos.error)}</p>
+      ) : (
+        <>
+          <dl className="ficha">
+            <div className="ficha-linha">
+              <dt>Custo por unidade</dt>
+              <dd>
+                {atual?.custoEstimado != null ? (
+                  <>
+                    <strong>{formatarMoeda(atual.custoEstimado)}</strong>{' '}
+                    <span className="suave">{doEstoque ? '· pelo catálogo do estoque (custo da embalagem)' : '· informado aqui'}</span>
+                  </>
+                ) : (
+                  <span className="suave">sem custo — a margem fica “n/d” nos relatórios</span>
+                )}
+              </dd>
+            </div>
+            <div className="ficha-linha">
+              <dt>Margem</dt>
+              <dd>{atual ? descreverMargem(atual) : 'n/d'}</dd>
+            </div>
+          </dl>
+          <label className="campo">
+            <span>{doEstoque ? 'Custo informado (só vale se o catálogo ficar sem custo)' : 'Custo de uma unidade vendida (R$)'}</span>
+            <input
+              inputMode="decimal"
+              placeholder="ex.: 1,20"
+              value={campo}
+              onChange={(e) => {
+                setTexto(e.target.value)
+                setSalvo(false)
+              }}
+            />
+            <span className="suave dica">Deixe em branco para apagar. O custo não aparece no tablet.</span>
+          </label>
+          {erro && <p className="alerta alerta-erro">{erro}</p>}
+          {salvar.isError && <p className="alerta alerta-erro">{mensagemDoErro(salvar.error)}</p>}
+          {salvo && !mudou && <p className="alerta alerta-sucesso">Custo salvo.</p>}
+          <button type="submit" className="botao botao-secundario" disabled={salvar.isPending || !mudou}>
+            {salvar.isPending ? 'Salvando…' : 'Salvar custo'}
+          </button>
+        </>
+      )}
     </form>
   )
 }

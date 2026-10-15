@@ -51,3 +51,23 @@ public sealed record LigarProdutoEstoqueRequest(
     Guid? GrupoEstoqueId,
     [Range(1, 50, ErrorMessage = "Unidades por venda vai de 1 a 50.")]
     int UnidadesPorVenda = 1);
+
+/// <summary>
+/// GET /api/produtos/custos e PUT /api/produtos/{id}/custo (Admin) — RN-PR-07: custo estimado de uma unidade vendida e a
+/// margem sobre o preço atual (RN-RL-04). Só no painel: o app não recebe custo.
+/// <paramref name="Origem"/>: "Estoque" (catálogo, pela embalagem) ou "Informado" (digitado no produto); nulo = sem custo.
+/// <paramref name="Margem"/> = preço − custo; <paramref name="MargemPercentual"/> = margem ÷ preço × 100, 1 casa. Nulos sem custo
+/// ou em produto de valor livre (o preço muda a cada venda).
+/// </summary>
+public sealed record CustoProdutoDto(
+    Guid ProdutoId,
+    decimal? CustoInformado,
+    decimal? CustoEstimado,
+    string? Origem,
+    decimal? Margem,
+    decimal? MargemPercentual);
+
+/// <summary>PUT /api/produtos/{id}/custo (Admin) — custo de uma unidade vendida; nulo apaga.</summary>
+public sealed record InformarCustoProdutoRequest(
+    [Range(0.01, 99999.99, ErrorMessage = "O custo deve ser de 0,01 a 99.999,99.")]
+    decimal? Custo);

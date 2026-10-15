@@ -77,7 +77,22 @@ public sealed record RelatorioPeriodoDto(
     IReadOnlyList<VendasNoDiaDaSemanaDto> PorDiaDaSemana,
     IReadOnlyList<ProdutoNoRankingDto> Produtos,
     IReadOnlyList<CategoriaNoRankingDto> Categorias,
-    IReadOnlyList<SaborNoRankingDto> Sabores);
+    IReadOnlyList<SaborNoRankingDto> Sabores,
+    MargemPeriodoDto Margem);
+
+/// <summary>
+/// RN-RL-04: margem estimada do período com os custos de hoje (RN-PR-07), só sobre os produtos que têm custo:
+/// <paramref name="MargemEstimada"/> = <paramref name="FaturamentoComCusto"/> − <paramref name="CustoEstimado"/>;
+/// <paramref name="MargemPercentual"/> sobre esse faturamento (1 casa). Nenhum produto vendido com custo → custo e margens nulos ("n/d",
+/// nunca zero). <paramref name="FaturamentoSemCusto"/>: o que ficou de fora por falta de custo (self-service, venda avulsa, produto
+/// sem custo cadastrado).
+/// </summary>
+public sealed record MargemPeriodoDto(
+    decimal FaturamentoComCusto,
+    decimal? CustoEstimado,
+    decimal? MargemEstimada,
+    decimal? MargemPercentual,
+    decimal FaturamentoSemCusto);
 
 /// <summary>
 /// RN-RL-09: período de comparação. <paramref name="AteMesmoHorario"/>: o período consultado termina hoje, então o último dia do
@@ -109,14 +124,32 @@ public sealed record VendasNoDiaDaSemanaDto(int DiaDaSemana, int Dias, decimal T
 /// <summary>
 /// RN-RL-03: produto no ranking do período. Nome e categoria do cadastro atual; itens livres juntos como
 /// "Self-service / venda avulsa" (<paramref name="ProdutoId"/> nulo). <paramref name="Percentual"/>: parte do faturamento, 1 casa.
+/// <paramref name="CustoEstimado"/>/<paramref name="Margem"/>/<paramref name="MargemPercentual"/>: RN-RL-04, nulos ("n/d") quando
+/// alguma venda do produto não tem custo (RN-PR-07); margem % sobre o total do produto.
 /// </summary>
-public sealed record ProdutoNoRankingDto(Guid? ProdutoId, string Descricao, string Categoria, int Quantidade, decimal Total, decimal Percentual);
+public sealed record ProdutoNoRankingDto(
+    Guid? ProdutoId,
+    string Descricao,
+    string Categoria,
+    int Quantidade,
+    decimal Total,
+    decimal Percentual,
+    decimal? CustoEstimado = null,
+    decimal? Margem = null,
+    decimal? MargemPercentual = null);
 
 /// <summary>RN-RL-03: soma dos produtos de uma categoria; <paramref name="Percentual"/>: parte do faturamento, 1 casa.</summary>
 public sealed record CategoriaNoRankingDto(string Categoria, int Quantidade, decimal Total, decimal Percentual);
 
 /// <summary>
 /// RN-RL-03: sabor (item de estoque escolhido na venda, RN-ES-09) — "Pote 1L Flocos". <paramref name="Unidades"/>: potes que
-/// saíram (quantidade × unidades por venda do produto).
+/// saíram (quantidade × unidades por venda do produto). Custo e margem como em <see cref="ProdutoNoRankingDto"/>, pelo custo do sabor.
 /// </summary>
-public sealed record SaborNoRankingDto(Guid ItemEstoqueId, string Descricao, int Unidades, decimal Total);
+public sealed record SaborNoRankingDto(
+    Guid ItemEstoqueId,
+    string Descricao,
+    int Unidades,
+    decimal Total,
+    decimal? CustoEstimado = null,
+    decimal? Margem = null,
+    decimal? MargemPercentual = null);

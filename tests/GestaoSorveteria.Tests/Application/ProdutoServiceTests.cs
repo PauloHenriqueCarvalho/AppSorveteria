@@ -2,6 +2,7 @@ using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 
 namespace GestaoSorveteria.Tests.Application;
@@ -265,5 +266,44 @@ public class ProdutoServiceTests
     {
         await Assert.ThrowsAsync<EntidadeNaoEncontradaException>(() =>
             _service.ObterAsync(Guid.NewGuid(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ListarCustos_PeloEstoqueInformadoESemCusto_ComAMargemSobreOPreco()
+    {
+        var fabrica = Fornecedor.Criar("Fábrica", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, true);
+        var leite = GrupoEstoque.Criar("Picolé ao leite", ModoControle.Contagem, 1);
+        _estoque.Grupos.Add(leite);
+        _estoque.Itens.Add(ItemEstoque.Criar(leite.Id, fabrica.Id, "Coco", UnidadeCompra.Caixa, 28, 25.20m, 1));
+        var picole = Produto.Criar("Picolé ao leite", "Picolés", 5m, false, 1, Ontem);
+        picole.LigarAoEstoque(leite.Id, 1, Ontem);
+        var shake = Produto.Criar("Milk-shake", "Bebidas", 18m, false, 2, Ontem);
+        var selfService = Produto.Criar("Self-service", "Self-service", 69.90m, true, 3, Ontem);
+        _produtos.Produtos.AddRange([picole, shake, selfService]);
+        _clock.UtcNow = Hoje;
+
+        var semCusto = (await _service.ListarCustosAsync(TestContext.Current.CancellationToken)).Single(c => c.ProdutoId == shake.Id);
+        var informado = await _service.InformarCustoAsync(shake.Id, new InformarCustoProdutoRequest(4.50m), TestContext.Current.CancellationToken);
+        var custos = (await _service.ListarCustosAsync(TestContext.Current.CancellationToken)).ToDictionary(c => c.ProdutoId);
+
+        Assert.Equal((null, null, null), (semCusto.CustoEstimado, semCusto.Origem, semCusto.Margem));
+        // RN-PR-07: picolé = 25,20 ÷ 28 = 0,90; margem 4,10 de 5,00 = 82%.
+        Assert.Equal((0.90m, "Estoque", 4.10m, 82.0m), (custos[picole.Id].CustoEstimado, custos[picole.Id].Origem, custos[picole.Id].Margem, custos[picole.Id].MargemPercentual));
+        Assert.Equal((4.50m, 4.50m, "Informado", 13.50m, 75.0m), (informado.CustoInformado, informado.CustoEstimado, informado.Origem, informado.Margem, informado.MargemPercentual));
+        Assert.Equal(1, _uow.Confirmacoes);
+        Assert.Null(custos[selfService.Id].Margem); // valor livre: o preço muda a cada venda
+    }
+
+    [Fact]
+    public async Task InformarCusto_Nulo_ApagaOCusto()
+    {
+        var shake = Produto.Criar("Milk-shake", "Bebidas", 18m, false, 2, Ontem);
+        shake.InformarCusto(4.50m);
+        _produtos.Produtos.Add(shake);
+        _clock.UtcNow = Hoje;
+
+        var custo = await _service.InformarCustoAsync(shake.Id, new InformarCustoProdutoRequest(null), TestContext.Current.CancellationToken);
+
+        Assert.Equal((null, null, null), (custo.CustoInformado, custo.CustoEstimado, custo.Margem));
     }
 }

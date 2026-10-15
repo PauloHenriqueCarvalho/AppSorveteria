@@ -81,6 +81,29 @@ public sealed class ProdutosController : ControllerBase
     public async Task<ActionResult<ProdutoDto>> LigarAoEstoque(Guid id, LigarProdutoEstoqueRequest request, CancellationToken cancellationToken) =>
         Ok(await _produtos.LigarAoEstoqueAsync(id, request, cancellationToken));
 
+    /// <summary>
+    /// RN-PR-07/RN-RL-04: custo estimado de uma unidade vendida (pelo catálogo de estoque ou informado) e a margem sobre o
+    /// preço atual de cada produto. Só para o painel.
+    /// </summary>
+    [HttpGet("custos")]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(IReadOnlyList<CustoProdutoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IReadOnlyList<CustoProdutoDto>>> Custos(CancellationToken cancellationToken) =>
+        Ok(await _produtos.ListarCustosAsync(cancellationToken));
+
+    /// <summary>RN-PR-07: informa o custo de uma unidade vendida (produto sem vínculo de estoque ou grupo sem custo); nulo apaga.</summary>
+    [HttpPut("{id:guid}/custo")]
+    [Authorize(Policy = Politicas.Admin)]
+    [ProducesResponseType(typeof(CustoProdutoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CustoProdutoDto>> InformarCusto(Guid id, InformarCustoProdutoRequest request, CancellationToken cancellationToken) =>
+        Ok(await _produtos.InformarCustoAsync(id, request, cancellationToken));
+
     [HttpPost("{id:guid}/ativar")]
     [Authorize(Policy = Politicas.Admin)]
     [ProducesResponseType(typeof(ProdutoDto), StatusCodes.Status200OK)]

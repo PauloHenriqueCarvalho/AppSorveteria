@@ -269,7 +269,7 @@ itens_pedido_fornecedor (id, pedido_id FK, item_estoque_id FK, sugerido_embalage
                      -- Sugestao | Aviso | FaltouAnterior, pedir_de_novo bool, nao_pedido bool)
 
 produtos            + grupo_estoque_id FK uuid null, + unidades_por_venda int default 1   -- RN-PR-06 (Sprint 7)
-                    + custo_manual numeric(12,2) null    -- Fase 3
+produtos            + custo_informado numeric(12,2) null                                  -- RN-PR-07 (Sprint 9)
 itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-ES-09); só em item de produto
 ```
 
@@ -322,6 +322,8 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
 | POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
 | POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
+| GET | `/api/produtos/custos` | Admin | custo estimado de uma unidade vendida (pelo estoque ou informado), a origem e a margem sobre o preço de cada produto (RN-PR-07, RN-RL-04) — só o painel; o catálogo do app não traz custo |
+| PUT | `/api/produtos/{id}/custo` | Admin | `{ custo }` informa o custo de uma unidade vendida (nulo apaga) — para produto sem vínculo de estoque ou grupo sem custo |
 | PUT | `/api/produtos/{id}/estoque` | Admin | liga o produto a um grupo de estoque (`grupoEstoqueId` nulo = desliga) e quantas unidades saem por venda (RN-PR-06). Grupo de potes → `pedeSabor` no produto: o app mostra a grade de sabores e manda `itemEstoqueId` na linha da venda (RN-ES-09) |
 | GET | `/api/usuarios`, `/api/usuarios/{id}` | Admin | todos os usuários, inclusive desativados (`UsuarioDto`) |
 | POST | `/api/usuarios` | Admin | cria atendente (PIN) ou Admin (senha) — `CriarUsuarioRequest` (`perfil` = `Atendente`/`Admin`); login repetido → 400 (RN-US-02); senha fora da política → 400 (RN-US-03); 201 |
@@ -345,7 +347,7 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
 | GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte; vendas por hora, mesmo dia da semana anterior e mais vendidos desde 14/10 — RN-RL-03/06/07) | `ResumoDiaDto` |
-| GET | `/api/relatorios/periodo?de=&ate=&agrupar=` | Relatório de período — **pronto** (sem datas = este mês até hoje; até 366 dias; `agrupar` = dia, semana ou mes; faturamento por trecho, período anterior, por hora, por dia da semana e rankings de produtos, categorias e sabores — RN-RL-03/08/09/10) | `RelatorioPeriodoDto` |
+| GET | `/api/relatorios/periodo?de=&ate=&agrupar=` | Relatório de período — **pronto** (sem datas = este mês até hoje; até 366 dias; `agrupar` = dia, semana ou mes; faturamento por trecho, período anterior, por hora, por dia da semana, rankings de produtos, categorias e sabores e a margem estimada por produto, sabor e período — RN-RL-03/04/08/09/10) | `RelatorioPeriodoDto` |
 | GET | `/api/comandas?de=&ate=&status=&atendente=&forma=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; `atendente` = Id de quem vendeu; `forma` = Dinheiro, Pix, CartaoDebito ou CartaoCredito — venda com pelo menos um pagamento nela, então o pagamento dividido aparece nas duas; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09) — **pronto** (corpo `{ "motivo": "..." }`; não altera o caixa) | `ComandaDetalheDto` |
