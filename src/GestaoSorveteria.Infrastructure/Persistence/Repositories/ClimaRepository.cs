@@ -25,6 +25,15 @@ internal sealed class ClimaRepository : IClimaRepository
     public async Task AdicionarDiaAsync(ClimaDia dia, CancellationToken cancellationToken = default) =>
         await _db.ClimaDias.AddAsync(dia, cancellationToken);
 
+    public Task<DateOnly?> PrimeiroDiaAbertoAsync(PontoClima ponto, CancellationToken cancellationToken = default)
+    {
+        var (latitude, longitude) = (ponto.Latitude, ponto.Longitude);
+        return _db.ClimaDias
+            .AsNoTracking()
+            .Where(c => c.Latitude == latitude && c.Longitude == longitude && !c.Definitivo)
+            .MinAsync(c => (DateOnly?)c.Data, cancellationToken);
+    }
+
     public Task<bool> ExistePrevisaoFeitaNoDiaAsync(PontoClima ponto, DateOnly feitaNoDia, CancellationToken cancellationToken = default)
     {
         var (latitude, longitude) = (ponto.Latitude, ponto.Longitude);

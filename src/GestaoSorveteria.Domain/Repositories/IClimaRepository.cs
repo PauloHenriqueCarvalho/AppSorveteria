@@ -10,6 +10,9 @@ public interface IClimaRepository
 
     Task AdicionarDiaAsync(ClimaDia dia, CancellationToken cancellationToken = default);
 
+    /// <summary>O dia mais antigo do ponto que ainda não é definitivo (a coleta volta até ele mesmo antes do início); nulo = nenhum.</summary>
+    Task<DateOnly?> PrimeiroDiaAbertoAsync(PontoClima ponto, CancellationToken cancellationToken = default);
+
     /// <summary>RN-CL-03: já foi guardada a previsão feita neste dia comercial?</summary>
     Task<bool> ExistePrevisaoFeitaNoDiaAsync(PontoClima ponto, DateOnly feitaNoDia, CancellationToken cancellationToken = default);
 

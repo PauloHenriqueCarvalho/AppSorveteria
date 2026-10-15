@@ -179,6 +179,8 @@ public class ClimaVendasServiceTests
         _avisos.Avisos.Add(Aviso.DoItem(Guid.NewGuid(), 0, PrioridadeAviso.Urgente, null, Cenario.Atendente, Em(7, 14)));
         _avisos.Avisos.Add(Aviso.DoItem(Guid.NewGuid(), 3, PrioridadeAviso.Alta, null, Cenario.Atendente, Em(7, 16)));
         _avisos.Avisos.Add(Aviso.DoItem(Guid.NewGuid(), 0, PrioridadeAviso.Urgente, null, Cenario.Atendente, Em(8, 10)));
+        // Automático dos potes (RN-AV-04, autor "Sistema"): não é o balcão avisando.
+        _avisos.Avisos.Add(Aviso.DoItem(Guid.NewGuid(), 0, PrioridadeAviso.Urgente, null, null, Em(7, 18)));
 
         var dia = (await _service.ObterAsync(Dia(7), Dia(7), Ct)).Dias.Single();
 
@@ -187,6 +189,18 @@ public class ClimaVendasServiceTests
             c => Assert.Equal(("Self-service / venda avulsa", 1, 28.5m), (c.Categoria, c.Quantidade, c.Total)),
             c => Assert.Equal(("Picolés", 4, 20m), (c.Categoria, c.Quantidade, c.Total)));
         Assert.Equal(48.5m, dia.Faturamento);
+    }
+
+    [Fact]
+    public async Task Obter_VendaEstornada_ForaDoFaturamentoDoDia()
+    {
+        Clima(7, 31m);
+        Venda(7, 100m);
+        Venda(7, 40m).Estornar("Valor errado", Cenario.Dona, Em(7, 18));
+
+        var dia = (await _service.ObterAsync(Dia(7), Dia(7), Ct)).Dias.Single();
+
+        Assert.Equal((100m, 1), (dia.Faturamento, dia.Vendas));
     }
 
     [Fact]

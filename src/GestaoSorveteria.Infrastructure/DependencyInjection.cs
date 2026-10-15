@@ -53,7 +53,7 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddFonteClima(this IServiceCollection services, ClimaOptions opcoes)
     {
-        opcoes.Validar();
+        opcoes.Normalizar();
         services.AddSingleton(opcoes);
         services.AddSingleton<IFonteClima>(_ => new VisualCrossingFonteClima(
             new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) })

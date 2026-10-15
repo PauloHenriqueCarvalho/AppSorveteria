@@ -296,10 +296,10 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
             (depoisDoLocal.PrimeiroDia, depoisDoLocal.UltimoDia, depoisDoLocal.DiasComClima));
         Assert.Equal(-21.1775m, depoisDoLocal.Local!.Latitude);
 
-        // 3 h depois: só 19 e 20/01 (ainda abertos) mudam; o resto já é definitivo.
+        // 3 h depois: só 18, 19 e 20/01 (ainda abertos) mudam; até 17/01 já é definitivo.
         fonte.MaximaPadrao = 35m;
         var tresHorasDepois = await NoBanco(Em(1, 20, 15), s => s.Coleta(fonte, situacao).ColetarAsync(forcar: false, Ct));
-        Assert.Equal((2, 0), (tresHorasDepois.DiasGravados, tresHorasDepois.PrevisoesGravadas));
+        Assert.Equal((3, 0), (tresHorasDepois.DiasGravados, tresHorasDepois.PrevisoesGravadas));
 
         // Quarta 21/01: nova previsão guardada sem apagar a de ontem; o relatório lê tudo do banco.
         fonte.Hoje = new DateOnly(2026, 1, 21);
@@ -311,7 +311,9 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
             var dias = await clima.ListarDiasAsync(ponto, new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31), Ct);
             Assert.Equal(17, dias.Count);
             Assert.Equal((28m, true), (dias.Single(d => d.Data == new DateOnly(2026, 1, 17)).TempMax, dias.Single(d => d.Data == new DateOnly(2026, 1, 17)).Definitivo));
-            Assert.Equal((35m, true), (dias.Single(d => d.Data == new DateOnly(2026, 1, 19)).TempMax, dias.Single(d => d.Data == new DateOnly(2026, 1, 19)).Definitivo));
+            Assert.Equal((35m, true), (dias.Single(d => d.Data == new DateOnly(2026, 1, 18)).TempMax, dias.Single(d => d.Data == new DateOnly(2026, 1, 18)).Definitivo));
+            Assert.False(dias.Single(d => d.Data == new DateOnly(2026, 1, 19)).Definitivo);
+            Assert.Equal(new DateOnly(2026, 1, 19), await clima.PrimeiroDiaAbertoAsync(ponto, Ct));
             Assert.True(await clima.ExistePrevisaoFeitaNoDiaAsync(ponto, new DateOnly(2026, 1, 20), Ct));
 
             var proximos = await clima.ListarUltimaPrevisaoAsync(ponto, new DateOnly(2026, 1, 22), new DateOnly(2026, 1, 28), Ct);

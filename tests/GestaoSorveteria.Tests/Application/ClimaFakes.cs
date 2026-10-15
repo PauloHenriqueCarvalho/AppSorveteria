@@ -25,6 +25,9 @@ internal sealed class ClimaRepositoryFake : IClimaRepository
         return Task.CompletedTask;
     }
 
+    public Task<DateOnly?> PrimeiroDiaAbertoAsync(PontoClima ponto, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Dias.Where(d => d.Ponto == ponto && !d.Definitivo).Select(d => (DateOnly?)d.Data).Min());
+
     public Task<bool> ExistePrevisaoFeitaNoDiaAsync(PontoClima ponto, DateOnly feitaNoDia, CancellationToken cancellationToken = default) =>
         Task.FromResult(Previsoes.Any(p => PontoDe(p) == ponto && p.FeitaNoDia == feitaNoDia));
 
@@ -105,9 +108,17 @@ internal sealed class FonteClimaFake : IFonteClima
 
     public bool FalharAoProcurar { get; set; }
 
-    public Task<IReadOnlyList<LeituraClima>> LerDiasAsync(PontoClima ponto, DateOnly de, DateOnly ate, CancellationToken cancellationToken = default)
+    /// <summary>Segura a chamada até ser liberado (testa "uma coleta por vez").</summary>
+    public TaskCompletionSource? Segurar { get; set; }
+
+    public async Task<IReadOnlyList<LeituraClima>> LerDiasAsync(PontoClima ponto, DateOnly de, DateOnly ate, CancellationToken cancellationToken = default)
     {
         Chamadas.Add((ponto, de, ate));
+        if (Segurar is { } segurar)
+        {
+            await segurar.Task;
+        }
+
         if (FalharNaChamada == Chamadas.Count)
         {
             throw new FonteClimaException("O serviço de clima não respondeu. A próxima tentativa é automática.");
@@ -124,7 +135,7 @@ internal sealed class FonteClimaFake : IFonteClima
                     "clear-day", "Céu limpo", dia > Hoje ? OrigemClima.Previsto : OrigemDoPassado);
             })
             .ToList();
-        return Task.FromResult<IReadOnlyList<LeituraClima>>(leituras);
+        return leituras;
     }
 
     public Task<LocalEncontrado?> ProcurarLocalAsync(string texto, CancellationToken cancellationToken = default)

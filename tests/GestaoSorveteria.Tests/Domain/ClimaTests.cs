@@ -82,9 +82,10 @@ public class ClimaTests
     [Theory]
     [InlineData(0, false)]  // hoje: ainda aberto
     [InlineData(1, false)]  // ontem: o serviço ainda corrige
-    [InlineData(2, true)]   // anteontem: fecha
+    [InlineData(2, false)]  // anteontem: terminou há 1 dia e pouco
+    [InlineData(3, true)]   // terminou há 2 dias inteiros: fecha
     [InlineData(30, true)]
-    public void Registrar_DefinitivoSoDepoisDeDoisDias(int diasAtras, bool definitivo) =>
+    public void Registrar_DiaQueTerminouHaDoisDias_FicaDefinitivo(int diasAtras, bool definitivo) =>
         Assert.Equal(definitivo, ClimaDia.Registrar(Ponto, Leitura(Hoje.AddDays(-diasAtras)), "Teste", Agora, Hoje).Definitivo);
 
     [Fact]
@@ -100,9 +101,12 @@ public class ClimaTests
         Assert.Throws<DomainException>(() => ClimaDia.Registrar(Ponto, Leitura(Hoje, maxima: 15m, minima: 20m), "Teste", Agora, Hoje));
 
     [Fact]
-    public void Registrar_PercentualForaDeZeroACem_Lanca() =>
-        Assert.Throws<DomainException>(() =>
-            ClimaDia.Registrar(Ponto, Leitura(Hoje) with { UmidadePct = 140m }, "Teste", Agora, Hoje));
+    public void Registrar_PercentualForaDeZeroACem_FicaNoLimiteSemRecusarODia()
+    {
+        var dia = ClimaDia.Registrar(Ponto, Leitura(Hoje) with { UmidadePct = 100.2m, NuvensPct = -3m }, "Teste", Agora, Hoje);
+
+        Assert.Equal((100m, 0m), (dia.UmidadePct!.Value, dia.NuvensPct!.Value));
+    }
 
     [Fact]
     public void Registrar_ChuvaNegativa_Lanca() =>
@@ -124,11 +128,14 @@ public class ClimaTests
         var ontem = Hoje.AddDays(-1);
         var dia = ClimaDia.Registrar(Ponto, Leitura(ontem, maxima: 29m), "Teste", Agora, Hoje);
 
-        dia.Atualizar(Leitura(ontem, maxima: 31m), "Teste", Agora.AddDays(1), Hoje.AddDays(1));
+        dia.Atualizar(Leitura(ontem, maxima: 30m), "Teste", Agora.AddDays(1), Hoje.AddDays(1));
+        Assert.False(dia.Definitivo); // 14 em 16/10: terminou há 1 dia e pouco
+
+        dia.Atualizar(Leitura(ontem, maxima: 31m), "Teste", Agora.AddDays(2), Hoje.AddDays(2));
 
         Assert.Equal(31m, dia.TempMax);
         Assert.True(dia.Definitivo);
-        Assert.Equal(Agora.AddDays(1), dia.ColetadoEm);
+        Assert.Equal(Agora.AddDays(2), dia.ColetadoEm);
     }
 
     [Fact]
@@ -145,7 +152,7 @@ public class ClimaTests
     {
         var dia = ClimaDia.Registrar(Ponto, Leitura(Hoje, maxima: 29m), "Teste", Agora, Hoje);
 
-        Assert.Throws<DomainException>(() => dia.Atualizar(Leitura(Hoje, maxima: 29m) with { NuvensPct = 101m, TempMedia = 10m }, "Outra", Agora.AddHours(4), Hoje));
+        Assert.Throws<DomainException>(() => dia.Atualizar(Leitura(Hoje, maxima: 29m) with { ChuvaMm = -1m, TempMedia = 10m }, "Outra", Agora.AddHours(4), Hoje));
 
         Assert.Equal(24.3m, dia.TempMedia);
         Assert.Equal("Teste", dia.Fonte);
@@ -161,12 +168,13 @@ public class ClimaTests
     }
 
     [Fact]
-    public void PrecisaColetar_NaoDefinitivo_SoDepoisDeTresHorasOuForcado()
+    public void PrecisaColetar_NaoDefinitivo_SoDepoisDeTresHorasComFolgaOuForcado()
     {
         var dia = ClimaDia.Registrar(Ponto, Leitura(Hoje), "Teste", Agora, Hoje);
 
-        Assert.False(dia.PrecisaColetar(Agora.AddHours(2).AddMinutes(59), forcar: false));
-        Assert.True(dia.PrecisaColetar(Agora.AddHours(3), forcar: false));
+        // 3 h com 10 min de folga: a rodada seguinte começa uns instantes antes de completar 3 h desde a gravação.
+        Assert.False(dia.PrecisaColetar(Agora.AddHours(2).AddMinutes(49), forcar: false));
+        Assert.True(dia.PrecisaColetar(Agora.AddHours(2).AddMinutes(50), forcar: false));
         Assert.True(dia.PrecisaColetar(Agora.AddMinutes(1), forcar: true));
     }
 
@@ -208,7 +216,7 @@ public class ClimaTests
     [InlineData(2025, 4, 20)]
     [InlineData(2026, 4, 5)]
     [InlineData(2027, 3, 28)]
-    public void Pascoa_DatasConhecidas(int ano, int mes, int dia) =>
+    public void Pascoa_AnosConhecidos_DataCerta(int ano, int mes, int dia) =>
         Assert.Equal(new DateOnly(ano, mes, dia), Feriados.Pascoa(ano));
 
     [Fact]

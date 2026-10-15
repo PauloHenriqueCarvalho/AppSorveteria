@@ -14,22 +14,42 @@ public sealed class ClimaOptions
     /// <summary>Chave do Visual Crossing. Vazia = coleta desligada (RN-CL-07).</summary>
     public string ChaveApi { get; set; } = string.Empty;
 
-    /// <summary>De quanto em quanto tempo a API acordada coleta (RN-CL-04).</summary>
-    public int IntervaloHoras { get; set; } = 3;
+    /// <summary>
+    /// De quanto em quanto tempo a API acordada coleta (RN-CL-04). A recoleta de um dia ainda aberto espera 3 h (fixo,
+    /// <c>ClimaDia.IntervaloRecoleta</c>): com intervalo menor, as rodadas do meio só completam dias que faltam.
+    /// </summary>
+    public int IntervaloHoras { get; set; } = IntervaloPadraoHoras;
 
-    public string Endereco { get; set; } = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/";
+    public string Endereco { get; set; } = EnderecoPadrao;
 
-    public void Validar()
+    public const int IntervaloPadraoHoras = 3;
+
+    public const string EnderecoPadrao = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/";
+
+    /// <summary>O que <see cref="Normalizar"/> corrigiu (o serviço em segundo plano registra no log ao ligar).</summary>
+    public IReadOnlyList<string> Correcoes { get; private set; } = [];
+
+    /// <summary>
+    /// O clima é opcional: configuração errada não pode impedir a API de subir (e a sincronização das vendas). Valor fora da
+    /// faixa volta ao padrão; devolve o que foi corrigido, para o log.
+    /// </summary>
+    public IReadOnlyList<string> Normalizar()
     {
+        var corrigido = new List<string>();
         if (IntervaloHoras is < 1 or > 24)
         {
-            throw new InvalidOperationException("Clima:IntervaloHoras deve ficar entre 1 e 24.");
+            corrigido.Add($"Clima:IntervaloHoras = {IntervaloHoras} fora de 1–24; usando {IntervaloPadraoHoras}.");
+            IntervaloHoras = IntervaloPadraoHoras;
         }
 
         if (!Uri.TryCreate(Endereco, UriKind.Absolute, out var endereco) || endereco.Scheme != Uri.UriSchemeHttps)
         {
-            throw new InvalidOperationException("Clima:Endereco deve ser uma URL https.");
+            corrigido.Add("Clima:Endereco não é uma URL https; usando o endereço do Visual Crossing.");
+            Endereco = EnderecoPadrao;
         }
+
+        Correcoes = [.. Correcoes, .. corrigido];
+        return corrigido;
     }
 }
 
@@ -206,12 +226,29 @@ public sealed class VisualCrossingFonteClima : IFonteClima
                     "A chave do serviço de clima foi recusada. Confira Clima__ChaveApi no servidor.",
                 HttpStatusCode.TooManyRequests =>
                     "O limite diário do serviço de clima acabou. A coleta volta sozinha amanhã.",
-                _ => $"O serviço de clima recusou a consulta (HTTP {status}){Trecho(corpo)}",
+                _ => $"O serviço de clima recusou a consulta (código {status}){Trecho(SemAChave(corpo))}",
             });
         }
     }
 
-    /// <summary>Começo da mensagem do serviço (sem a chave: ela não volta no corpo), para o painel mostrar.</summary>
+    /// <summary>
+    /// A resposta de erro de um serviço de fora pode repetir a URL pedida: a chave sai do texto (como foi enviada e como fica
+    /// escapada na URL) antes de a mensagem ir para o painel e para o log.
+    /// </summary>
+    private string SemAChave(string corpo)
+    {
+        var chave = _opcoes.ChaveApi.Trim();
+        if (chave.Length == 0)
+        {
+            return corpo;
+        }
+
+        return corpo
+            .Replace(chave, "***", StringComparison.Ordinal)
+            .Replace(Uri.EscapeDataString(chave), "***", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Começo da mensagem do serviço (já sem a chave), para o painel mostrar.</summary>
     private static string Trecho(string corpo)
     {
         var texto = corpo.Trim();

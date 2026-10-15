@@ -4,15 +4,22 @@ namespace GestaoSorveteria.Domain.Clima;
 
 /// <summary>
 /// RN-CL-02: o clima de um dia comercial (America/Sao_Paulo) num ponto. Coletado de novo enquanto não é definitivo; fica
-/// definitivo quando o dia terminou há pelo menos <see cref="DiasParaDefinitivo"/> dias e não é previsão — depois nunca muda.
+/// definitivo quando o dia terminou há pelo menos <see cref="DiasParaDefinitivo"/> dias (o dia 13 fecha a partir do dia 16) e
+/// não é previsão — depois nunca muda.
 /// </summary>
 public sealed class ClimaDia : Entity
 {
-    /// <summary>Os serviços corrigem os dados recentes: o dia só fecha 2 dias depois.</summary>
+    /// <summary>Os serviços corrigem os dados recentes: o dia só fecha depois de ter terminado há 2 dias inteiros.</summary>
     public const int DiasParaDefinitivo = 2;
 
     /// <summary>RN-CL-04: dia ainda não definitivo coletado há menos que isso espera a próxima rodada.</summary>
     public static readonly TimeSpan IntervaloRecoleta = TimeSpan.FromHours(3);
+
+    /// <summary>
+    /// A rodada de 3 h em 3 h grava a hora da coleta uns instantes depois de começar: sem folga, a rodada seguinte veria
+    /// 2h59m59s e só buscaria o dia de novo 6 h depois.
+    /// </summary>
+    public static readonly TimeSpan FolgaRecoleta = TimeSpan.FromMinutes(10);
 
     public DateOnly Data { get; private set; }
 
@@ -86,9 +93,12 @@ public sealed class ClimaDia : Entity
         Aplicar(leitura, fonte, coletadoEmUtc, hoje);
     }
 
-    /// <summary>RN-CL-04: precisa coletar de novo? Só se não é definitivo e a última coleta tem 3 h ou mais (ou se forçado).</summary>
+    /// <summary>
+    /// RN-CL-04: precisa coletar de novo? Só se não é definitivo e a última coleta tem 3 h ou mais, com
+    /// <see cref="FolgaRecoleta"/> (ou se forçado).
+    /// </summary>
     public bool PrecisaColetar(DateTime agoraUtc, bool forcar) =>
-        !Definitivo && (forcar || agoraUtc - ColetadoEm >= IntervaloRecoleta);
+        !Definitivo && (forcar || agoraUtc - ColetadoEm >= IntervaloRecoleta - FolgaRecoleta);
 
     private void Aplicar(LeituraClima leitura, string fonte, DateTime coletadoEmUtc, DateOnly hoje)
     {
@@ -97,9 +107,9 @@ public sealed class ClimaDia : Entity
         var media = ValoresClima.Temperatura(leitura.TempMedia, leitura.Data, "média");
         var sensacao = ValoresClima.TemperaturaOpcional(leitura.SensacaoMax, leitura.Data, "de sensação");
         var chuva = ValoresClima.Chuva(leitura.ChuvaMm, leitura.Data);
-        var chuvaHoras = ValoresClima.Percentual(leitura.ChuvaHorasPct, leitura.Data, "Parte do dia com chuva");
-        var nuvens = ValoresClima.Percentual(leitura.NuvensPct, leitura.Data, "Nuvens");
-        var umidade = ValoresClima.Percentual(leitura.UmidadePct, leitura.Data, "Umidade");
+        var chuvaHoras = ValoresClima.Percentual(leitura.ChuvaHorasPct);
+        var nuvens = ValoresClima.Percentual(leitura.NuvensPct);
+        var umidade = ValoresClima.Percentual(leitura.UmidadePct);
         var nomeFonte = ValoresClima.Fonte(fonte);
         var coletadoEm = Guard.Utc(coletadoEmUtc, "a hora da coleta");
 
@@ -116,6 +126,7 @@ public sealed class ClimaDia : Entity
         Origem = leitura.Origem;
         Fonte = nomeFonte;
         ColetadoEm = coletadoEm;
-        Definitivo = leitura.Origem != OrigemClima.Previsto && Data.DayNumber <= hoje.DayNumber - DiasParaDefinitivo;
+        // Dia D termina no começo de D+1; "terminou há 2 dias" = D+3 em diante.
+        Definitivo = leitura.Origem != OrigemClima.Previsto && Data.DayNumber < hoje.DayNumber - DiasParaDefinitivo;
     }
 }

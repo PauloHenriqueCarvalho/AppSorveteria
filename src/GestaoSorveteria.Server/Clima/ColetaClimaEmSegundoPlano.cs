@@ -24,6 +24,11 @@ public sealed class ColetaClimaEmSegundoPlano : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        foreach (var aviso in _opcoes.Correcoes)
+        {
+            _log.LogWarning("Clima: {Aviso}", aviso);
+        }
+
         try
         {
             await Task.Delay(EsperaAoLigar, stoppingToken);
@@ -47,7 +52,14 @@ public sealed class ColetaClimaEmSegundoPlano : BackgroundService
             await using var escopo = _escopos.CreateAsyncScope();
             var coleta = escopo.ServiceProvider.GetRequiredService<ColetaClimaService>();
             var resultado = await coleta.ColetarAsync(forcar: false, stoppingToken);
-            _log.LogInformation("Clima: {Mensagem}", resultado.Mensagem);
+            if (resultado.Falhou)
+            {
+                _log.LogWarning("Clima: {Mensagem}", resultado.Mensagem);
+            }
+            else
+            {
+                _log.LogInformation("Clima: {Mensagem}", resultado.Mensagem);
+            }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {

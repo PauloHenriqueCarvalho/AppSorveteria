@@ -65,7 +65,7 @@ public class ColetaClimaServiceTests
         var resultado = await _coleta.ColetarAsync(forcar: false, Ct);
 
         Assert.False(resultado.Coletou);
-        Assert.Contains("Clima__ChaveApi", resultado.Mensagem);
+        Assert.Equal(ColetaClimaService.MensagemSemChave, resultado.Mensagem);
         Assert.Empty(_fonte.Chamadas);
     }
 
@@ -93,7 +93,7 @@ public class ColetaClimaServiceTests
         Assert.Equal(PontoClima.De(-21.18m, -47.81m), _fonte.Chamadas.Single().Ponto);
         Assert.Equal((7, 14), (resultado.DiasGravados, resultado.PrevisoesGravadas));
         Assert.Equal(Enumerable.Range(9, 7).Select(d => Dia(10, d)), _clima.Dias.Select(d => d.Data).OrderBy(d => d));
-        Assert.Equal(5, _clima.Dias.Count(d => d.Definitivo)); // 09 a 13; 14 e 15 ainda abertos
+        Assert.Equal(4, _clima.Dias.Count(d => d.Definitivo)); // 09 a 12; 13, 14 e 15 ainda abertos (RN-CL-02)
         Assert.All(_clima.Previsoes, p => Assert.Equal(Hoje, p.FeitaNoDia));
         Assert.Equal((Dia(10, 16), Dia(10, 29)), (_clima.Previsoes.Min(p => p.Data), _clima.Previsoes.Max(p => p.Data)));
         Assert.Equal("7 dias de clima guardados; previsão dos próximos 14 dias.", resultado.Mensagem);
@@ -137,10 +137,10 @@ public class ColetaClimaServiceTests
 
         var resultado = await _coleta.ColetarAsync(forcar: false, Ct);
 
-        Assert.Equal((Dia(10, 14), Dia(10, 15)), (_fonte.Chamadas[1].De, _fonte.Chamadas[1].Ate));
-        Assert.Equal((2, 0), (resultado.DiasGravados, resultado.PrevisoesGravadas));
+        Assert.Equal((Dia(10, 13), Dia(10, 15)), (_fonte.Chamadas[1].De, _fonte.Chamadas[1].Ate));
+        Assert.Equal((3, 0), (resultado.DiasGravados, resultado.PrevisoesGravadas));
         Assert.Equal(33m, _clima.Dias.Single(d => d.Data == Hoje).TempMax);
-        Assert.Equal(28m, _clima.Dias.Single(d => d.Data == Dia(10, 13)).TempMax); // definitivo não muda
+        Assert.Equal(28m, _clima.Dias.Single(d => d.Data == Dia(10, 12)).TempMax); // definitivo não muda
         Assert.Equal(7, _clima.Dias.Count);
     }
 
@@ -152,10 +152,10 @@ public class ColetaClimaServiceTests
 
         var resultado = await _coleta.ColetarAsync(forcar: false, Ct);
 
-        Assert.Equal((Dia(10, 14), Dia(10, 30)), (_fonte.Chamadas[1].De, _fonte.Chamadas[1].Ate));
-        Assert.Equal((3, 14), (resultado.DiasGravados, resultado.PrevisoesGravadas));
-        Assert.True(_clima.Dias.Single(d => d.Data == Dia(10, 14)).Definitivo);
-        Assert.False(_clima.Dias.Single(d => d.Data == Dia(10, 15)).Definitivo);
+        Assert.Equal((Dia(10, 13), Dia(10, 30)), (_fonte.Chamadas[1].De, _fonte.Chamadas[1].Ate));
+        Assert.Equal((4, 14), (resultado.DiasGravados, resultado.PrevisoesGravadas));
+        Assert.True(_clima.Dias.Single(d => d.Data == Dia(10, 13)).Definitivo);
+        Assert.False(_clima.Dias.Single(d => d.Data == Dia(10, 14)).Definitivo);
         Assert.Equal(28, _clima.Previsoes.Count); // a feita em 15/10 continua lá (RN-CL-03)
         Assert.Equal(2, _clima.Previsoes.Count(p => p.Data == Dia(10, 20)));
     }
@@ -168,8 +168,8 @@ public class ColetaClimaServiceTests
 
         var resultado = await _coleta.ColetarAsync(forcar: true, Ct);
 
-        Assert.Equal((Dia(10, 14), Dia(10, 15)), (_fonte.Chamadas[1].De, _fonte.Chamadas[1].Ate));
-        Assert.Equal(2, resultado.DiasGravados);
+        Assert.Equal((Dia(10, 13), Dia(10, 15)), (_fonte.Chamadas[1].De, _fonte.Chamadas[1].Ate));
+        Assert.Equal(3, resultado.DiasGravados);
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class ColetaClimaServiceTests
         Passar(TimeSpan.FromHours(3));
         var segunda = await _coleta.ColetarAsync(forcar: false, Ct);
 
-        Assert.Equal(82, segunda.DiasGravados); // os 80 que faltavam + 14 e 15/10, ainda abertos
+        Assert.Equal(83, segunda.DiasGravados); // os 80 que faltavam + 13, 14 e 15/10, ainda abertos
         Assert.Equal(200, _clima.Dias.Count);
     }
 
@@ -203,6 +203,19 @@ public class ColetaClimaServiceTests
 
         Assert.Equal(Hoje.AddDays(-(ColetaClimaService.MaximoDiasParaTras - 1)), _clima.Dias.Min(d => d.Data));
         Assert.Equal(ColetaClimaService.MaximoDiasParaTras, _clima.Dias.Count);
+    }
+
+    [Fact]
+    public async Task Coletar_LocalInformadoAntesDaPrimeiraVenda_DiasAbertosNaoFicamParaTras()
+    {
+        await _coleta.ColetarAsync(forcar: false, Ct); // 09 a 15/10, com 13, 14 e 15 abertos
+        PrimeiraVendaEm(Dia(10, 20));
+        Passar(TimeSpan.FromDays(6));                 // 21/10: o início agora seria 20/10
+
+        await _coleta.ColetarAsync(forcar: false, Ct);
+
+        Assert.Equal(Dia(10, 13), _fonte.Chamadas[^1].De);
+        Assert.All(_clima.Dias.Where(d => d.Data <= Dia(10, 15)), d => Assert.True(d.Definitivo));
     }
 
     // ---------------------------------------------------------------- falhas
@@ -247,6 +260,36 @@ public class ColetaClimaServiceTests
         await _coleta.ColetarAsync(forcar: false, Ct);
 
         Assert.Contains(_clima.Dias, d => d.Data == Dia(10, 12)); // a próxima rodada tenta de novo
+    }
+
+    [Fact]
+    public async Task Coletar_OutraColetaRodando_NaoCorreJunto()
+    {
+        _fonte.Segurar = new TaskCompletionSource();
+        var primeira = _coleta.ColetarAsync(forcar: false, Ct);
+
+        var segunda = await _coleta.ColetarAsync(forcar: true, Ct);
+
+        Assert.False(segunda.Coletou);
+        Assert.Contains("Já tem uma coleta do clima em andamento", segunda.Mensagem);
+        _fonte.Segurar.SetResult();
+        Assert.Equal(7, (await primeira).DiasGravados);
+        Assert.Single(_fonte.Chamadas);
+    }
+
+    [Fact]
+    public async Task Coletar_BancoFalhaAoGravar_ApareceNaSituacaoERelanca()
+    {
+        _uow.FalharNaConfirmacao = 1;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _coleta.ColetarAsync(forcar: false, Ct));
+
+        Assert.Equal(ColetaClimaService.MensagemFalhaAoGravar, _situacao.UltimoErro);
+
+        _uow.FalharNaConfirmacao = null;
+        var depois = await _coleta.ColetarAsync(forcar: true, Ct);
+        Assert.True(depois.Coletou); // a trava foi liberada
+        Assert.Null(_situacao.UltimoErro);
     }
 
     // ---------------------------------------------------------------- janelas
@@ -324,6 +367,17 @@ public class ColetaClimaServiceTests
         Assert.Equal(Agora, situacao.UltimaColetaEm);
         Assert.True(situacao.ChaveConfigurada);
         Assert.Equal("Dados do clima: Teste", situacao.Atribuicao);
+    }
+
+    [Fact]
+    public async Task DefinirLocal_BancoFalhaNaColeta_GuardaOLocalEMostraOErro()
+    {
+        _uow.FalharNaConfirmacao = 2; // 1ª = o local; 2ª = a primeira janela do clima
+
+        var situacao = await _service.DefinirLocalAsync(new DefinirLocalLojaRequest("Franca, SP, Brasil", -20.5386m, -47.4009m), Ct);
+
+        Assert.Equal("Franca, SP, Brasil", situacao.Local!.Nome);
+        Assert.Equal(ColetaClimaService.MensagemFalhaAoGravar, situacao.UltimoErro);
     }
 
     [Fact]

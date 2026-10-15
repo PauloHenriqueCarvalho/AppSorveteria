@@ -69,16 +69,12 @@ internal static class ValoresClima
         return Arredondar(valor);
     }
 
-    public static decimal? Percentual(decimal? valor, DateOnly dia, string campo)
-    {
-        if (valor is not { } v)
-        {
-            return null;
-        }
-
-        Guard.Contra(v is < 0m or > 100m, $"{campo} fora de 0–100% em {dia:dd/MM/yyyy}: {v}.");
-        return Arredondar(v);
-    }
+    /// <summary>
+    /// Percentual opcional (umidade, nuvens, chance de chuva): o modelo às vezes passa um pouco de 100 (100,2) — fica limitado a
+    /// 0–100 em vez de recusar o dia inteiro, que seria pedido de novo a cada rodada.
+    /// </summary>
+    public static decimal? Percentual(decimal? valor) =>
+        valor is { } v ? Arredondar(Math.Clamp(v, 0m, 100m)) : null;
 
     /// <summary>Texto que vem de fora: sem espaços nas pontas e cortado no tamanho da coluna (não recusa o dia por isso).</summary>
     public static string? Texto(string? valor, int maximo)

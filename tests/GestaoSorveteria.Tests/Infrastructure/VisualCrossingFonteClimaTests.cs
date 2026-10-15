@@ -122,8 +122,8 @@ public class VisualCrossingFonteClimaTests
     [Theory]
     [InlineData(HttpStatusCode.Unauthorized, "chave do serviço de clima foi recusada")]
     [InlineData(HttpStatusCode.TooManyRequests, "limite diário")]
-    [InlineData(HttpStatusCode.InternalServerError, "HTTP 500")]
-    [InlineData(HttpStatusCode.BadRequest, "HTTP 400")]
+    [InlineData(HttpStatusCode.InternalServerError, "código 500")]
+    [InlineData(HttpStatusCode.BadRequest, "código 400")]
     public async Task LerDiasAsync_Erro_MensagemProntaSemAChave(HttpStatusCode status, string esperado)
     {
         var (fonte, _) = Fonte(status, "No account found with API key");
@@ -133,6 +133,20 @@ public class VisualCrossingFonteClimaTests
 
         Assert.Contains(esperado, erro.Message);
         Assert.DoesNotContain(Chave, erro.Message);
+    }
+
+    [Fact]
+    public async Task LerDiasAsync_ErroQueRepeteAUrl_TiraAChaveDaMensagem()
+    {
+        var (fonte, _) = Fonte(HttpStatusCode.BadRequest,
+            "Bad API Request: timeline/x?key=abc%2B123 (chave abc+123 sem permissão)");
+
+        var erro = await Assert.ThrowsAsync<FonteClimaException>(() =>
+            fonte.LerDiasAsync(PontoClima.De(-21m, -47m), new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 2), Ct));
+
+        Assert.DoesNotContain(Chave, erro.Message);
+        Assert.DoesNotContain("abc%2B123", erro.Message);
+        Assert.Contains("key=***", erro.Message);
     }
 
     [Fact]
@@ -158,10 +172,15 @@ public class VisualCrossingFonteClimaTests
     }
 
     [Fact]
-    public void Opcoes_IntervaloForaDaFaixaOuEnderecoSemHttps_Lanca()
+    public void Opcoes_ForaDaFaixa_VoltamAoPadraoSemDerrubarAApi()
     {
-        Assert.Throws<InvalidOperationException>(() => new ClimaOptions { IntervaloHoras = 0 }.Validar());
-        Assert.Throws<InvalidOperationException>(() => new ClimaOptions { Endereco = "http://exemplo.com/" }.Validar());
-        new ClimaOptions().Validar();
+        var opcoes = new ClimaOptions { IntervaloHoras = 0, Endereco = "http://exemplo.com/" };
+
+        var corrigido = opcoes.Normalizar();
+
+        Assert.Equal(2, corrigido.Count);
+        Assert.Equal(2, opcoes.Correcoes.Count);
+        Assert.Equal((ClimaOptions.IntervaloPadraoHoras, ClimaOptions.EnderecoPadrao), (opcoes.IntervaloHoras, opcoes.Endereco));
+        Assert.Empty(new ClimaOptions().Normalizar());
     }
 }

@@ -74,8 +74,9 @@ public sealed class ClimaVendasService
             .Where(c => c.Status == StatusComanda.Fechada)
             .ToLookup(c => DiaComercial.DataDe(c.FechadaEm!.Value));
         var produtos = (await _produtos.ListarAsync(somenteAtivos: false, cancellationToken)).ToDictionary(p => p.Id);
+        // Avisos urgentes que o balcão criou no dia (prioridade atual; os automáticos dos potes, do sistema, ficam de fora).
         var urgentes = (await _avisos.ListarAtualizadosEntreAsync(inicioUtc, fimUtc, cancellationToken))
-            .Where(a => a.Prioridade == PrioridadeAviso.Urgente && a.CriadoEm >= inicioUtc && a.CriadoEm < fimUtc)
+            .Where(a => !a.CriadoPeloSistema && a.Prioridade == PrioridadeAviso.Urgente && a.CriadoEm >= inicioUtc && a.CriadoEm < fimUtc)
             .GroupBy(a => DiaComercial.DataDe(a.CriadoEm))
             .ToDictionary(g => g.Key, g => g.Count());
 

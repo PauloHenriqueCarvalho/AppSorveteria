@@ -7,9 +7,11 @@ public sealed record LocalLojaDto(string Nome, decimal Latitude, decimal Longitu
 
 /// <summary>PUT /api/clima/local (Admin): grava o local confirmado pela dona e já coleta (RN-CL-01/04).</summary>
 public sealed record DefinirLocalLojaRequest(
-    [Required, StringLength(120, MinimumLength = 2)] string Nome,
-    [Range(-90, 90)] decimal Latitude,
-    [Range(-180, 180)] decimal Longitude);
+    [Required(ErrorMessage = "Informe o nome do local.")]
+    [StringLength(120, MinimumLength = 2, ErrorMessage = "O nome do local deve ter de 2 a 120 caracteres.")]
+    string Nome,
+    [Range(-90.0, 90.0, ErrorMessage = "A latitude deve ficar entre −90 e 90.")] decimal Latitude,
+    [Range(-180.0, 180.0, ErrorMessage = "A longitude deve ficar entre −180 e 180.")] decimal Longitude);
 
 /// <summary>
 /// GET /api/clima/situacao (Admin): a coleta do clima está ligada? <paramref name="ChaveConfigurada"/>: há chave do serviço
@@ -30,8 +32,11 @@ public sealed record SituacaoClimaDto(
     string Atribuicao,
     string AtribuicaoLink);
 
-/// <summary>POST /api/clima/atualizar (Admin): o que a coleta fez (RN-CL-04). <paramref name="Coletou"/> = falou com o serviço de clima.</summary>
-public sealed record ColetaClimaDto(bool Coletou, int DiasGravados, int PrevisoesGravadas, string Mensagem);
+/// <summary>
+/// POST /api/clima/atualizar (Admin): o que a coleta fez (RN-CL-04). <paramref name="Coletou"/> = falou com o serviço de clima;
+/// <paramref name="Falhou"/> = parou num erro (o que veio antes ficou gravado; a mensagem diz o que houve).
+/// </summary>
+public sealed record ColetaClimaDto(bool Coletou, int DiasGravados, int PrevisoesGravadas, string Mensagem, bool Falhou = false);
 
 /// <summary>
 /// Clima de um dia (RN-CL-02). °C com 1 casa, chuva em mm, percentuais 0–100. <paramref name="Origem"/>: Observado, Combinado

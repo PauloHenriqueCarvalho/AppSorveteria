@@ -10,6 +10,9 @@ namespace GestaoSorveteria.Application.Clima;
 /// <summary>Local da loja e situação da coleta do clima, para a tela Configurações do painel (RN-CL-01/04/07). Só Admin.</summary>
 public sealed class ClimaService
 {
+    /// <summary>Ao mudar o local, espera a rodada em segundo plano terminar por até esse tempo.</summary>
+    public static readonly TimeSpan EsperaPelaColeta = TimeSpan.FromSeconds(30);
+
     private readonly IFonteClima _fonte;
     private readonly IClimaRepository _clima;
     private readonly IConfiguracaoLojaRepository _configuracao;
@@ -71,7 +74,7 @@ public sealed class ClimaService
 
         if (!_fonte.Configurada)
         {
-            throw new DomainException("A coleta do clima está desligada: falta a chave do serviço de clima (Clima__ChaveApi no servidor).");
+            throw new DomainException(ColetaClimaService.MensagemSemChave);
         }
 
         LocalEncontrado? encontrado;
@@ -91,7 +94,8 @@ public sealed class ClimaService
 
     /// <summary>
     /// RN-CL-01: grava o local confirmado pela dona e já coleta o que falta (RN-CL-04), forçando: o ponto novo começa com o
-    /// histórico desde a primeira venda.
+    /// histórico desde a primeira venda. Se a rodada em segundo plano está no meio, espera até 30 s por ela. O local fica gravado
+    /// mesmo se a coleta falhar: o erro aparece na situação devolvida e a próxima rodada tenta de novo.
     /// </summary>
     public async Task<SituacaoClimaDto> DefinirLocalAsync(DefinirLocalLojaRequest request, CancellationToken cancellationToken = default)
     {
@@ -105,7 +109,15 @@ public sealed class ClimaService
         configuracao.DefinirLocal(request.Nome, request.Latitude, request.Longitude, _clock.UtcNow);
         await _uow.SaveChangesAsync(cancellationToken);
 
-        await _coleta.ColetarAsync(forcar: true, cancellationToken);
+        try
+        {
+            await _coleta.ColetarAsync(forcar: true, EsperaPelaColeta, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A coleta já registrou o erro na situação (RN-CL-04); o local está gravado.
+        }
+
         return await SituacaoAsync(cancellationToken);
     }
 

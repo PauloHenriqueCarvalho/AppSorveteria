@@ -469,7 +469,7 @@ Decidido em 30/09/2026 (Paulo):
 | `Database:MigrateOnStartup` | true | `true` no piloto (um serviço só, Render Free); `false` quando houver deploy pago/réplicas |
 | `Cors:PainelOrigem` | `http://localhost:5173` (painel local) | URL do painel no Cloudflare Pages (Sprint 3) |
 | `Clima:ChaveApi` | vazio (coleta desligada; pôr a sua chave em `dotnet user-secrets` ou variável para testar) | `Clima__ChaveApi` (chave do Visual Crossing, RN-CL-07) |
-| `Clima:IntervaloHoras` | 3 | 3 (de quanto em quanto tempo a API acordada coleta) |
+| `Clima:IntervaloHoras` | 3 | 3 (de quanto em quanto tempo a API acordada coleta; fora de 1–24 volta a 3 com aviso no log). A recoleta de um dia ainda aberto espera 3 h, fixo |
 
 Nunca commitar segredo: `appsettings.Development.json` só contém valores locais; produção usa variáveis de ambiente (Render → Environment). Ver docs/07.
 

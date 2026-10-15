@@ -69,7 +69,7 @@ public sealed class PrevisaoClima : Entity
             TempMax = maxima,
             TempMin = minima,
             ChuvaMm = ValoresClima.Chuva(leitura.ChuvaMm, leitura.Data),
-            ChanceChuvaPct = ValoresClima.Percentual(leitura.ChanceChuvaPct, leitura.Data, "Chance de chuva"),
+            ChanceChuvaPct = ValoresClima.Percentual(leitura.ChanceChuvaPct),
             Icone = ValoresClima.Texto(leitura.Icone, ValoresClima.MaximoIcone),
             Condicao = ValoresClima.Texto(leitura.Condicao, ValoresClima.MaximoCondicao),
         };

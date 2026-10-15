@@ -52,12 +52,25 @@ public sealed class ColetaClimaService
         _situacao = situacao;
     }
 
+    /// <summary>Mensagem da coleta desligada (sem a chave no servidor), sem jargão: aparece para a dona.</summary>
+    public const string MensagemSemChave =
+        "A coleta do clima ainda não foi ligada no servidor: falta configurar a chave do serviço de clima.";
+
+    /// <summary>Banco fora do ar ou gravação recusada no meio da coleta (o erro completo fica no log).</summary>
+    public const string MensagemFalhaAoGravar = "Não deu para gravar o clima agora. A próxima rodada tenta de novo.";
+
     /// <param name="forcar">"Atualizar agora": coleta de novo os dias não definitivos mesmo se a última coleta tem menos de 3 h.</param>
-    public async Task<ColetaClimaDto> ColetarAsync(bool forcar, CancellationToken cancellationToken = default)
+    public Task<ColetaClimaDto> ColetarAsync(bool forcar, CancellationToken cancellationToken = default) =>
+        ColetarAsync(forcar, TimeSpan.Zero, cancellationToken);
+
+    /// <param name="forcar">"Atualizar agora": coleta de novo os dias não definitivos mesmo se a última coleta tem menos de 3 h.</param>
+    /// <param name="esperarVez">Se outra coleta está rodando, espera até esse tempo antes de desistir (a dona acabou de mudar o local).</param>
+    /// <exception cref="Exception">Falha no banco: registrada na situação (aparece no painel) e relançada para o log.</exception>
+    public async Task<ColetaClimaDto> ColetarAsync(bool forcar, TimeSpan esperarVez, CancellationToken cancellationToken = default)
     {
         if (!_fonte.Configurada)
         {
-            return new ColetaClimaDto(false, 0, 0, "A coleta do clima está desligada: falta a chave do serviço de clima (Clima__ChaveApi).");
+            return new ColetaClimaDto(false, 0, 0, MensagemSemChave);
         }
 
         var configuracao = await _configuracao.ObterAsync(cancellationToken);
@@ -66,7 +79,7 @@ public sealed class ColetaClimaService
             return new ColetaClimaDto(false, 0, 0, "Informe o local da loja em Configurações para começar a guardar o clima.");
         }
 
-        if (!await _situacao.UmaPorVez.WaitAsync(0, cancellationToken))
+        if (!await _situacao.UmaPorVez.WaitAsync(esperarVez, cancellationToken))
         {
             return new ColetaClimaDto(false, 0, 0, "Já tem uma coleta do clima em andamento. Tente de novo em instantes.");
         }
@@ -74,6 +87,12 @@ public sealed class ColetaClimaService
         try
         {
             return await ColetarNoPontoAsync(ponto, forcar, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException and not FonteClimaException)
+        {
+            // RN-CL-04: o erro aparece no painel; o detalhe vai para o log por quem chamou.
+            _situacao.Registrar(_clock.UtcNow, MensagemFalhaAoGravar);
+            throw;
         }
         finally
         {
@@ -85,7 +104,7 @@ public sealed class ColetaClimaService
     {
         var agora = _clock.UtcNow;
         var hoje = DiaComercial.DataDe(agora);
-        var inicio = await InicioAsync(hoje, cancellationToken);
+        var inicio = await InicioAsync(ponto, hoje, cancellationToken);
 
         var guardados = (await _clima.ListarDiasAsync(ponto, inicio, hoje, cancellationToken)).ToDictionary(d => d.Data);
         var pendentes = Enumerable.Range(0, hoje.DayNumber - inicio.DayNumber + 1)
@@ -114,7 +133,7 @@ public sealed class ColetaClimaService
             {
                 // O que já veio nas janelas anteriores está gravado; a próxima rodada tenta o resto.
                 _situacao.Registrar(agora, ex.Message);
-                return new ColetaClimaDto(true, dias, previsoes, ex.Message);
+                return new ColetaClimaDto(true, dias, previsoes, ex.Message, Falhou: true);
             }
 
             var novasPrevisoes = new List<PrevisaoClima>();
@@ -161,11 +180,19 @@ public sealed class ColetaClimaService
         return new ColetaClimaDto(true, dias, previsoes, Mensagem(dias, previsoes, recusados));
     }
 
-    /// <summary>Desde o primeiro dia com venda (sem venda: os últimos 7 dias), no máximo 2 anos para trás.</summary>
-    private async Task<DateOnly> InicioAsync(DateOnly hoje, CancellationToken cancellationToken)
+    /// <summary>
+    /// Desde o primeiro dia com venda (sem venda: os últimos 7 dias), ou antes, se há dia guardado que ainda não é definitivo
+    /// (local informado antes da primeira venda, API parada vários dias) — senão ele ficaria aberto para sempre. No máximo 2 anos.
+    /// </summary>
+    private async Task<DateOnly> InicioAsync(PontoClima ponto, DateOnly hoje, CancellationToken cancellationToken)
     {
         var primeiraVenda = await _comandas.PrimeiraVendaEmAsync(cancellationToken);
         var inicio = primeiraVenda is { } em ? DiaComercial.DataDe(em) : hoje.AddDays(-(DiasSemVenda - 1));
+        if (await _clima.PrimeiroDiaAbertoAsync(ponto, cancellationToken) is { } aberto && aberto < inicio)
+        {
+            inicio = aberto;
+        }
+
         var limite = hoje.AddDays(-(MaximoDiasParaTras - 1));
         if (inicio < limite)
         {
