@@ -743,3 +743,13 @@ export interface SaborNoRankingDto {
   margem: number | null
   margemPercentual: number | null
 }
+
+/** GET /api/configuracoes/primeiros-passos (Admin) — RN-LJ-01: cada passo é "já tem pelo menos um". */
+export interface PrimeirosPassosDto {
+  catalogoDeEstoque: boolean
+  produtos: boolean
+  atendentes: boolean
+  whatsAppDona: boolean
+  contagemConcluida: boolean
+  vendaDoTablet: boolean
+}

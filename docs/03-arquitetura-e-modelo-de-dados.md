@@ -291,6 +291,7 @@ itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-E
 | Método | Rota | Uso |
 |---|---|---|
 | GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja (GET para todos; PUT só Admin) |
+| GET | `/api/configuracoes/primeiros-passos` | Admin: catálogo, cardápio, atendentes, WhatsApp da dona, primeira contagem e primeira venda do tablet — feito ou não (RN-LJ-01; lista do Início do painel) |
 | GET/POST | `/api/avisos`, `/api/avisos/{id}/ainda-falta`, `/{id}/whatsapp-aberto` | listar e criar avisos, "ainda falta" (atendente e dona) |
 | POST | `/api/avisos/{id}/fechar` | fechar com motivo (só Admin) |
 | GET | `/api/avisos/resumo-do-dia?data=` | texto e link do resumo (RN-AV-07) |

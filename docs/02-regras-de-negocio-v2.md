@@ -174,6 +174,12 @@ Desenho e motivo em **docs/10** (revisto em 14/10). A loja compra sorvete **pron
 | RN-TD-03 | Nenhum registro de venda, pagamento, caixa ou movimento é apagado; correções geram novos registros com motivo | F1 |
 | RN-TD-04 | Todo registro guarda quem fez (`UsuarioId`) e quando | F1 |
 
+## 9a. Implantação
+
+| ID | Regra | Fase |
+|---|---|---|
+| RN-LJ-01 | **Primeiros passos** no Início do painel, até tudo estar feito: importar o catálogo de estoque (planilha), cadastrar o cardápio (produtos), cadastrar as atendentes, informar o WhatsApp da dona, concluir a primeira contagem do freezer e receber a primeira venda do tablet. Cada passo é "já existe pelo menos um" (item ativo, produto ativo, atendente ativa, número salvo, contagem concluída, venda recebida); a lista some quando os seis estão feitos | F2/F3 |
+
 ## 10. Perguntas abertas para confirmar com a dona
 
 1. Aceita cartão (maquininha)? Quais bandeiras/formas devem aparecer?

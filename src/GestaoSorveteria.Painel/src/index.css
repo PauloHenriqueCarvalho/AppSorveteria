@@ -2442,3 +2442,73 @@ code {
 .secao-tabela > p {
   padding: 0 1.25rem 1rem;
 }
+
+/* ---------------------------------------------------------------- primeiros passos (RN-LJ-01) */
+
+.passos {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.passo {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--cor-linha);
+}
+
+.passo:first-child {
+  border-top: 0;
+}
+
+.passo-marca {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--cor-borda-forte);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cor-texto-suave);
+}
+
+.passo-feito .passo-marca {
+  border-color: var(--cor-bom);
+  background: var(--cor-bom);
+  color: #fff;
+}
+
+.passo-feito .passo-corpo strong {
+  color: var(--cor-texto-suave);
+  font-weight: 600;
+}
+
+.passo-corpo {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.passo .botao {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  .passo {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    row-gap: 0.5rem;
+  }
+
+  .passo .botao {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
