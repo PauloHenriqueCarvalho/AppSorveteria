@@ -51,6 +51,10 @@ services:
       - key: Cors__PainelOrigem
         sync: false
 
+      # Chave do Visual Crossing (clima do dia e previsão, RN-CL-07; conta grátis, docs/07). Vazia = coleta desligada.
+      - key: Clima__ChaveApi
+        sync: false
+
       # Piloto: um único serviço, sem réplicas → a API aplica as migrações ao subir (docs/07).
       # Em produção paga voltar a "false" e rodar "dotnet ef database update" no deploy.
       - key: Database__MigrateOnStartup

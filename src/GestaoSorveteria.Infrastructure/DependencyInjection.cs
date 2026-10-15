@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Domain.Repositories;
+using GestaoSorveteria.Infrastructure.Clima;
 using GestaoSorveteria.Infrastructure.Persistence;
 using GestaoSorveteria.Infrastructure.Persistence.Repositories;
 using GestaoSorveteria.Infrastructure.Security;
@@ -37,10 +38,29 @@ public static class DependencyInjection
         services.AddScoped<IPedidoFornecedorRepository, PedidoFornecedorRepository>();
         services.AddScoped<IConfiguracaoLojaRepository, ConfiguracaoLojaRepository>();
         services.AddScoped<IMovimentoEstoqueRepository, MovimentoEstoqueRepository>();
+        services.AddScoped<IClimaRepository, ClimaRepository>();
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<DatabaseSeeder>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// RN-CL-07: serviço de clima (Visual Crossing). HttpClient próprio, sem o log do IHttpClientFactory: a chave vai na URL
+    /// e não pode parar nos logs do Render.
+    /// </summary>
+    public static IServiceCollection AddFonteClima(this IServiceCollection services, ClimaOptions opcoes)
+    {
+        opcoes.Normalizar();
+        services.AddSingleton(opcoes);
+        services.AddSingleton<IFonteClima>(_ => new VisualCrossingFonteClima(
+            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(15) })
+            {
+                Timeout = TimeSpan.FromSeconds(40),
+            },
+            opcoes));
 
         return services;
     }

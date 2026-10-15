@@ -311,6 +311,38 @@ itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-E
 
 **Montagem automática do rascunho:** o painel chama `montar` ao abrir no dia do pedido (idempotente); um `BackgroundService` faz o mesmo quando a API estiver acordada. Não depende de agendador pago.
 
+## 5a. Clima e calendário (base para estimar vendas)
+
+Regras RN-CL em docs/02, seção 9b. O clima é guardado pelo **ponto** (latitude/longitude com 2 casas), não pela loja: uma segunda loja (ou a mudança de endereço) ganha o próprio histórico sem migração.
+
+```
+configuracao_loja + local_nome varchar(120)?, latitude numeric(7,4)?, longitude numeric(7,4)?   -- RN-CL-01
+
+clima_dias          (id, data date, latitude numeric(5,2), longitude numeric(5,2),
+                     temp_max numeric(4,1), temp_min numeric(4,1), temp_media numeric(4,1), sensacao_max numeric(4,1)?,
+                     chuva_mm numeric(6,1)?, chuva_horas_pct numeric(4,1)?, nuvens_pct numeric(4,1)?, umidade_pct numeric(4,1)?,
+                     icone varchar(40)?, condicao varchar(120)?, origem varchar(12) -- Observado | Combinado | Previsto,
+                     definitivo bool, fonte varchar(20), coletado_em timestamptz)
+                     -- único (latitude, longitude, data); definitivo nunca muda (RN-CL-02)
+
+previsoes_clima     (id, feita_no_dia date, feita_em timestamptz, data date, latitude numeric(5,2), longitude numeric(5,2),
+                     temp_max numeric(4,1), temp_min numeric(4,1), chuva_mm numeric(6,1)?, chance_chuva_pct numeric(4,1)?,
+                     icone varchar(40)?, condicao varchar(120)?, fonte varchar(20))
+                     -- único (latitude, longitude, feita_no_dia, data); nunca sobrescrita (RN-CL-03)
+```
+
+- **Feriados nacionais** (RN-CL-05) são calculados no Domain (`Feriados`), sem tabela.
+- **Fonte do clima** atrás de `IFonteClima` (Application); a implementação `VisualCrossingFonteClima` (Infrastructure) usa a Timeline API — `GET timeline/{lat},{lon}/{de}/{ate}?unitGroup=metric&include=days&lang=pt&elements=…` — que devolve, na mesma resposta, dias passados (observados) e futuros (previsão), cada um com `source` (`obs`, `comb`, `fcst`). Procurar o local usa o mesmo endpoint com o texto no lugar das coordenadas (`resolvedAddress`, `latitude`, `longitude`).
+- **Coleta** (`ColetaClimaService`, RN-CL-04): chamada por um `BackgroundService` do Server (1 min depois de ligar e a cada 3 h) e pelo botão "Atualizar agora". Uma chamada à fonte por janela de até 31 dias; a janela mais recente vai até hoje + 14 quando a previsão do dia ainda não foi guardada (uma chamada só traz os dois). Grava a cada janela (o que já veio fica, mesmo se a próxima falhar).
+
+| Método | Rota | Uso |
+|---|---|---|
+| GET | `/api/clima/situacao` | Admin: chave configurada, local, última coleta, último erro, primeiro e último dia com clima, atribuição |
+| GET | `/api/clima/procurar-local?texto=` | Admin: o lugar encontrado pelo serviço de clima (nome, latitude, longitude) para a dona confirmar |
+| PUT | `/api/clima/local` | Admin: `{ nome, latitude, longitude }` grava o local da loja e já coleta; devolve a situação |
+| POST | `/api/clima/atualizar` | Admin: coleta agora (RN-CL-04, sem esperar as 3 h) |
+| GET | `/api/relatorios/clima-vendas?de=&ate=` | Admin: Clima × vendas por dia, médias por faixa de temperatura e chuva, próximos 7 dias (RN-CL-06) |
+
 ## 6. API — plano de endpoints (Sprint 1)
 
 Modelo local-first: o app **não** chama a API a cada toque. Ele envia documentos prontos.
@@ -436,6 +468,8 @@ Decidido em 30/09/2026 (Paulo):
 | `Seed:AdminLogin` / `Seed:AdminSenha` | `admin` / `admin12345` | `Seed__AdminLogin` / `Seed__AdminSenha` (trocar após o 1º login) |
 | `Database:MigrateOnStartup` | true | `true` no piloto (um serviço só, Render Free); `false` quando houver deploy pago/réplicas |
 | `Cors:PainelOrigem` | `http://localhost:5173` (painel local) | URL do painel no Cloudflare Pages (Sprint 3) |
+| `Clima:ChaveApi` | vazio (coleta desligada; pôr a sua chave em `dotnet user-secrets` ou variável para testar) | `Clima__ChaveApi` (chave do Visual Crossing, RN-CL-07) |
+| `Clima:IntervaloHoras` | 3 | 3 (de quanto em quanto tempo a API acordada coleta; fora de 1–24 volta a 3 com aviso no log). A recoleta de um dia ainda aberto espera 3 h, fixo |
 
 Nunca commitar segredo: `appsettings.Development.json` só contém valores locais; produção usa variáveis de ambiente (Render → Environment). Ver docs/07.
 

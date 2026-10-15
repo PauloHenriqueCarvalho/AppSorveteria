@@ -45,6 +45,7 @@
 | `App__LinkApk` | link fixo do APK assinado, mostrado no aviso de atualização. Vazio até publicar o APK |
 | `Cors__PainelOrigem` | URL do painel no Cloudflare Pages, só esquema e domínio (ex.: `https://sorveteria-painel.pages.dev`). Várias origens: separar por `;`. Vazio = nenhum site chama a API pelo navegador |
 | `Database__MigrateOnStartup` | `true` **só no piloto** (um único serviço, sem réplicas); em produção paga voltar a `false` e rodar `dotnet ef database update` no deploy |
+| `Clima__ChaveApi` | chave do **Visual Crossing** (clima do dia e previsão, RN-CL-07). Vazia = coleta desligada; o resto do sistema não muda |
 
 O `Dockerfile` da raiz já está pronto: o Render faz o build a partir dele e informa a porta pela variável `PORT`, que o `Program.cs` já lê. Health check: `/health`.
 
@@ -96,6 +97,17 @@ O endereço da API depende da configuração do build do app (`ConfiguracaoApi`,
 - `scripts/publicar-apk.ps1 -ApiUrl https://<servico>.onrender.com …` passa a URL ao build (parâmetro obrigatório, só https). Um APK gerado sem ela **não** aponta para um endereço chutado: o app mostra "Este app foi instalado sem o endereço do servidor" e não tenta logar. Quando a API estiver publicada no Render, registrar a URL aqui.
 - Para a API local aceitar o tablet (Debug): `dotnet run --project src/GestaoSorveteria.Server --urls http://0.0.0.0:5080` e liberar a porta 5080 no firewall do Windows; tablet na mesma rede Wi-Fi do PC.
 - O login exige internet (RN-US-06); depois disso a venda segue offline com o token guardado no aparelho (docs/03, seção 7).
+
+## Clima (Visual Crossing)
+
+A API guarda o clima de cada dia e a previsão para cruzar com as vendas (docs/02, seção 9b). Fonte: **Visual Crossing**, plano grátis — permite uso comercial, 1.000 registros por dia (a loja usa algumas dezenas: um registro por dia consultado), mais de 50 anos de histórico e 15 dias de previsão. Exige atribuição visível: o painel mostra "Dados do clima: Visual Crossing" na tela de clima. Não usar o Open-Meteo grátis: os termos dele proíbem uso comercial (o plano comercial custa US$ 29/mês).
+
+1. Criar a conta grátis no site do Visual Crossing (visualcrossing.com) e copiar a **API key** na página da conta.
+2. Render → `sorveteria-api` → Environment → `Clima__ChaveApi` = a chave → Save (a API reinicia).
+3. Painel → Configurações → **Local da loja (clima)**: escrever a cidade (ex.: "Ribeirão Preto, SP"), **Procurar**, conferir o lugar encontrado e **Confirmar**. A API já busca o histórico desde a primeira venda e a previsão dos próximos dias.
+4. Conferir em Configurações a "Última coleta". Erro de chave aparece ali ("A chave do serviço de clima foi recusada").
+
+A coleta roda quando a API está acordada (ao ligar e a cada 3 h). A API dormindo não perde dias: na próxima rodada ela busca o que faltou. Para testar local: `dotnet user-secrets set "Clima:ChaveApi" "<chave>" --project src/GestaoSorveteria.Server`.
 
 ## Backup no piloto
 

@@ -155,6 +155,18 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 - [x] Painel: custo e margem no produto (Custo e margem, com o custo informado) e nos Relatórios (indicador, produtos por margem, sabores, Excel)
 - [x] Exportação CSV/Excel por período (Vendas, Caixas, Catálogo e Relatórios — tudo numa planilha) e relatório de fechamento imprimível no detalhe do caixa
 
+### Sprint 10 — Base para vender mais: clima e calendário (15/10/2026)
+
+Começar pequeno e guardar dados desde já: clima de cada dia e a previsão como estava, ao lado das vendas, para estimar vendas e pedido pela previsão quando houver meses de histórico (docs/02, seção 9b; docs/03, seção 5a). O clima é guardado por ponto (latitude/longitude), já pronto para uma segunda loja no futuro.
+
+- [ ] Domain: local da loja na configuração, ponto do clima, clima do dia (definitivo depois de 2 dias), previsão guardada, feriados nacionais (RN-CL-01/02/03/05) + testes
+- [ ] Application + Infrastructure: coleta que completa o que falta (API dormindo não perde nada), fonte Visual Crossing atrás de `IFonteClima`, tabelas `clima_dias` e `previsoes_clima`, `BackgroundService` a cada 3 h, endpoints `/api/clima/*` (RN-CL-04/07)
+- [ ] API: relatório Clima × vendas por dia, médias por faixa de temperatura e com/sem chuva (dias úteis × fins de semana e feriados), avisos urgentes do dia, próximos 7 dias (RN-CL-06)
+- [ ] Painel: local da loja em Configurações (procurar, confirmar, situação da coleta, "Atualizar agora") e tela Análise → Clima × vendas (gráfico, médias, tabela por dia, exportar Excel)
+- [ ] Ligar em produção: criar a conta grátis no Visual Crossing, `Clima__ChaveApi` no Render, local da loja no painel (docs/07)
+
+Depois (a combinar): anotação do dia pela dona (evento na cidade, feriado municipal, loja fechada, faltou luz) e, com uns 3 meses de dados, a estimativa de vendas e do pedido pela previsão.
+
 ## Fase 4 — Expansões (a combinar)
 Ficha técnica de insumos (se a dona quiser controlar insumo além do produto pronto) · fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.
 
