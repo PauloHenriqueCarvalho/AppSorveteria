@@ -87,7 +87,7 @@ Plano detalhado em docs/06, seção 4.
 - [x] API do dashboard: vendas por hora, comparativo com o mesmo dia da semana anterior, mais vendidos (RN-RL-03/06/07); gráfico no Início
 - [x] Vendas e Caixas em tabela com filtro de período (atalhos Hoje, Ontem, 7 dias, 30 dias, Este mês) e situação, exportar Excel (CSV brasileiro) e imprimir; relatório de fechamento imprimível no detalhe do caixa
 - [x] Filtro de vendas por atendente e por forma de pagamento (`atendente` e `forma` em `GET /api/comandas`; vale também para exportar e imprimir)
-- [ ] Produtos e Usuários no mesmo padrão
+- [x] Produtos e Usuários no mesmo padrão (tabela; Produtos com filtro de categoria e o que cada um baixa do estoque)
 
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)
 
