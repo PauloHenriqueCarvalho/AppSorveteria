@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Contracts.Comandas;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Domain.Usuarios;
@@ -14,24 +15,27 @@ public sealed class ComandaService
     private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
     private readonly ComandaConsultaService _consulta;
+    private readonly SaldoEstoqueService _saldos;
 
     public ComandaService(
         IComandaRepository comandas,
         IUsuarioRepository usuarios,
         IUnitOfWork uow,
         IClock clock,
-        ComandaConsultaService consulta)
+        ComandaConsultaService consulta,
+        SaldoEstoqueService saldos)
     {
         _comandas = comandas;
         _usuarios = usuarios;
         _uow = uow;
         _clock = clock;
         _consulta = consulta;
+        _saldos = saldos;
     }
 
     /// <summary>
     /// RN-CM-09: só Admin ativo, só comanda fechada, motivo obrigatório. Não altera caixa nenhum (RN-CX-07):
-    /// dinheiro devolvido ao cliente é uma sangria registrada no caixa aberto, pelo app.
+    /// dinheiro devolvido ao cliente é uma sangria registrada no caixa aberto, pelo app. Os potes da venda voltam ao saldo.
     /// </summary>
     public async Task<ComandaDetalheDto> EstornarAsync(Guid id, EstornarComandaRequest request, Guid usuarioId, CancellationToken cancellationToken = default)
     {
@@ -45,6 +49,7 @@ public sealed class ComandaService
             ?? throw new EntidadeNaoEncontradaException("Venda não encontrada.");
 
         comanda.Estornar(request.Motivo, usuario.Id, _clock.UtcNow);
+        await _saldos.EstornarVendaAsync(comanda.Id, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
 
         return await _consulta.ObterAsync(id, cancellationToken);

@@ -3,6 +3,8 @@ using GestaoSorveteria.Application.Relatorios;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Produtos;
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Tests.Domain;
 
 namespace GestaoSorveteria.Tests.Application;
@@ -16,6 +18,7 @@ public class RelatorioServiceTests
     private readonly ComandasEmMemoria _comandas = new();
     private readonly UsuarioRepositoryFake _usuarios = new();
     private readonly ClockFake _clock = new() { UtcNow = Meio17 };
+    private readonly ProdutoRepositoryFake _produtos = new();
     private readonly Caixa _caixa;
     private readonly RelatorioService _service;
 
@@ -23,7 +26,7 @@ public class RelatorioServiceTests
     {
         _usuarios.Usuarios.Add(Cenario.Admin());
         var consultaCaixas = new CaixaConsultaService(_caixas, _comandas, _usuarios, _clock);
-        _service = new RelatorioService(_comandas, consultaCaixas, _clock);
+        _service = new RelatorioService(_comandas, _produtos, consultaCaixas, _clock);
         _caixa = Caixa.Abrir(_usuarios.Usuarios[0].Id, 100m, Meio17.AddHours(-4));
         _caixas.Caixas.Add(_caixa);
     }
@@ -224,5 +227,25 @@ public class RelatorioServiceTests
             p => Assert.Equal((shake.Id, "Milk-shake 500ml", 1, 18.90m), (p.ProdutoId!.Value, p.Descricao, p.Quantidade, p.Total)),
             p => Assert.Equal(((Guid?)null, "Self-service / venda avulsa", 2, 15.40m), (p.ProdutoId, p.Descricao, p.Quantidade, p.Total)),
             p => Assert.Equal((picole.Id, "Picolé de morango", 3, 15.00m), (p.ProdutoId!.Value, p.Descricao, p.Quantidade, p.Total)));
+    }
+
+    [Fact]
+    public async Task ResumoDoDia_MaisVendidos_PoteComSaborAparecePeloNomeDoCadastro()
+    {
+        var fabrica = Fornecedor.Criar("Fábrica", null, [DayOfWeek.Monday], 2, false, FormaEnvioPedido.Impresso, true);
+        var grupo = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 1);
+        var flocos = ItemEstoque.Criar(grupo.Id, fabrica.Id, "Flocos", UnidadeCompra.Unidade, 1, 14m, 1);
+        var chocolate = ItemEstoque.Criar(grupo.Id, fabrica.Id, "Chocolate", UnidadeCompra.Unidade, 1, 14m, 2);
+        var pote = Produto.Criar("Pote 1L", "Potes", 28m, false, 4, Meio17.AddDays(-30));
+        pote.LigarAoEstoque(grupo.Id, 1, Meio17.AddDays(-30));
+        _produtos.Produtos.Add(pote);
+        VendaCom(_caixa, 1, Meio17.AddHours(-2), c => c.AdicionarProduto(pote, 1, sabor: flocos));
+        VendaCom(_caixa, 2, Meio17.AddHours(-1), c => c.AdicionarProduto(pote, 2, sabor: chocolate));
+
+        var resumo = await _service.ResumoDoDiaAsync(null, TestContext.Current.CancellationToken);
+
+        // RN-RL-03: a linha diz "Pote 1L · Chocolate", mas o ranking é do produto.
+        var maisVendido = Assert.Single(resumo.MaisVendidos);
+        Assert.Equal(("Pote 1L", 3, 84m), (maisVendido.Descricao, maisVendido.Quantidade, maisVendido.Total));
     }
 }

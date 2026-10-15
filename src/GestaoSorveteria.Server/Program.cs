@@ -2,8 +2,12 @@ using System.Text;
 using System.Threading.RateLimiting;
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
+using GestaoSorveteria.Application.Avisos;
 using GestaoSorveteria.Application.Caixas;
 using GestaoSorveteria.Application.Comandas;
+using GestaoSorveteria.Application.Contagens;
+using GestaoSorveteria.Application.Estoque;
+using GestaoSorveteria.Application.Pedidos;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Relatorios;
 using GestaoSorveteria.Application.Sync;
@@ -58,7 +62,13 @@ builder.Services.AddScoped<CaixaService>();
 builder.Services.AddScoped<ComandaConsultaService>();
 builder.Services.AddScoped<ComandaService>();
 builder.Services.AddScoped<RelatorioService>();
+builder.Services.AddScoped<RelatorioPeriodoService>();
 builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<CatalogoEstoqueService>();
+builder.Services.AddScoped<AvisoService>();
+builder.Services.AddScoped<ContagemService>();
+builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<SaldoEstoqueService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------
 var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();

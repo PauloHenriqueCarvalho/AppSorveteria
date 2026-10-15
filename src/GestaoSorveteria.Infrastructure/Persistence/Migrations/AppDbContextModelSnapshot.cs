@@ -287,6 +287,10 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(120)")
                         .HasColumnName("descricao");
 
+                    b.Property<Guid?>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
                     b.Property<decimal>("PrecoUnitario")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
@@ -310,6 +314,9 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ComandaId")
                         .HasDatabaseName("ix_itens_comanda_comanda_id");
+
+                    b.HasIndex("ItemEstoqueId")
+                        .HasDatabaseName("ix_itens_comanda_item_estoque_id");
 
                     b.HasIndex("ProdutoId")
                         .HasDatabaseName("ix_itens_comanda_produto_id");
@@ -360,6 +367,632 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.ToTable("pagamentos", (string)null);
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.Aviso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<Guid?>("AtualizadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("atualizado_por_usuario_id");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid?>("CriadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("criado_por_usuario_id");
+
+                    b.Property<DateTime?>("FechadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fechado_em");
+
+                    b.Property<Guid?>("FechadoPeloPedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fechado_pelo_pedido_id");
+
+                    b.Property<Guid?>("FechadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fechado_por_usuario_id");
+
+                    b.Property<Guid?>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
+                    b.Property<string>("MotivoFechamento")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("motivo_fechamento");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("observacao");
+
+                    b.Property<string>("Prioridade")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("prioridade");
+
+                    b.Property<int>("QuantidadeAtual")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantidade_atual");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TextoLivre")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("texto_livre");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTime?>("WhatsAppAbertoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("whatsapp_aberto_em");
+
+                    b.HasKey("Id")
+                        .HasName("pk_avisos");
+
+                    b.HasIndex("AtualizadoPorUsuarioId")
+                        .HasDatabaseName("ix_avisos_atualizado_por_usuario_id");
+
+                    b.HasIndex("CriadoPorUsuarioId")
+                        .HasDatabaseName("ix_avisos_criado_por_usuario_id");
+
+                    b.HasIndex("FechadoPorUsuarioId")
+                        .HasDatabaseName("ix_avisos_fechado_por_usuario_id");
+
+                    b.HasIndex("ItemEstoqueId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_avisos_um_aberto_por_item")
+                        .HasFilter("status = 'Aberto' AND item_estoque_id IS NOT NULL");
+
+                    b.HasIndex("Status", "CriadoEm")
+                        .HasDatabaseName("ix_avisos_status_criado_em");
+
+                    b.ToTable("avisos", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.Contagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ConcluidaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("concluida_em");
+
+                    b.Property<DateTime>("IniciadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("iniciada_em");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("origem");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contagens");
+
+                    b.HasIndex("ConcluidaEm")
+                        .HasDatabaseName("ix_contagens_concluida_em");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_contagens_usuario_id");
+
+                    b.ToTable("contagens", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.Fornecedor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AceitaMeiaCaixa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("aceita_meia_caixa");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<string>("Envio")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("envio");
+
+                    b.Property<bool>("MostrarPrecos")
+                        .HasColumnType("boolean")
+                        .HasColumnName("mostrar_precos");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nome");
+
+                    b.Property<string>("NomeNormalizado")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nome_normalizado");
+
+                    b.Property<int>("PrazoEntregaDias")
+                        .HasColumnType("integer")
+                        .HasColumnName("prazo_entrega_dias");
+
+                    b.Property<string>("WhatsApp")
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("whatsapp");
+
+                    b.PrimitiveCollection<string[]>("_diasPedido")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("dias_pedido");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fornecedores");
+
+                    b.HasIndex("NomeNormalizado")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fornecedores_nome_normalizado");
+
+                    b.ToTable("fornecedores", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.GrupoEstoque", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ModoControle")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("modo_controle");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("nome");
+
+                    b.Property<string>("NomeNormalizado")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("nome_normalizado");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordem");
+
+                    b.HasKey("Id")
+                        .HasName("pk_grupos_estoque");
+
+                    b.HasIndex("NomeNormalizado")
+                        .IsUnique()
+                        .HasDatabaseName("ix_grupos_estoque_nome_normalizado");
+
+                    b.ToTable("grupos_estoque", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.ItemContagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ContadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("contado_em");
+
+                    b.Property<int?>("ContadoUnidades")
+                        .HasColumnType("integer")
+                        .HasColumnName("contado_unidades");
+
+                    b.Property<Guid>("ContagemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contagem_id");
+
+                    b.Property<Guid>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
+                    b.Property<int?>("SaldoSistemaUnidades")
+                        .HasColumnType("integer")
+                        .HasColumnName("saldo_sistema_unidades");
+
+                    b.HasKey("Id")
+                        .HasName("pk_itens_contagem");
+
+                    b.HasIndex("ItemEstoqueId")
+                        .HasDatabaseName("ix_itens_contagem_item_estoque_id");
+
+                    b.HasIndex("ContagemId", "ItemEstoqueId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_itens_contagem_contagem_id_item_estoque_id");
+
+                    b.ToTable("itens_contagem", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.ItemEstoque", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<decimal>("CustoEmbalagem")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("custo_embalagem");
+
+                    b.Property<decimal?>("EstoqueAlvoEmbalagens")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("estoque_alvo_embalagens");
+
+                    b.Property<Guid>("FornecedorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fornecedor_id");
+
+                    b.Property<Guid>("GrupoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grupo_id");
+
+                    b.Property<int?>("MinimoUnidades")
+                        .HasColumnType("integer")
+                        .HasColumnName("minimo_unidades");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nome");
+
+                    b.Property<string>("NomeNormalizado")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("nome_normalizado");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordem");
+
+                    b.Property<string>("Unidade")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("unidade_compra");
+
+                    b.Property<int>("UnidadesPorEmbalagem")
+                        .HasColumnType("integer")
+                        .HasColumnName("unidades_por_embalagem");
+
+                    b.HasKey("Id")
+                        .HasName("pk_itens_estoque");
+
+                    b.HasIndex("FornecedorId")
+                        .HasDatabaseName("ix_itens_estoque_fornecedor_id");
+
+                    b.HasIndex("GrupoId", "NomeNormalizado")
+                        .IsUnique()
+                        .HasDatabaseName("ix_itens_estoque_grupo_id_nome_normalizado");
+
+                    b.ToTable("itens_estoque", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.ItemPedidoFornecedor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AlteradoPelaDona")
+                        .HasColumnType("boolean")
+                        .HasColumnName("alterado_pela_dona");
+
+                    b.Property<decimal>("CustoEmbalagem")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("custo_embalagem");
+
+                    b.Property<Guid>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
+                    b.Property<string>("Observacao")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("observacao");
+
+                    b.Property<string>("Origem")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("origem");
+
+                    b.Property<decimal>("Passo")
+                        .HasPrecision(3, 1)
+                        .HasColumnType("numeric(3,1)")
+                        .HasColumnName("passo");
+
+                    b.Property<decimal>("PassoRecebimento")
+                        .HasPrecision(3, 1)
+                        .HasColumnType("numeric(3,1)")
+                        .HasColumnName("passo_recebimento");
+
+                    b.Property<decimal>("PedidoEmbalagens")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("pedido_embalagens");
+
+                    b.Property<Guid>("PedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<bool>("PedirDeNovo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("pedir_de_novo");
+
+                    b.Property<decimal?>("RecebidoEmbalagens")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("recebido_embalagens");
+
+                    b.Property<decimal>("SugeridoEmbalagens")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("numeric(6,1)")
+                        .HasColumnName("sugerido_embalagens");
+
+                    b.HasKey("Id")
+                        .HasName("pk_itens_pedido_fornecedor");
+
+                    b.HasIndex("ItemEstoqueId")
+                        .HasDatabaseName("ix_itens_pedido_fornecedor_item_estoque_id");
+
+                    b.HasIndex("PedidoId", "ItemEstoqueId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_itens_pedido_fornecedor_pedido_id_item_estoque_id");
+
+                    b.ToTable("itens_pedido_fornecedor", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.MovimentoEstoque", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ComandaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comanda_id");
+
+                    b.Property<DateTime>("Em")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("em");
+
+                    b.Property<Guid?>("ItemComandaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_comanda_id");
+
+                    b.Property<Guid>("ItemEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("item_estoque_id");
+
+                    b.Property<Guid?>("PedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pedido_id");
+
+                    b.Property<DateTime>("RegistradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("registrado_em");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("tipo");
+
+                    b.Property<int>("Unidades")
+                        .HasColumnType("integer")
+                        .HasColumnName("unidades");
+
+                    b.HasKey("Id")
+                        .HasName("pk_movimentos_estoque");
+
+                    b.HasIndex("ComandaId")
+                        .HasDatabaseName("ix_movimentos_estoque_comanda_id");
+
+                    b.HasIndex("ItemComandaId")
+                        .HasDatabaseName("ix_movimentos_estoque_item_comanda_id");
+
+                    b.HasIndex("PedidoId")
+                        .HasDatabaseName("ix_movimentos_estoque_pedido_id");
+
+                    b.HasIndex("ItemEstoqueId", "Em")
+                        .HasDatabaseName("ix_movimentos_estoque_item_estoque_id_em");
+
+                    b.HasIndex("Tipo", "ItemComandaId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_movimentos_estoque_por_linha_de_venda")
+                        .HasFilter("item_comanda_id IS NOT NULL");
+
+                    b.HasIndex("Tipo", "PedidoId", "ItemEstoqueId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_movimentos_estoque_entrada_por_pedido")
+                        .HasFilter("pedido_id IS NOT NULL");
+
+                    b.ToTable("movimentos_estoque", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<DateTime?>("CanceladoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelado_em");
+
+                    b.Property<Guid?>("CanceladoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancelado_por_usuario_id");
+
+                    b.Property<DateTime?>("ChegouEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("chegou_em");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<Guid>("CriadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("criado_por_usuario_id");
+
+                    b.Property<DateTime?>("EnviadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviado_em");
+
+                    b.Property<Guid>("FornecedorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fornecedor_id");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("motivo_cancelamento");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero");
+
+                    b.Property<decimal?>("PercentualAtendido")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("percentual_atendido");
+
+                    b.Property<DateTime?>("RecebidoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recebido_em");
+
+                    b.Property<Guid?>("RecebidoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recebido_por_usuario_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalPedido")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("total_pedido");
+
+                    b.Property<decimal?>("TotalRecebido")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("total_recebido");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pedidos_fornecedor");
+
+                    b.HasIndex("CanceladoPorUsuarioId")
+                        .HasDatabaseName("ix_pedidos_fornecedor_cancelado_por_usuario_id");
+
+                    b.HasIndex("CriadoPorUsuarioId")
+                        .HasDatabaseName("ix_pedidos_fornecedor_criado_por_usuario_id");
+
+                    b.HasIndex("FornecedorId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pedidos_fornecedor_um_rascunho")
+                        .HasFilter("status = 'Rascunho'");
+
+                    b.HasIndex("Numero")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pedidos_fornecedor_numero");
+
+                    b.HasIndex("RecebidoPorUsuarioId")
+                        .HasDatabaseName("ix_pedidos_fornecedor_recebido_por_usuario_id");
+
+                    b.HasIndex("Status", "RecebidoEm")
+                        .HasDatabaseName("ix_pedidos_fornecedor_status_recebido_em");
+
+                    b.ToTable("pedidos_fornecedor", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Loja.ConfiguracaoLoja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<string>("NomeLoja")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("nome_loja");
+
+                    b.Property<string>("WhatsAppDona")
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("whatsapp_dona");
+
+                    b.HasKey("Id")
+                        .HasName("pk_configuracao_loja");
+
+                    b.ToTable("configuracao_loja", (string)null);
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Produtos.Produto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -383,6 +1016,15 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em");
+
+                    b.Property<decimal?>("CustoInformado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("custo_informado");
+
+                    b.Property<Guid?>("GrupoEstoqueId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grupo_estoque_id");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -409,8 +1051,17 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("preco");
 
+                    b.Property<int>("UnidadesPorVenda")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("unidades_por_venda");
+
                     b.HasKey("Id")
                         .HasName("pk_produtos");
+
+                    b.HasIndex("GrupoEstoqueId")
+                        .HasDatabaseName("ix_produtos_grupo_estoque_id");
 
                     b.HasIndex("NomeNormalizado")
                         .IsUnique()
@@ -535,6 +1186,12 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_itens_comanda_comandas_comanda_id");
 
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_itens_comanda_itens_estoque_item_estoque_id");
+
                     b.HasOne("GestaoSorveteria.Domain.Produtos.Produto", null)
                         .WithMany()
                         .HasForeignKey("ProdutoId")
@@ -552,6 +1209,160 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_pagamentos_comandas_comanda_id");
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.Aviso", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("AtualizadoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_avisos_usuarios_atualizado_por_usuario_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("CriadoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_avisos_usuarios_criado_por_usuario_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("FechadoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_avisos_usuarios_fechado_por_usuario_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_avisos_itens_estoque_item_estoque_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.Contagem", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_contagens_usuarios_usuario_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.ItemContagem", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.Contagem", null)
+                        .WithMany("Itens")
+                        .HasForeignKey("ContagemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_itens_contagem_contagens_contagem_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_itens_contagem_itens_estoque_item_estoque_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.ItemEstoque", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.Fornecedor", null)
+                        .WithMany()
+                        .HasForeignKey("FornecedorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_itens_estoque_fornecedores_fornecedor_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.GrupoEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_itens_estoque_grupos_estoque_grupo_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.ItemPedidoFornecedor", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_itens_pedido_fornecedor_itens_estoque_item_estoque_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", null)
+                        .WithMany("Itens")
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_itens_pedido_fornecedor_pedidos_fornecedor_pedido_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.MovimentoEstoque", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Comandas.Comanda", null)
+                        .WithMany()
+                        .HasForeignKey("ComandaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimentos_estoque_comandas_comanda_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Comandas.ItemComanda", null)
+                        .WithMany()
+                        .HasForeignKey("ItemComandaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimentos_estoque_itens_comanda_item_comanda_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_movimentos_estoque_itens_estoque_item_estoque_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", null)
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimentos_estoque_pedidos_fornecedor_pedido_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("CanceladoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_pedidos_fornecedor_usuarios_cancelado_por_usuario_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("CriadoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pedidos_fornecedor_usuarios_criado_por_usuario_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.Fornecedor", null)
+                        .WithMany()
+                        .HasForeignKey("FornecedorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pedidos_fornecedor_fornecedores_fornecedor_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("RecebidoPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_pedidos_fornecedor_usuarios_recebido_por_usuario_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Produtos.Produto", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Estoque.GrupoEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("GrupoEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_produtos_grupos_estoque_grupo_estoque_id");
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Caixas.Caixa", b =>
                 {
                     b.Navigation("Movimentos");
@@ -562,6 +1373,16 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.Navigation("Itens");
 
                     b.Navigation("Pagamentos");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.Contagem", b =>
+                {
+                    b.Navigation("Itens");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", b =>
+                {
+                    b.Navigation("Itens");
                 });
 #pragma warning restore 612, 618
         }

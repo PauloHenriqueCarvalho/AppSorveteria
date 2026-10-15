@@ -14,10 +14,12 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class RelatoriosController : ControllerBase
 {
     private readonly RelatorioService _relatorios;
+    private readonly RelatorioPeriodoService _periodo;
 
-    public RelatoriosController(RelatorioService relatorios)
+    public RelatoriosController(RelatorioService relatorios, RelatorioPeriodoService periodo)
     {
         _relatorios = relatorios;
+        _periodo = periodo;
     }
 
     /// <summary>Resumo de um dia (horário de Brasília, formato 2026-09-30; sem data = hoje): vendas, ticket médio, formas de pagamento e caixa aberto.</summary>
@@ -28,4 +30,21 @@ public sealed class RelatoriosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ResumoDiaDto>> Dia([FromQuery] DateOnly? data, CancellationToken cancellationToken) =>
         Ok(await _relatorios.ResumoDoDiaAsync(data, cancellationToken));
+
+    /// <summary>
+    /// Vendas de um período (dias no horário de Brasília, formato 2026-10-01, inclusive; sem datas = este mês até hoje; até 366
+    /// dias, sem passar de hoje): faturamento por dia/semana/mês, comparativo com o período anterior, horários e dias de pico
+    /// e rankings de produtos, categorias e sabores. <c>agrupar</c>: dia (até 93 dias), semana ou mes; sem ele, escolhe pelo tamanho.
+    /// </summary>
+    [HttpGet("periodo")]
+    [ProducesResponseType(typeof(RelatorioPeriodoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<RelatorioPeriodoDto>> Periodo(
+        [FromQuery] DateOnly? de,
+        [FromQuery] DateOnly? ate,
+        [FromQuery] string? agrupar,
+        CancellationToken cancellationToken) =>
+        Ok(await _periodo.ObterAsync(de, ate, agrupar, cancellationToken));
 }
