@@ -151,7 +151,7 @@ Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa p
 ### Sprint 9 — Lucro e exportação
 - [x] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque ou informado), margem por produto, por sabor e por período (RN-RL-04): API (`GET /api/produtos/custos`, `PUT /api/produtos/{id}/custo`, margem no relatório de período)
 - [x] Painel: custo e margem no produto (Custo e margem, com o custo informado) e nos Relatórios (indicador, produtos por margem, sabores, Excel)
-- [ ] Exportação CSV/Excel por período; relatório de fechamentos de caixa
+- [x] Exportação CSV/Excel por período (Vendas, Caixas, Catálogo e Relatórios — tudo numa planilha) e relatório de fechamento imprimível no detalhe do caixa
 
 ## Fase 4 — Expansões (a combinar)
 Ficha técnica de insumos (se a dona quiser controlar insumo além do produto pronto) · fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.
