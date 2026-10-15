@@ -19,6 +19,7 @@ namespace SorveteriaMaui
             janela.Resumed += (_, _) =>
             {
                 _servicos.GetRequiredService<Services.Api.CatalogoService>().PermitirNovaAtualizacaoAoAbrir();
+                _servicos.GetRequiredService<Services.Api.EstoqueService>().PermitirNovaAtualizacaoAoAbrir(); // Fase 2: avisos fechados pela dona
                 _servicos.GetRequiredService<Services.Api.SyncService>().Disparar(); // C4: ao voltar, tenta enviar o que ficou
             };
             return janela;

@@ -27,15 +27,21 @@ namespace SorveteriaMaui
             builder.Services.AddSingleton<SessaoUsuario>();
             builder.Services.AddSingleton<ApiCliente>();
             builder.Services.AddSingleton<CatalogoService>(); // catálogo da API em cache no SQLite (C2)
-            builder.Services.AddSingleton<SyncService>();     // fila de caixas/comandas → POST /api/sync/* (C4)
+            builder.Services.AddSingleton<SyncService>();     // fila de caixas/comandas/avisos → POST /api/sync/* (C4, Fase 2)
+            builder.Services.AddSingleton<EstoqueService>();  // Fase 2: catálogo de estoque, WhatsApp da dona e avisos abertos
 
             // Banco local, repositórios e casos de uso (carrega → Domain → grava numa transação)
             builder.Services.AddSingleton<BancoLocal>();
             builder.Services.AddSingleton<ComandaRepository>();
             builder.Services.AddSingleton<ProdutoRepository>();
             builder.Services.AddSingleton<CaixaRepository>();
+            builder.Services.AddSingleton<ItemEstoqueRepository>(); // Fase 2
+            builder.Services.AddSingleton<AvisoRepository>();       // Fase 2
+            builder.Services.AddSingleton<ContagemRepository>();    // Fase 2: contagem semanal
             builder.Services.AddSingleton<CaixaAppService>(); // C3: abrir, sangria/suprimento, fechar com conferência
             builder.Services.AddSingleton<ComandaAppService>();
+            builder.Services.AddSingleton<AvisoAppService>(); // Fase 2: "Está acabando", urgente e resumo do dia
+            builder.Services.AddSingleton<ContagemAppService>(); // Fase 2: contagem semanal do freezer (RN-ES-05/06)
             // Diálogos de pagamento (não gravam nada)
             builder.Services.AddSingleton<IPaymentService, PaymentService>();
 
@@ -58,6 +64,14 @@ namespace SorveteriaMaui
             // Histórico do turno (C5)
             builder.Services.AddTransient<HistoricoTurnoView>();
             builder.Services.AddTransient<HistoricoTurnoViewModel>();
+
+            // "Está acabando" (Fase 2)
+            builder.Services.AddTransient<EstaAcabandoView>();
+            builder.Services.AddTransient<EstaAcabandoViewModel>();
+
+            // Contagem semanal (Fase 2)
+            builder.Services.AddTransient<ContagemView>();
+            builder.Services.AddTransient<ContagemViewModel>();
 
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();

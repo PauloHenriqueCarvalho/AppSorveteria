@@ -38,8 +38,8 @@
             </VerticalStackLayout>
         </Border>
 
-        <!-- Topo fixo com Nova Comanda e Venda Rápida -->
-        <Grid Grid.Row="2" ColumnDefinitions="*, *, *" Padding="10" ColumnSpacing="10">
+        <!-- Topo fixo com Nova Comanda e Venda Rápida; embaixo, "Está acabando" e a contagem semanal (Fase 2) -->
+        <Grid Grid.Row="2" ColumnDefinitions="*, *, *" RowDefinitions="Auto, Auto, Auto" Padding="10" ColumnSpacing="10" RowSpacing="10">
             <Button Grid.Column="0"
                     Text="➕  Nova Comanda"
                     FontSize="16"
@@ -70,6 +70,45 @@
                     CornerRadius="10"
                     FontAttributes="Bold"
                     Command="{Binding VendaRapidaCommand}" />
+
+            <!-- Fase 2 (docs/10 §2.2, RN-AV-01): avisar o que está acabando; urgente vai na hora para o WhatsApp da dona -->
+            <Button Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    Text="{Binding TextoEstaAcabando}"
+                    FontSize="16"
+                    HeightRequest="56"
+                    BackgroundColor="#FFB300"
+                    TextColor="#3E2723"
+                    CornerRadius="10"
+                    FontAttributes="Bold"
+                    Command="{Binding EstaAcabandoCommand}" />
+
+            <!-- Fase 2 (docs/10 §2.1, RN-ES-05): contagem semanal do freezer -->
+            <Button Grid.Row="1"
+                    Grid.Column="2"
+                    Text="{Binding TextoContagem}"
+                    FontSize="16"
+                    HeightRequest="56"
+                    BackgroundColor="#EDE7F6"
+                    TextColor="#4527A0"
+                    CornerRadius="10"
+                    FontAttributes="Bold"
+                    Command="{Binding ContagemCommand}" />
+
+            <!-- RN-ES-05: na véspera do pedido, lembrete com atalho (some quando a contagem de hoje é concluída) -->
+            <Border Grid.Row="2"
+                    Grid.ColumnSpan="3"
+                    IsVisible="{Binding LembreteContagem}"
+                    Padding="14,12"
+                    StrokeThickness="2"
+                    Stroke="#4527A0"
+                    BackgroundColor="#EDE7F6"
+                    StrokeShape="RoundRectangle 10">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ContagemCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{Binding TextoLembreteContagem}" FontSize="16" FontAttributes="Bold" TextColor="#4527A0" />
+            </Border>
         </Grid>
 
         <CollectionView Grid.Row="3" 

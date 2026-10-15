@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
+             xmlns:model="clr-namespace:SorveteriaMaui.Model"
+             x:Class="SorveteriaMaui.View.EstaAcabandoView"
+             x:DataType="vm:EstaAcabandoViewModel"
+             Title="Está acabando"
+             BackgroundColor="#F5F5F5">
+
+    <!-- Baixa de novo o catálogo de estoque e os avisos abertos (sem internet, usa o que está no tablet) -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Atualizar" Command="{Binding AtualizarCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <!-- Fase 2 (docs/10 §2.2, RN-AV-01…03): o quê → quanto tem → prioridade → avisar; embaixo, os já avisados -->
+    <ScrollView x:Name="Rolagem">
+        <VerticalStackLayout Padding="12" Spacing="12">
+
+            <Label Text="{Binding Situacao}" FontSize="13" TextColor="#616161" />
+
+            <!-- 1. O quê: grupo ou busca em todos os itens (sorvetes, copos, casquinhas, insumos) ou "Outro" -->
+            <Border Padding="14" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#E0E0E0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="1. O que está acabando?" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
+
+                    <VerticalStackLayout Spacing="10" IsVisible="{Binding SemSelecao}">
+                        <SearchBar Placeholder="Buscar sabor, pote, copo, casquinha..."
+                                   Text="{Binding FiltroNome}"
+                                   BackgroundColor="#FAFAFA"
+                                   CancelButtonColor="Gray" />
+
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                            <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Grupos}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GrupoParaFiltro">
+                                        <Border StrokeShape="RoundRectangle 20" Stroke="#6200EE" StrokeThickness="1" Padding="18,12" BackgroundColor="White">
+                                            <Border.Triggers>
+                                                <DataTrigger TargetType="Border" Binding="{Binding Selecionado}" Value="True">
+                                                    <Setter Property="BackgroundColor" Value="#E8DEF8" />
+                                                </DataTrigger>
+                                            </Border.Triggers>
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                                      Command="{Binding EscolherGrupoCommand, Source={RelativeSource AncestorType={x:Type vm:EstaAcabandoViewModel}}}" />
+                                            </Border.GestureRecognizers>
+                                            <Label Text="{Binding Nome}" TextColor="#6200EE" FontAttributes="Bold" FontSize="15" VerticalOptions="Center" />
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <Label Text="{Binding DicaBusca}" IsVisible="{Binding TemDicaBusca}" FontSize="14" TextColor="#757575" />
+
+                        <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Resultados}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ItemParaAvisar">
+                                    <Border Padding="14,12" StrokeShape="RoundRectangle 10" BackgroundColor="#FAFAFA" Stroke="#E0E0E0">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                                  Command="{Binding EscolherItemCommand, Source={RelativeSource AncestorType={x:Type vm:EstaAcabandoViewModel}}}" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                                            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Nome}" FontSize="17" FontAttributes="Bold" TextColor="#212121" />
+                                                <Label Text="{Binding Grupo}" FontSize="13" TextColor="#757575" />
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="1" Text="{Binding JaAvisado}" IsVisible="{Binding TemAviso}"
+                                                   FontSize="13" FontAttributes="Bold" TextColor="#E65100" VerticalOptions="Center" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <Button Text="✏️  Outro (escrever o que é)"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                HeightRequest="56"
+                                BackgroundColor="#EDE7F6"
+                                TextColor="#4527A0"
+                                CornerRadius="10"
+                                Command="{Binding OutroCommand}" />
+                    </VerticalStackLayout>
+
+                    <!-- Escolhido -->
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10" IsVisible="{Binding TemSelecao}">
+                        <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                            <Label Text="{Binding SelecionadoNome}" FontSize="22" FontAttributes="Bold" TextColor="#212121" />
+                            <Label Text="{Binding SelecionadoGrupo}" FontSize="14" TextColor="#757575" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1"
+                                Text="Trocar"
+                                FontSize="15"
+                                HeightRequest="48"
+                                BackgroundColor="#F0F0F0"
+                                TextColor="#333"
+                                CornerRadius="10"
+                                VerticalOptions="Center"
+                                Command="{Binding TrocarCommand}" />
+                    </Grid>
+
+                    <!-- RN-AV-03: o mesmo item não ganha dois avisos; o botão vira "Ainda falta" -->
+                    <Border IsVisible="{Binding TemAvisoExistente}" Padding="12" StrokeShape="RoundRectangle 8" StrokeThickness="0" BackgroundColor="#FFF8E1">
+                        <Label Text="{Binding JaAvisadoTexto}" FontSize="15" FontAttributes="Bold" TextColor="#5D4037" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- 2. Quanto tem agora (menor unidade) -->
+            <Border IsVisible="{Binding TemSelecao}" Padding="14" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#E0E0E0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="2. Quanto tem agora?" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
+                    <Label Text="{Binding DicaQuantidade}" FontSize="13" TextColor="#757575" />
+                    <Grid ColumnDefinitions="Auto, *, Auto, *" ColumnSpacing="10">
+                        <Button Grid.Column="0" Text="−" WidthRequest="64" HeightRequest="64" CornerRadius="32"
+                                FontSize="28" FontAttributes="Bold" BackgroundColor="#F0F0F0" TextColor="#333"
+                                Command="{Binding MenosCommand}" />
+                        <Entry Grid.Column="1" Text="{Binding QuantidadeTexto}" Keyboard="Numeric" MaxLength="4"
+                               FontSize="28" FontAttributes="Bold" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                        <Button Grid.Column="2" Text="+" WidthRequest="64" HeightRequest="64" CornerRadius="32"
+                                FontSize="28" FontAttributes="Bold" BackgroundColor="#E3F2FD" TextColor="#1976D2"
+                                Command="{Binding MaisCommand}" />
+                        <!-- RN-AV-02: acabou = 0 e já escolhe Urgente -->
+                        <Button Grid.Column="3" Text="Acabou" HeightRequest="64" CornerRadius="12"
+                                FontSize="20" FontAttributes="Bold" BackgroundColor="#C62828" TextColor="White"
+                                Command="{Binding AcabouCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- 3. Prioridade com significado fixo (RN-AV-02); abaixo da atual fica apagada no "Ainda falta" (RN-AV-03) -->
+            <Border IsVisible="{Binding TemSelecao}" Padding="14" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#E0E0E0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="3. Prioridade" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
+
+                    <Border Padding="14,10" StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="2" BackgroundColor="White">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding UrgenteEscolhida}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#FFCDD2" />
+                                <Setter Property="Stroke" Value="#C62828" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding EscolherPrioridadeCommand}" CommandParameter="Urgente" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="🔴 Urgente" FontSize="18" FontAttributes="Bold" TextColor="#B71C1C" />
+                            <Label Text="Acabou, ou o cliente pediu e não tinha. A dona recebe na hora pelo WhatsApp." FontSize="13" TextColor="#424242" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Padding="14,10" StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="2" BackgroundColor="White">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding AltaEscolhida}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#FFE0B2" />
+                                <Setter Property="Stroke" Value="#E65100" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding PodeAlta}" Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding EscolherPrioridadeCommand}" CommandParameter="Alta" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="🟠 Alta" FontSize="18" FontAttributes="Bold" TextColor="#E65100" />
+                            <Label Text="Acaba hoje ou amanhã. Vai no resumo do fim do dia." FontSize="13" TextColor="#424242" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Padding="14,10" StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="2" BackgroundColor="White">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding MediaEscolhida}" Value="True">
+                                <Setter Property="BackgroundColor" Value="#FFF9C4" />
+                                <Setter Property="Stroke" Value="#F9A825" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Border" Binding="{Binding PodeMedia}" Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding EscolherPrioridadeCommand}" CommandParameter="Media" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="🟡 Média" FontSize="18" FontAttributes="Bold" TextColor="#F57F17" />
+                            <Label Text="Está baixando, entra no próximo pedido. Vai no resumo do fim do dia." FontSize="13" TextColor="#424242" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- 4. Observação (opcional) e salvar -->
+            <Border IsVisible="{Binding TemSelecao}" Padding="14" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#E0E0E0">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="4. Observação (opcional)" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
+                    <Entry Text="{Binding Observacao}" Placeholder="Ex.: cliente pediu 3 vezes hoje" MaxLength="200" FontSize="16" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button IsVisible="{Binding TemSelecao}"
+                    IsEnabled="{Binding Livre}"
+                    Text="{Binding TextoSalvar}"
+                    FontSize="20"
+                    FontAttributes="Bold"
+                    HeightRequest="64"
+                    BackgroundColor="#2E7D32"
+                    TextColor="White"
+                    CornerRadius="12"
+                    Command="{Binding SalvarCommand}" />
+
+            <!-- Já avisados: abertos no servidor ou ainda no tablet; recusado fica em laranja com o motivo (RN-AV-09) -->
+            <Label Text="{Binding TituloAvisos}" FontSize="18" FontAttributes="Bold" TextColor="#212121" Margin="4,12,0,0" />
+            <Label Text="Toque num aviso para dizer que ainda falta (muda a quantidade ou sobe a prioridade)."
+                   IsVisible="{Binding TemAvisos}" FontSize="13" TextColor="#757575" Margin="4,0" />
+
+            <VerticalStackLayout Spacing="8" Margin="0,0,0,16" BindableLayout.ItemsSource="{Binding Avisos}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="model:AvisoLocal">
+                        <Border Padding="12" StrokeShape="RoundRectangle 10" BackgroundColor="White" Stroke="#E0E0E0">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding EhRecusado}" Value="True">
+                                    <Setter Property="Stroke" Value="#E65100" />
+                                    <Setter Property="BackgroundColor" Value="#FFF3E0" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                      Command="{Binding TocarAvisoCommand, Source={RelativeSource AncestorType={x:Type vm:EstaAcabandoViewModel}}}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout Spacing="3">
+                                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                                    <Label Grid.Column="0" Text="{Binding Descricao}" FontSize="16" FontAttributes="Bold" TextColor="#212121" />
+                                    <Label Grid.Column="1" Text="{Binding PrioridadeTexto}" FontSize="14" FontAttributes="Bold" TextColor="#F57F17">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding EhAlta}" Value="True">
+                                                <Setter Property="TextColor" Value="#E65100" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Label" Binding="{Binding EhUrgente}" Value="True">
+                                                <Setter Property="TextColor" Value="#C62828" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </Grid>
+                                <Label Text="{Binding Detalhe}" FontSize="14" TextColor="#424242" />
+                                <Label Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}" FontSize="13" FontAttributes="Italic" TextColor="#616161" />
+                                <Label Text="{Binding SituacaoEnvio}" IsVisible="{Binding TemSituacaoEnvio}" FontSize="13" TextColor="#757575">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding EhRecusado}" Value="True">
+                                            <Setter Property="TextColor" Value="#BF360C" />
+                                            <Setter Property="FontAttributes" Value="Bold" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
