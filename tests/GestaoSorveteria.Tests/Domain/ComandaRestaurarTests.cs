@@ -12,8 +12,8 @@ public class ComandaRestaurarTests
 
     private static DadosItem[] Itens() =>
     [
-        new(Guid.NewGuid(), PicoleId, "Picolé de morango", 3, 2.50m),
-        new(Guid.NewGuid(), null, "Self-Service", 1, 15.55m),
+        new(Guid.NewGuid(), PicoleId, "Picolé de morango", 3, 2.50m, null),
+        new(Guid.NewGuid(), null, "Self-Service", 1, 15.55m, null),
     ];
 
     private static Comanda Restaurar(
@@ -97,13 +97,13 @@ public class ComandaRestaurarTests
     public void Restaurar_ItemComQuantidadeZero_Lanca()
     {
         Assert.Throws<DomainException>(() =>
-            Restaurar(StatusComanda.Aberta, [new(Guid.NewGuid(), PicoleId, "Picolé", 0, 2.50m)]));
+            Restaurar(StatusComanda.Aberta, [new(Guid.NewGuid(), PicoleId, "Picolé", 0, 2.50m, null)]));
     }
 
     [Fact]
     public void Restaurar_ItemRepetido_Lanca()
     {
-        var item = new DadosItem(Guid.NewGuid(), PicoleId, "Picolé", 1, 2.50m);
+        var item = new DadosItem(Guid.NewGuid(), PicoleId, "Picolé", 1, 2.50m, null);
 
         Assert.Throws<DomainException>(() => Restaurar(StatusComanda.Aberta, [item, item]));
     }

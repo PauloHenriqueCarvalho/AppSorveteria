@@ -10,6 +10,10 @@ export interface FiltroVendas {
   de?: string
   ate?: string
   status?: StatusComanda
+  /** Id de quem vendeu. */
+  atendente?: string
+  /** Dinheiro, Pix, CartaoDebito ou CartaoCredito: venda com pelo menos um pagamento nessa forma. */
+  forma?: string
   pagina?: number
   /** 1 a 100 (a API recusa acima). */
   tamanho?: number
@@ -19,7 +23,16 @@ export const VENDAS_POR_PAGINA = 30
 export const MAXIMO_POR_PAGINA = 100
 
 /** GET /api/comandas — vendas do período, mais recente primeiro. */
-export function listarComandas({ dia, de, ate, status, pagina = 1, tamanho = VENDAS_POR_PAGINA }: FiltroVendas): Promise<PaginaDto<ComandaResumoDto>> {
+export function listarComandas({
+  dia,
+  de,
+  ate,
+  status,
+  atendente,
+  forma,
+  pagina = 1,
+  tamanho = VENDAS_POR_PAGINA,
+}: FiltroVendas): Promise<PaginaDto<ComandaResumoDto>> {
   const parametros = new URLSearchParams({ pagina: String(pagina), tamanho: String(tamanho) })
   const inicio = de ?? dia
   const fim = ate ?? dia
@@ -31,6 +44,12 @@ export function listarComandas({ dia, de, ate, status, pagina = 1, tamanho = VEN
   }
   if (status) {
     parametros.set('status', status)
+  }
+  if (atendente) {
+    parametros.set('atendente', atendente)
+  }
+  if (forma) {
+    parametros.set('forma', forma)
   }
   return requisicao<PaginaDto<ComandaResumoDto>>(`/api/comandas?${parametros}`)
 }

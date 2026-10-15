@@ -5,7 +5,7 @@ import { formatarMoeda } from '../formatacao.ts'
 interface Props {
   hoje: VendasNaHoraDto[]
   antes: VendasNaHoraDto[]
-  /** Rótulo da série de comparação ("quarta passada, até 12:40"). */
+  /** Rótulo da série de comparação ("quarta passada, até 12:40"); vazio = sem comparação (só uma série). */
   rotuloAntes: string
   rotuloHoje: string
 }
@@ -25,7 +25,7 @@ function tetoDoEixo(maximo: number): number {
 }
 
 function compacto(valor: number): string {
-  return valor >= 1000 ? `${(valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : String(valor)
+  return valor >= 1000 ? `${(valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mil` : String(valor)
 }
 
 /**
@@ -54,12 +54,18 @@ export default function GraficoHoras({ hoje, antes, rotuloAntes, rotuloHoje }: P
         <span>
           <i className="grafico-chave grafico-hoje" /> {rotuloHoje}
         </span>
-        <span>
-          <i className="grafico-chave grafico-antes" /> {rotuloAntes}
-        </span>
+        {rotuloAntes && (
+          <span>
+            <i className="grafico-chave grafico-antes" /> {rotuloAntes}
+          </span>
+        )}
       </div>
 
-      <div className="grafico-area" role="img" aria-label={`Vendas por hora: ${rotuloHoje} comparado com ${rotuloAntes}. Os números estão em "Ver em tabela".`}>
+      <div
+        className="grafico-area"
+        role="img"
+        aria-label={`Vendas por hora: ${rotuloHoje}${rotuloAntes ? ` comparado com ${rotuloAntes}` : ''}. Os números estão em "Ver em tabela".`}
+      >
         <div className="grafico-eixo" aria-hidden="true">
           <span>R$ {compacto(teto)}</span>
           <span>R$ {compacto(teto / 2)}</span>
@@ -79,7 +85,7 @@ export default function GraficoHoras({ hoje, antes, rotuloAntes, rotuloHoje }: P
                 onMouseLeave={() => setAtiva(null)}
               >
                 <div className="grafico-par">
-                  <span className="grafico-barra grafico-antes" style={{ height: altura(a?.total ?? 0) }} />
+                  {rotuloAntes && <span className="grafico-barra grafico-antes" style={{ height: altura(a?.total ?? 0) }} />}
                   <span className="grafico-barra grafico-hoje" style={{ height: altura(h?.total ?? 0) }} />
                 </div>
                 {ativa === hora && (
@@ -89,9 +95,11 @@ export default function GraficoHoras({ hoje, antes, rotuloAntes, rotuloHoje }: P
                       <i className="grafico-chave grafico-hoje" aria-hidden="true" /> {formatarMoeda(h?.total ?? 0)} ·{' '}
                       {h?.quantidade ?? 0} venda{h?.quantidade === 1 ? '' : 's'}
                     </span>
-                    <span>
-                      <i className="grafico-chave grafico-antes" aria-hidden="true" /> {formatarMoeda(a?.total ?? 0)}
-                    </span>
+                    {rotuloAntes && (
+                      <span>
+                        <i className="grafico-chave grafico-antes" aria-hidden="true" /> {formatarMoeda(a?.total ?? 0)}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -118,9 +126,11 @@ export default function GraficoHoras({ hoje, antes, rotuloAntes, rotuloHoje }: P
                 <th scope="col" className="numero">
                   Vendas
                 </th>
-                <th scope="col" className="numero">
-                  {rotuloAntes}
-                </th>
+                {rotuloAntes && (
+                  <th scope="col" className="numero">
+                    {rotuloAntes}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -131,7 +141,7 @@ export default function GraficoHoras({ hoje, antes, rotuloAntes, rotuloHoje }: P
                     <td>{hora}h</td>
                     <td className="numero">{formatarMoeda(deHoje.get(hora)?.total ?? 0)}</td>
                     <td className="numero">{deHoje.get(hora)?.quantidade ?? 0}</td>
-                    <td className="numero">{formatarMoeda(deAntes.get(hora)?.total ?? 0)}</td>
+                    {rotuloAntes && <td className="numero">{formatarMoeda(deAntes.get(hora)?.total ?? 0)}</td>}
                   </tr>
                 ))}
             </tbody>

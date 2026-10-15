@@ -1,4 +1,5 @@
 using GestaoSorveteria.Application.Abstractions;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Estoque;
@@ -56,6 +57,9 @@ internal sealed class ClockFake : IClock
 internal sealed class ProdutoRepositoryFake : IProdutoRepository
 {
     public List<Produto> Produtos { get; } = new();
+
+    public Task<IReadOnlyList<Produto>> ListarDoGrupoEstoqueAsync(Guid grupoEstoqueId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Produto>>(Produtos.Where(p => p.GrupoEstoqueId == grupoEstoqueId).ToList());
 
     public Task<Produto?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Produtos.FirstOrDefault(p => p.Id == id));
@@ -139,12 +143,21 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
     public Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.ContaNoCaixa && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
 
+    public Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        ListarFechadasAsync(deUtc, ateUtc, cancellationToken);
+
+    public Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<VendaFechada>>(Comandas
+            .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .Select(c => new VendaFechada(c.FechadaEm!.Value, c.Total))
+            .ToList());
+
     public Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
-        DateTime deUtc, DateTime ateUtc, StatusComanda? status, int pular, int quantidade, CancellationToken cancellationToken = default)
+        DateTime deUtc, DateTime ateUtc, FiltroVendas filtro, int pular, int quantidade, CancellationToken cancellationToken = default)
     {
         var filtradas = Comandas
             .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc)
-            .Where(c => status is null || c.Status == status)
+            .Where(c => FiltroVendasFake.Passa(filtro, c))
             .OrderByDescending(c => c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm)
             .ToList();
         return Task.FromResult<(IReadOnlyList<Comanda>, int)>((filtradas.Skip(pular).Take(quantidade).ToList(), filtradas.Count));
@@ -287,16 +300,105 @@ internal sealed class ContagemRepositoryFake : IContagemRepository
             .OrderByDescending(c => c.IniciadaEm)
             .ToList());
 
-    public Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyDictionary<Guid, int>>(Contagens
+    public Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyDictionary<Guid, UltimaContagemDoItem>>(Contagens
             .Where(c => c.ConcluidaEm < antesDeUtc)
-            .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades)))
+            .SelectMany(c => c.Itens.Where(i => i.ContadoUnidades is not null).Select(i => (c.ConcluidaEm, i.ItemEstoqueId, i.ContadoUnidades, i.ContadoEm)))
             .GroupBy(x => x.ItemEstoqueId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.ConcluidaEm).First().ContadoUnidades!.Value));
+            .ToDictionary(g => g.Key, g =>
+            {
+                var ultima = g.OrderByDescending(x => x.ConcluidaEm).First();
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value, ultima.ContadoEm);
+            }));
+
+    public Task<IReadOnlyList<Contagem>> ListarConcluidasEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Contagem>>(Contagens
+            .Where(c => c.ConcluidaEm >= deUtc && c.ConcluidaEm < ateUtc)
+            .OrderByDescending(c => c.ConcluidaEm)
+            .ToList());
 
     public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)
     {
         Contagens.Add(contagem);
         return Task.CompletedTask;
     }
+}
+
+/// <summary>Pedidos aos fornecedores em memória.</summary>
+internal sealed class PedidoFornecedorRepositoryFake : IPedidoFornecedorRepository
+{
+    public List<PedidoFornecedor> Pedidos { get; } = new();
+
+    public Task<PedidoFornecedor?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Pedidos.FirstOrDefault(p => p.Id == id));
+
+    public Task<PedidoFornecedor?> ObterRascunhoAsync(Guid fornecedorId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Pedidos.FirstOrDefault(p => p.FornecedorId == fornecedorId && p.Status == StatusPedido.Rascunho));
+
+    public Task<IReadOnlyList<PedidoFornecedor>> ListarAsync(Guid? fornecedorId, DateTime desdeUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PedidoFornecedor>>(Pedidos
+            .Where(p => fornecedorId is null || p.FornecedorId == fornecedorId)
+            .Where(p => p.CriadoEm >= desdeUtc || p.Status is StatusPedido.Rascunho or StatusPedido.Enviado)
+            .OrderByDescending(p => p.CriadoEm)
+            .ToList());
+
+    public Task<IReadOnlyList<PedidoFornecedor>> ListarRecebidosEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PedidoFornecedor>>(Pedidos
+            .Where(p => p.Status == StatusPedido.Recebido && p.RecebidoEm >= deUtc && p.RecebidoEm < ateUtc)
+            .ToList());
+
+    public Task<int> ProximoNumeroAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Pedidos.Count == 0 ? 1 : Pedidos.Max(p => p.Numero) + 1);
+
+    public Task AdicionarAsync(PedidoFornecedor pedido, CancellationToken cancellationToken = default)
+    {
+        Pedidos.Add(pedido);
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class MovimentoEstoqueRepositoryFake : IMovimentoEstoqueRepository
+{
+    public List<MovimentoEstoque> Movimentos { get; } = new();
+
+    public Task AdicionarAsync(MovimentoEstoque movimento, CancellationToken cancellationToken = default)
+    {
+        // Mesmos índices únicos do banco: uma baixa/estorno por linha de venda, uma entrada por item e pedido.
+        if (Movimentos.Any(m => m.Tipo == movimento.Tipo
+                && ((movimento.ItemComandaId is not null && m.ItemComandaId == movimento.ItemComandaId)
+                    || (movimento.PedidoId is not null && m.PedidoId == movimento.PedidoId && m.ItemEstoqueId == movimento.ItemEstoqueId))))
+        {
+            throw new InvalidOperationException("Movimento repetido (índice único).");
+        }
+
+        Movimentos.Add(movimento);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<MovimentoEstoque>> ListarDosItensAsync(
+        IReadOnlyCollection<Guid> itemEstoqueIds, DateTime? desdeUtc = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<MovimentoEstoque>>(Movimentos
+            .Where(m => itemEstoqueIds.Contains(m.ItemEstoqueId) && (desdeUtc is null || m.Em > desdeUtc))
+            .OrderBy(m => m.Em)
+            .ToList());
+
+    public Task<IReadOnlyList<MovimentoEstoque>> ListarDaComandaAsync(Guid comandaId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<MovimentoEstoque>>(Movimentos.Where(m => m.ComandaId == comandaId).ToList());
+}
+
+/// <summary>Saldo dos potes com os fakes: passe os que o teste olha, o resto nasce vazio.</summary>
+internal static class SaldosFake
+{
+    public static SaldoEstoqueService Novo(
+        IClock clock,
+        IEstoqueRepository? estoque = null,
+        IContagemRepository? contagens = null,
+        IAvisoRepository? avisos = null,
+        IMovimentoEstoqueRepository? movimentos = null) =>
+        new(
+            movimentos ?? new MovimentoEstoqueRepositoryFake(),
+            contagens ?? new ContagemRepositoryFake(),
+            estoque ?? new EstoqueRepositoryFake(),
+            avisos ?? new AvisoRepositoryFake(),
+            clock);
 }

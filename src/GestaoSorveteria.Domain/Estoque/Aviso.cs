@@ -121,6 +121,29 @@ public sealed class Aviso : Entity
         return virouUrgente;
     }
 
+    /// <summary>
+    /// RN-AV-04: atualização automática pelo saldo dos potes (venda que chegou na sincronização). A prioridade fica com a maior;
+    /// a quantidade só acompanha o saldo enquanto a última informação for do próprio sistema — o que uma pessoa informou
+    /// ("restam 2", "Ainda falta") nunca é trocado pela conta. <paramref name="emUtc"/> é a hora da venda.
+    /// </summary>
+    public void AtualizarPeloSaldo(int quantidadeAtual, PrioridadeAviso prioridade, DateTime emUtc)
+    {
+        Guard.Contra(!Aberto, "Este aviso já foi fechado.");
+        ValidarPrioridade(prioridade);
+        var quantidade = ValidarQuantidade(quantidadeAtual);
+        var em = Guard.Utc(emUtc, "a data");
+        if (prioridade > Prioridade)
+        {
+            Prioridade = prioridade;
+        }
+
+        if (AtualizadoPorUsuarioId is null && em >= AtualizadoEm)
+        {
+            QuantidadeAtual = quantidade;
+            AtualizadoEm = em;
+        }
+    }
+
     /// <summary>RN-AV-05b: a dona fecha à mão, com motivo ("comprei no mercado").</summary>
     public void Fechar(string motivo, Guid usuarioId, DateTime agoraUtc)
     {

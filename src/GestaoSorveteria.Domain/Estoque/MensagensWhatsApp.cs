@@ -47,6 +47,7 @@ public static class MensagensWhatsApp
     /// 🔴 Urgente (1): Picolé ao leite Coco preto — acabou
     /// 🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1
     /// 🟡 Média (1): Massa Pistache — 1
+    /// 📋 Potes na contagem de domingo 18/10 (1): Pote 1L Flocos: sistema 6, contado 3
     /// Vendas do dia: R$ 1.284,50
     /// </summary>
     public static string ResumoDoDia(
@@ -55,7 +56,8 @@ public static class MensagensWhatsApp
         IReadOnlyList<LinhaAviso> urgentes,
         IReadOnlyList<LinhaAviso> altas,
         IReadOnlyList<LinhaAviso> medias,
-        decimal? totalVendido)
+        decimal? totalVendido,
+        DiferencasDaContagem? contagem = null)
     {
         var texto = new StringBuilder()
             .Append("Resumo de ").Append(DiasDaSemana[(int)dia.DayOfWeek]).Append(' ')
@@ -70,12 +72,96 @@ public static class MensagensWhatsApp
         Secao(texto, "🟠 Alta", altas);
         Secao(texto, "🟡 Média", medias);
 
+        if (contagem is { Linhas.Count: > 0 })
+        {
+            texto.Append("\n📋 Potes na contagem de ").Append(DiasDaSemana[(int)contagem.Dia.DayOfWeek]).Append(' ')
+                .Append(contagem.Dia.ToString("dd/MM", CultureInfo.InvariantCulture))
+                .Append(" (").Append(contagem.Linhas.Count).Append("): ")
+                .AppendJoin(" · ", contagem.Linhas.Select(d => $"{d.Descricao.Trim()}: sistema {d.Sistema}, contado {d.Contado}"));
+        }
+
         if (totalVendido is { } total)
         {
             texto.Append("\nVendas do dia: ").Append(Reais(total));
         }
 
         return texto.ToString();
+    }
+
+    /// <summary>RN-ES-08: pote em que o contado ficou mais de 1 longe do saldo do sistema ("Pote 1L Flocos: sistema 6, contado 3").</summary>
+    public sealed record LinhaDiferencaContagem(string Descricao, int Sistema, int Contado);
+
+    /// <summary>RN-AV-07: as diferenças da última contagem (do dia da contagem) que vão no resumo.</summary>
+    public sealed record DiferencasDaContagem(DateOnly Dia, IReadOnlyList<LinhaDiferencaContagem> Linhas);
+
+    /// <summary>Uma linha do pedido para o texto do fornecedor.</summary>
+    public sealed record LinhaPedido(string Grupo, string Item, decimal Embalagens, UnidadeCompra Unidade);
+
+    /// <summary>
+    /// Pedido nº 12 — Verão Tropical
+    /// Para: Fábrica · segunda 19/10
+    /// Picolé de fruta: Limão 3 cx · Uva 2 cx
+    /// Massa (balde): Flocos 1 balde
+    /// Total estimado: R$ 255,60
+    /// </summary>
+    public static string Pedido(string nomeLoja, string fornecedor, int numero, DateOnly dia, IReadOnlyList<LinhaPedido> linhas, decimal? totalEstimado)
+    {
+        var texto = new StringBuilder()
+            .Append("Pedido nº ").Append(numero).Append(" — ").Append(nomeLoja.Trim()).Append('\n')
+            .Append("Para: ").Append(fornecedor.Trim()).Append(" · ").Append(DiasDaSemana[(int)dia.DayOfWeek]).Append(' ')
+            .Append(dia.ToString("dd/MM", CultureInfo.InvariantCulture));
+
+        foreach (var grupo in linhas.Where(l => l.Embalagens > 0).GroupBy(l => l.Grupo))
+        {
+            texto.Append('\n').Append(grupo.Key.Trim()).Append(": ")
+                .AppendJoin(" · ", grupo.Select(l => $"{l.Item.Trim()} {Embalagens(l.Embalagens, l.Unidade)}"));
+        }
+
+        if (totalEstimado is { } total)
+        {
+            texto.Append("\nTotal estimado: ").Append(Reais(total));
+        }
+
+        return texto.ToString();
+    }
+
+    /// <summary>
+    /// Entrega do pedido nº 12 — Verão Tropical
+    /// Faltou: Limão 1 cx · Uva 1 cx
+    /// Veio a mais: Morango 1 cx
+    /// Veio sem pedir: Flocos 1 balde
+    /// </summary>
+    public static string Divergencias(
+        string nomeLoja, int numero, IReadOnlyList<LinhaPedido> faltou, IReadOnlyList<LinhaPedido> veioAMais, IReadOnlyList<LinhaPedido> naoPedido)
+    {
+        var texto = new StringBuilder().Append("Entrega do pedido nº ").Append(numero).Append(" — ").Append(nomeLoja.Trim());
+        Linhas(texto, "Faltou", faltou);
+        Linhas(texto, "Veio a mais", veioAMais);
+        Linhas(texto, "Veio sem pedir", naoPedido);
+        return texto.ToString();
+
+        static void Linhas(StringBuilder texto, string titulo, IReadOnlyList<LinhaPedido> linhas)
+        {
+            if (linhas.Count > 0)
+            {
+                texto.Append('\n').Append(titulo).Append(": ")
+                    .AppendJoin(" · ", linhas.Select(l => $"{l.Item.Trim()} {Embalagens(l.Embalagens, l.Unidade)}"));
+            }
+        }
+    }
+
+    /// <summary>2,5 caixas → "2,5 cx"; 1 balde → "1 balde"; 2 → "2 baldes"; unidade → "3 un"; pacote → "1 pct".</summary>
+    public static string Embalagens(decimal quantidade, UnidadeCompra unidade)
+    {
+        var numero = quantidade.ToString("0.#", CultureInfo.InvariantCulture).Replace('.', ',');
+        var nome = unidade switch
+        {
+            UnidadeCompra.Caixa => "cx",
+            UnidadeCompra.Balde => quantidade > 1 ? "baldes" : "balde",
+            UnidadeCompra.Pacote => "pct",
+            _ => "un",
+        };
+        return $"{numero} {nome}";
     }
 
     /// <summary>Link que abre o WhatsApp com a mensagem pronta; sem número, o próprio WhatsApp pede o contato.</summary>

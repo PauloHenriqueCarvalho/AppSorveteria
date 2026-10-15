@@ -1,4 +1,5 @@
 using GestaoSorveteria.Domain.Comandas;
+using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -18,12 +19,18 @@ internal sealed class ItemComandaConfiguration : IEntityTypeConfiguration<ItemCo
         builder.Property(i => i.Quantidade).IsRequired();
         builder.Property(i => i.PrecoUnitario).HasPrecision(12, 2).IsRequired();
         builder.Property(i => i.Subtotal).HasPrecision(12, 2).IsRequired();
+        builder.Property(i => i.ItemEstoqueId); // sabor do pote (RN-ES-09); nulo no resto
 
         builder.Ignore(i => i.EhItemLivre);
 
         builder.HasOne<Produto>()
             .WithMany()
             .HasForeignKey(i => i.ProdutoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ItemEstoque>()
+            .WithMany()
+            .HasForeignKey(i => i.ItemEstoqueId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -3,6 +3,7 @@ using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Common;
+using GestaoSorveteria.Domain.Usuarios;
 using GestaoSorveteria.Tests.Domain;
 
 namespace GestaoSorveteria.Tests.Application;
@@ -25,9 +26,12 @@ public class ComandaConsultaServiceTests
         _caixa = Caixa.Abrir(_usuarios.Usuarios[0].Id, 100m, Meio17.AddDays(-2));
     }
 
-    private Comanda Venda(int numero, DateTime fechadaEm, params DadosPagamento[] pagamentos)
+    private Comanda Venda(int numero, DateTime fechadaEm, params DadosPagamento[] pagamentos) =>
+        VendaDe(_usuarios.Usuarios[0], numero, fechadaEm, pagamentos);
+
+    private Comanda VendaDe(Usuario atendente, int numero, DateTime fechadaEm, params DadosPagamento[] pagamentos)
     {
-        var comanda = Comanda.Abrir(_caixa, _usuarios.Usuarios[0].Id, numero, TipoComanda.Balcao, fechadaEm.AddMinutes(-5), fechadaEm);
+        var comanda = Comanda.Abrir(_caixa, atendente.Id, numero, TipoComanda.Balcao, fechadaEm.AddMinutes(-5), fechadaEm);
         comanda.AdicionarItemLivre("Self-service", pagamentos.Sum(p => p.Valor));
         comanda.Fechar(pagamentos, fechadaEm);
         _comandas.Comandas.Add(comanda);
@@ -44,7 +48,7 @@ public class ComandaConsultaServiceTests
             new DadosPagamento(FormaPagamento.Pix, 1m));
         Venda(3, Meio17.AddDays(-1), new DadosPagamento(FormaPagamento.Pix, 4m)); // ontem
 
-        var pagina = await _service.ListarAsync(null, null, null, null, null, TestContext.Current.CancellationToken);
+        var pagina = await _service.ListarAsync(null, null, null, null, null, null, null, TestContext.Current.CancellationToken);
 
         Assert.Equal(2, pagina.TotalItens);
         Assert.Equal(new[] { 2, 1 }, pagina.Itens.Select(c => c.Numero));
@@ -61,8 +65,8 @@ public class ComandaConsultaServiceTests
         // Criada 17/09 23:58 e fechada 18/09 00:01 em Brasília (03:01 UTC).
         Venda(1, new DateTime(2026, 9, 18, 3, 1, 0, DateTimeKind.Utc), new DadosPagamento(FormaPagamento.Pix, 5m));
 
-        var dia17 = await _service.ListarAsync(new DateOnly(2026, 9, 17), new DateOnly(2026, 9, 17), null, null, null, TestContext.Current.CancellationToken);
-        var dia18 = await _service.ListarAsync(new DateOnly(2026, 9, 18), new DateOnly(2026, 9, 18), null, null, null, TestContext.Current.CancellationToken);
+        var dia17 = await _service.ListarAsync(new DateOnly(2026, 9, 17), new DateOnly(2026, 9, 17), null, null, null, null, null, TestContext.Current.CancellationToken);
+        var dia18 = await _service.ListarAsync(new DateOnly(2026, 9, 18), new DateOnly(2026, 9, 18), null, null, null, null, null, TestContext.Current.CancellationToken);
 
         Assert.Empty(dia17.Itens);
         Assert.Single(dia18.Itens);
@@ -76,7 +80,7 @@ public class ComandaConsultaServiceTests
         cancelada.Cancelar("Cliente desistiu", Meio17.AddMinutes(-10));
         _comandas.Comandas.Add(cancelada);
 
-        var pagina = await _service.ListarAsync(null, null, "cancelada", null, null, TestContext.Current.CancellationToken);
+        var pagina = await _service.ListarAsync(null, null, "cancelada", null, null, null, null, TestContext.Current.CancellationToken);
 
         var item = Assert.Single(pagina.Itens);
         Assert.Equal("Cancelada", item.Status);
@@ -92,11 +96,49 @@ public class ComandaConsultaServiceTests
             Venda(i, Meio17.AddMinutes(-60 + i), new DadosPagamento(FormaPagamento.Pix, 1m));
         }
 
-        var pagina2 = await _service.ListarAsync(null, null, null, 2, 2, TestContext.Current.CancellationToken);
+        var pagina2 = await _service.ListarAsync(null, null, null, null, null, 2, 2, TestContext.Current.CancellationToken);
 
         Assert.Equal(5, pagina2.TotalItens);
         Assert.Equal(2, pagina2.Pagina);
         Assert.Equal(new[] { 3, 2 }, pagina2.Itens.Select(c => c.Numero));
+    }
+
+    [Fact]
+    public async Task Listar_FiltroAtendente_TrazSoAsVendasDela()
+    {
+        var ana = Usuario.Criar("Ana", "ana", "hash", PerfilUsuario.Atendente, Meio17.AddDays(-30));
+        _usuarios.Usuarios.Add(ana);
+        Venda(1, Meio17.AddMinutes(-30), new DadosPagamento(FormaPagamento.Pix, 5m));
+        VendaDe(ana, 2, Meio17.AddMinutes(-20), new DadosPagamento(FormaPagamento.Pix, 8m));
+
+        var pagina = await _service.ListarAsync(null, null, null, ana.Id, null, null, null, TestContext.Current.CancellationToken);
+
+        var item = Assert.Single(pagina.Itens);
+        Assert.Equal(2, item.Numero);
+        Assert.Equal("Ana", item.AtendenteNome);
+        Assert.Equal(1, pagina.TotalItens);
+    }
+
+    [Fact]
+    public async Task Listar_FiltroForma_TrazTambemOPagamentoDividido()
+    {
+        Venda(1, Meio17.AddMinutes(-30), new DadosPagamento(FormaPagamento.Pix, 5m));
+        Venda(2, Meio17.AddMinutes(-20), new DadosPagamento(FormaPagamento.Dinheiro, 8m, 10m));
+        Venda(3, Meio17.AddMinutes(-10), new DadosPagamento(FormaPagamento.CartaoDebito, 4m), new DadosPagamento(FormaPagamento.Dinheiro, 2m, 2m));
+
+        var pagina = await _service.ListarAsync(null, null, null, null, "dinheiro", null, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { 3, 2 }, pagina.Itens.Select(c => c.Numero));
+    }
+
+    [Theory]
+    [InlineData("Cheque")]
+    [InlineData("1")]
+    public async Task Listar_FormaInvalida_Lanca(string forma)
+    {
+        var erro = await Assert.ThrowsAsync<DomainException>(
+            () => _service.ListarAsync(null, null, null, null, forma, null, null, TestContext.Current.CancellationToken));
+        Assert.StartsWith("Forma de pagamento inválida", erro.Message);
     }
 
     [Theory]
@@ -105,7 +147,7 @@ public class ComandaConsultaServiceTests
     public async Task Listar_StatusInvalido_Lanca(string status)
     {
         await Assert.ThrowsAsync<DomainException>(
-            () => _service.ListarAsync(null, null, status, null, null, TestContext.Current.CancellationToken));
+            () => _service.ListarAsync(null, null, status, null, null, null, null, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -115,7 +157,7 @@ public class ComandaConsultaServiceTests
     public async Task Listar_PaginacaoInvalida_Lanca(int pagina, int tamanho)
     {
         await Assert.ThrowsAsync<DomainException>(
-            () => _service.ListarAsync(null, null, null, pagina, tamanho, TestContext.Current.CancellationToken));
+            () => _service.ListarAsync(null, null, null, null, null, pagina, tamanho, TestContext.Current.CancellationToken));
     }
 
     [Fact]

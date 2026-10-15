@@ -49,6 +49,7 @@ internal sealed class ItemContagemConfiguration : IEntityTypeConfiguration<ItemC
         builder.Property(i => i.ItemEstoqueId).IsRequired();
         builder.Property(i => i.ContadoUnidades); // nulo = não contado (RN-ES-06)
         builder.Property(i => i.SaldoSistemaUnidades); // potes: saldo no momento da contagem (RN-ES-08)
+        builder.Property(i => i.ContadoEm); // quando o item foi contado (base do saldo); nulo = vale a conclusão
 
         builder.Ignore(i => i.Diferenca);
 

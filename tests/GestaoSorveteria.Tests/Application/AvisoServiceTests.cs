@@ -49,7 +49,8 @@ public class AvisoServiceTests
         configuracao.Atualizar("Verão Tropical", "(11) 98765-4321", Agora.AddDays(-1));
         _configuracao.Configuracao = configuracao;
 
-        _service = new AvisoService(_avisos, _estoque, _usuarios, _configuracao, _comandas, _uow, _clock);
+        _service = new AvisoService(
+            _avisos, _estoque, _usuarios, _configuracao, _comandas, SaldosFake.Novo(_clock, _estoque, avisos: _avisos), _uow, _clock);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

@@ -89,6 +89,7 @@ public sealed class ItemEstoque : Entity
         }
 
         Guard.Contra(minimoUnidades < 0, "O mínimo não pode ser negativo.");
+        Guard.Contra(minimoUnidades > Aviso.QuantidadeMaxima, $"O mínimo deve ser no máximo {Aviso.QuantidadeMaxima}.");
 
         FornecedorId = fornecedorId;
         Nome = nomeValido;

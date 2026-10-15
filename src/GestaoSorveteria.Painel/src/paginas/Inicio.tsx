@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { CHAVE_COMANDAS, listarComandas } from '../api/comandas.ts'
 import { CHAVE_RELATORIOS, obterResumoDoDia } from '../api/relatorios.ts'
 import type { ComandaResumoDto, ResumoDiaDto } from '../api/tipos.ts'
+import Comparacao from '../componentes/Comparacao.tsx'
 import Consulta from '../componentes/Consulta.tsx'
 import { ConferenciaCaixa, ResultadoCaixa } from '../componentes/ConferenciaCaixa.tsx'
 import GraficoHoras from '../componentes/GraficoHoras.tsx'
@@ -15,7 +16,6 @@ import {
   formatarDiaPorExtenso,
   formatarHora,
   formatarMoeda,
-  formatarVariacao,
   hojeNaLoja,
   nomeDaForma,
   nomeDoStatus,
@@ -181,23 +181,6 @@ function Painel({ resumo, hoje, dia }: { resumo: ResumoDiaDto; hoje: boolean; di
         )}
       </div>
     </div>
-  )
-}
-
-/** "▲ +12,4% vs. 07/10 no mesmo horário". Variação calculada pela API (RN-RL-07); sem base → só o contexto. */
-function Comparacao({ variacao, contexto, anterior }: { variacao: number | null; contexto: string; anterior: string }) {
-  if (variacao === null) {
-    return <span>sem vendas para comparar {contexto.replace('vs.', 'em')}</span>
-  }
-  const classe = variacao > 0 ? 'variacao variacao-sobe' : variacao < 0 ? 'variacao variacao-desce' : 'variacao'
-  const seta = variacao > 0 ? '▲' : variacao < 0 ? '▼' : '='
-  return (
-    <span title={`Antes: ${anterior}`}>
-      <span className={classe}>
-        <span aria-hidden="true">{seta}</span> {formatarVariacao(variacao)}
-      </span>{' '}
-      {contexto}
-    </span>
   )
 }
 

@@ -66,4 +66,5 @@ public sealed record ContagemSyncDto(
     DateTime? ConcluidaEm,
     IReadOnlyList<LinhaContagemSyncDto>? Linhas);
 
-public sealed record LinhaContagemSyncDto(Guid Id, Guid ItemEstoqueId, decimal? Embalagens);
+/// <summary><paramref name="ContadoEm"/>: quando o item foi contado no tablet (UTC), base do saldo dos potes; opcional.</summary>
+public sealed record LinhaContagemSyncDto(Guid Id, Guid ItemEstoqueId, decimal? Embalagens, DateTime? ContadoEm = null);

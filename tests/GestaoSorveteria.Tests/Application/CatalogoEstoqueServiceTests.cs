@@ -12,12 +12,13 @@ public class CatalogoEstoqueServiceTests
     private const string Cabecalho = "categoria,sabor,unidade_compra,unidades_por_embalagem,custo_embalagem,fornecedor,origem_na_planilha,observacao";
 
     private readonly EstoqueRepositoryFake _estoque = new();
+    private readonly ProdutoRepositoryFake _produtos = new();
     private readonly UnitOfWorkFake _uow = new();
     private readonly CatalogoEstoqueService _service;
 
     public CatalogoEstoqueServiceTests()
     {
-        _service = new CatalogoEstoqueService(_estoque, _uow);
+        _service = new CatalogoEstoqueService(_estoque, _produtos, _uow, new ClockFake());
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -241,7 +242,7 @@ public class CatalogoEstoqueServiceTests
         // A linha errada não deixa grupo nem fornecedor criado pela metade.
         Assert.DoesNotContain(_estoque.Grupos, g => g.Nome == "Grupo fantasma");
         Assert.DoesNotContain(_estoque.Fornecedores, f => f.Nome == "Fornecedor fantasma");
-        Assert.Empty(resultado.FornecedoresNovos.Where(f => f == "Fornecedor fantasma"));
+        Assert.DoesNotContain(resultado.FornecedoresNovos, f => f == "Fornecedor fantasma");
         Assert.Equal(new[] { "Limão", "Uva" }, _estoque.Itens.Select(i => i.Nome).ToArray());
     }
 
@@ -353,6 +354,23 @@ public class CatalogoEstoqueServiceTests
     }
 
     // ---------- Itens ----------
+
+    [Fact]
+    public async Task AtualizarGrupo_TrocaDeModoComProdutoLigado_MarcaOProdutoESoAvisoRecusa()
+    {
+        var potes = GrupoEstoque.Criar("Pote 1L", ModoControle.SaldoPelaVenda, 5);
+        _estoque.Grupos.Add(potes);
+        var antes = new DateTime(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc);
+        var pote = GestaoSorveteria.Domain.Produtos.Produto.Criar("Pote 1L", "Potes", 28m, false, 1, antes);
+        pote.LigarAoEstoque(potes.Id, 1, antes);
+        _produtos.Produtos.Add(pote);
+
+        await _service.AtualizarGrupoAsync(potes.Id, new SalvarGrupoEstoqueRequest("Pote 1L", "Contagem", 5), Ct);
+
+        Assert.NotEqual(antes, pote.AtualizadoEm); // o app baixa de novo e para de pedir sabor
+        await Assert.ThrowsAsync<DomainException>(() =>
+            _service.AtualizarGrupoAsync(potes.Id, new SalvarGrupoEstoqueRequest("Pote 1L", "SoAviso", 5), Ct));
+    }
 
     [Fact]
     public async Task CriarItem_MesmoNomeNoMesmoGrupo_Lanca()

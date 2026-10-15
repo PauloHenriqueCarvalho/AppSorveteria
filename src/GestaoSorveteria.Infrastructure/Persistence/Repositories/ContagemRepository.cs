@@ -26,7 +26,7 @@ internal sealed class ContagemRepository : IContagemRepository
             .OrderByDescending(c => c.IniciadaEm)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyDictionary<Guid, int>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<Guid, UltimaContagemDoItem>> UltimaContagemPorItemAsync(DateTime antesDeUtc, CancellationToken cancellationToken = default)
     {
         var desde = antesDeUtc - JanelaDaAnterior;
         var linhas = await (
@@ -34,13 +34,24 @@ internal sealed class ContagemRepository : IContagemRepository
                 join contagem in _db.Contagens on linha.ContagemId equals contagem.Id
                 where contagem.ConcluidaEm != null && contagem.ConcluidaEm < antesDeUtc && contagem.ConcluidaEm >= desde
                     && linha.ContadoUnidades != null
-                select new { linha.ItemEstoqueId, contagem.ConcluidaEm, linha.ContadoUnidades })
+                select new { linha.ItemEstoqueId, contagem.ConcluidaEm, linha.ContadoUnidades, linha.ContadoEm })
             .ToListAsync(cancellationToken);
 
         return linhas
             .GroupBy(l => l.ItemEstoqueId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.ConcluidaEm).First().ContadoUnidades!.Value);
+            .ToDictionary(g => g.Key, g =>
+            {
+                var ultima = g.OrderByDescending(l => l.ConcluidaEm).First();
+                return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value, ultima.ContadoEm);
+            });
     }
+
+    public async Task<IReadOnlyList<Contagem>> ListarConcluidasEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        await _db.Contagens
+            .Include(c => c.Itens)
+            .Where(c => c.ConcluidaEm != null && c.ConcluidaEm >= deUtc && c.ConcluidaEm < ateUtc)
+            .OrderByDescending(c => c.ConcluidaEm)
+            .ToListAsync(cancellationToken);
 
     public async Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default) =>
         await _db.Contagens.AddAsync(contagem, cancellationToken);

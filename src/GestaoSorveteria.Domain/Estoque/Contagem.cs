@@ -42,22 +42,27 @@ public sealed class Contagem : Entity
     /// <summary>
     /// Registra (ou corrige) o que foi contado de um item, em embalagens ("2,5" caixas; "Não tem nenhum" = 0).
     /// <paramref name="embalagens"/> nulo = volta a "não contado". <paramref name="saldoSistemaUnidades"/>: potes, para a conferência (RN-ES-08).
+    /// <paramref name="contadoEmUtc"/>: quando o item foi olhado no freezer (a contagem pode levar horas ou ser concluída no dia
+    /// seguinte); é a base do saldo dos potes. Sem ela, vale a conclusão da contagem.
     /// </summary>
-    public ItemContagem Registrar(ItemEstoque item, GrupoEstoque grupo, decimal? embalagens, int? saldoSistemaUnidades = null, Guid? linhaId = null)
+    public ItemContagem Registrar(
+        ItemEstoque item, GrupoEstoque grupo, decimal? embalagens, int? saldoSistemaUnidades = null, Guid? linhaId = null, DateTime? contadoEmUtc = null)
     {
         ExigirAberta();
         Guard.Contra(item.GrupoId != grupo.Id, "O item não pertence a este grupo.");
         Guard.Contra(!grupo.EntraNaContagem, $"{grupo.Nome} não entra na contagem: use o aviso \"Está acabando\".");
 
         int? unidades = embalagens is { } valor ? item.ParaUnidades(valor) : null;
+        DateTime? contadoEm = contadoEmUtc is { } quando ? Guard.Utc(quando, "quando o item foi contado") : null;
+        Guard.Contra(contadoEm < IniciadaEm, "O item não pode ter sido contado antes do início da contagem.");
         var existente = _itens.FirstOrDefault(i => i.ItemEstoqueId == item.Id);
         if (existente is not null)
         {
-            existente.Alterar(unidades, saldoSistemaUnidades);
+            existente.Alterar(unidades, saldoSistemaUnidades, contadoEm);
             return existente;
         }
 
-        var linha = new ItemContagem(Id, item.Id, unidades, saldoSistemaUnidades, linhaId);
+        var linha = new ItemContagem(Id, item.Id, unidades, saldoSistemaUnidades, linhaId, unidades is null ? null : contadoEm);
         _itens.Add(linha);
         return linha;
     }
@@ -84,10 +89,16 @@ public sealed class ItemContagem : Entity
     /// <summary>Nulo = não contado (RN-ES-06).</summary>
     public int? ContadoUnidades { get; private set; }
 
-    /// <summary>Potes: saldo do sistema no momento da contagem (RN-ES-08).</summary>
+    /// <summary>
+    /// Reservado (sempre nulo hoje): o saldo esperado dos potes é calculado na leitura (RN-ES-08,
+    /// <c>SaldoEstoqueService.SaldoEsperadoNaContagemAsync</c>), para a venda que sincroniza depois entrar certa.
+    /// </summary>
     public int? SaldoSistemaUnidades { get; private set; }
 
-    /// <summary>Contado − saldo do sistema (potes). Diferença maior que 1 vai no resumo da dona.</summary>
+    /// <summary>Quando o item foi contado (base do saldo dos potes). Nulo = não informado: vale a conclusão da contagem.</summary>
+    public DateTime? ContadoEm { get; private set; }
+
+    /// <summary>Contado − <see cref="SaldoSistemaUnidades"/> (reservado; ver acima).</summary>
     public int? Diferenca => ContadoUnidades is { } contado && SaldoSistemaUnidades is { } saldo ? contado - saldo : null;
 
     // EF Core
@@ -95,16 +106,24 @@ public sealed class ItemContagem : Entity
     {
     }
 
-    internal ItemContagem(Guid contagemId, Guid itemEstoqueId, int? contadoUnidades, int? saldoSistemaUnidades, Guid? id) : base(id)
+    internal ItemContagem(Guid contagemId, Guid itemEstoqueId, int? contadoUnidades, int? saldoSistemaUnidades, Guid? id, DateTime? contadoEm = null)
+        : base(id)
     {
         ContagemId = contagemId;
         ItemEstoqueId = itemEstoqueId;
         ContadoUnidades = contadoUnidades;
         SaldoSistemaUnidades = saldoSistemaUnidades;
+        ContadoEm = contadoEm;
     }
 
-    internal void Alterar(int? contadoUnidades, int? saldoSistemaUnidades)
+    /// <summary>A hora da contagem do item só muda quando o número muda (salvar de novo o mesmo valor não "reconta").</summary>
+    internal void Alterar(int? contadoUnidades, int? saldoSistemaUnidades, DateTime? contadoEm = null)
     {
+        if (contadoUnidades != ContadoUnidades)
+        {
+            ContadoEm = contadoUnidades is null ? null : contadoEm;
+        }
+
         ContadoUnidades = contadoUnidades;
         SaldoSistemaUnidades = saldoSistemaUnidades ?? SaldoSistemaUnidades;
     }

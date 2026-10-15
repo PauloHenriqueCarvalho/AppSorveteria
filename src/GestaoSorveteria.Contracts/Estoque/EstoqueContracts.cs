@@ -106,3 +106,20 @@ public sealed record ItemEstoqueAppDto(
     int UnidadesPorEmbalagem,
     int Ordem,
     bool Ativo);
+
+/// <summary>
+/// GET /api/estoque/saldos (Admin) — RN-ES-08: saldo de cada pote (grupo <c>SaldoPelaVenda</c>) = última contagem + o que
+/// chegou − o que foi vendido depois dela. <paramref name="SaldoUnidades"/> pode ser negativo (a venda nunca é bloqueada:
+/// "conferir"). <paramref name="VendidosNaSemana"/> = vendas dos últimos 7 dias menos estornos.
+/// </summary>
+public sealed record SaldoPoteDto(
+    Guid ItemEstoqueId,
+    Guid GrupoId,
+    string GrupoNome,
+    string ItemNome,
+    int SaldoUnidades,
+    int? MinimoUnidades,
+    int? UltimaContagemUnidades,
+    DateTime? UltimaContagemEm,
+    int VendidosNaSemana,
+    bool Ativo);

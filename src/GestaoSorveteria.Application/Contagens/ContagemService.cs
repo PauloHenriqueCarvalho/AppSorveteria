@@ -1,5 +1,6 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
+using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Sync;
 using GestaoSorveteria.Domain.Common;
@@ -17,6 +18,7 @@ public sealed class ContagemService
     /// <summary>A lista do painel mostra as contagens dos últimos dias (e as que ainda não foram concluídas).</summary>
     public const int DiasNaLista = 60;
 
+    private readonly SaldoEstoqueService _saldos;
     private readonly IContagemRepository _contagens;
     private readonly IEstoqueRepository _estoque;
     private readonly IUsuarioRepository _usuarios;
@@ -24,8 +26,14 @@ public sealed class ContagemService
     private readonly IClock _clock;
 
     public ContagemService(
-        IContagemRepository contagens, IEstoqueRepository estoque, IUsuarioRepository usuarios, IUnitOfWork uow, IClock clock)
+        IContagemRepository contagens,
+        IEstoqueRepository estoque,
+        IUsuarioRepository usuarios,
+        SaldoEstoqueService saldos,
+        IUnitOfWork uow,
+        IClock clock)
     {
+        _saldos = saldos;
         _contagens = contagens;
         _estoque = estoque;
         _usuarios = usuarios;
@@ -84,7 +92,7 @@ public sealed class ContagemService
         foreach (var linha in request.Linhas ?? [])
         {
             var (item, grupo) = catalogo.Item(linha.ItemEstoqueId);
-            contagem.Registrar(item, grupo, linha.Embalagens);
+            contagem.Registrar(item, grupo, linha.Embalagens, contadoEmUtc: agora);
         }
 
         if (request.Concluir)
@@ -173,7 +181,9 @@ public sealed class ContagemService
         foreach (var linha in linhas)
         {
             var (item, grupo) = catalogo.Item(linha.ItemEstoqueId);
-            contagem.Registrar(item, grupo, linha.Embalagens, linhaId: linha.Id == Guid.Empty ? null : linha.Id);
+            contagem.Registrar(
+                item, grupo, linha.Embalagens, linhaId: linha.Id == Guid.Empty ? null : linha.Id,
+                contadoEmUtc: ContadoEmNoTablet(linha.ContadoEm, contagem.IniciadaEm, dto.ConcluidaEm ?? _clock.UtcNow));
         }
 
         if (dto.ConcluidaEm is { } concluidaEm)
@@ -191,6 +201,21 @@ public sealed class ContagemService
     }
 
     /// <summary>Linhas e conclusão em texto, para saber se o reenvio mudou alguma coisa.</summary>
+    /// <summary>
+    /// Hora em que o tablet diz que contou o item, dentro da contagem (entre o início e a conclusão): relógio do tablet um
+    /// pouco fora não rejeita a contagem inteira. Sem a hora, vale a conclusão (RN-ES-08).
+    /// </summary>
+    private static DateTime? ContadoEmNoTablet(DateTime? informado, DateTime iniciadaEm, DateTime limite)
+    {
+        if (informado is not { } quando)
+        {
+            return null;
+        }
+
+        var utc = quando.Kind == DateTimeKind.Utc ? quando : DateTime.SpecifyKind(quando, DateTimeKind.Utc);
+        return utc < iniciadaEm ? iniciadaEm : utc > limite ? limite : utc;
+    }
+
     private static string Retrato(Contagem contagem) =>
         $"{contagem.ConcluidaEm:O}|" + string.Join(";", contagem.Itens.OrderBy(i => i.ItemEstoqueId).Select(i => $"{i.ItemEstoqueId}={i.ContadoUnidades}"));
 
@@ -214,9 +239,17 @@ public sealed class ContagemService
     private async Task<ContagemDto> MontarAsync(Contagem contagem, CancellationToken cancellationToken)
     {
         var catalogo = await CatalogoAsync(cancellationToken);
-        var anteriores = await _contagens.UltimaContagemPorItemAsync(contagem.ConcluidaEm ?? contagem.IniciadaEm, cancellationToken);
+        // Referência e saldo esperado com o mesmo corte: as contagens concluídas antes desta (aberta: até agora).
+        var anteriores = await _contagens.UltimaContagemPorItemAsync(contagem.ConcluidaEm ?? _clock.UtcNow, cancellationToken);
         var nomes = await NomesDosUsuariosAsync(cancellationToken);
         var registradas = contagem.Itens.ToDictionary(i => i.ItemEstoqueId);
+        // Potes: o saldo que o sistema esperava, para conferir (RN-ES-08) — calculado agora, não guardado.
+        var potes = catalogo.Itens.Values
+            .Where(i => catalogo.Grupos.TryGetValue(i.GrupoId, out var g) && g.ModoControle == ModoControle.SaldoPelaVenda
+                && (i.Ativo || registradas.ContainsKey(i.Id)))
+            .Select(i => i.Id)
+            .ToList();
+        var esperados = await _saldos.SaldoEsperadoNaContagemAsync(contagem, potes, anteriores, cancellationToken);
 
         // Linhas: todo item ativo que entra na contagem + os que já estão na contagem (mesmo que desativados depois).
         var linhas = catalogo.Itens.Values
@@ -227,7 +260,7 @@ public sealed class ContagemService
             .Select(x =>
             {
                 var registrada = registradas.GetValueOrDefault(x.Item.Id);
-                int? anterior = anteriores.TryGetValue(x.Item.Id, out var a) ? a : null;
+                int? anterior = anteriores.TryGetValue(x.Item.Id, out var a) ? a.Unidades : null;
                 return new LinhaContagemDto(
                     x.Item.Id,
                     x.Grupo.Id,
@@ -240,7 +273,7 @@ public sealed class ContagemService
                     registrada?.ContadoUnidades is { } contado ? x.Item.EmEmbalagens(contado) : null,
                     anterior,
                     anterior is { } valor ? x.Item.EmEmbalagens(valor) : null,
-                    registrada?.SaldoSistemaUnidades);
+                    esperados.TryGetValue(x.Item.Id, out var esperado) ? esperado : null);
             })
             .ToList();
 
