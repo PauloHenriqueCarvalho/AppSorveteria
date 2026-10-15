@@ -18,7 +18,7 @@
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
-		<ApplicationTitle>Sorveteria</ApplicationTitle>
+		<ApplicationTitle>Verão Tropical</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>br.com.sorveteria.atendente</ApplicationId>
@@ -49,14 +49,16 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<!-- Marca Verão Tropical: mascote Juninho (o mesmo do painel, public/marca) sobre fundo branco -->
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\juninho_icone.png" ForegroundScale="0.62" Color="#FFFFFF" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\juninho_splash.png" Color="#FFFFFF" BaseSize="160,160" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+		<MauiImage Update="Resources\Images\logo_verao_tropical.png" Resize="True" BaseSize="74,104" />
 		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
