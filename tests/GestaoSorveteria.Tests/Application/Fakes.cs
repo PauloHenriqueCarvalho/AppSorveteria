@@ -144,11 +144,11 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
         Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.ContaNoCaixa && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
 
     public Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
-        DateTime deUtc, DateTime ateUtc, StatusComanda? status, int pular, int quantidade, CancellationToken cancellationToken = default)
+        DateTime deUtc, DateTime ateUtc, FiltroVendas filtro, int pular, int quantidade, CancellationToken cancellationToken = default)
     {
         var filtradas = Comandas
             .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc)
-            .Where(c => status is null || c.Status == status)
+            .Where(c => FiltroVendasFake.Passa(filtro, c))
             .OrderByDescending(c => c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm)
             .ToList();
         return Task.FromResult<(IReadOnlyList<Comanda>, int)>((filtradas.Skip(pular).Take(quantidade).ToList(), filtradas.Count));

@@ -47,7 +47,7 @@ internal sealed class ComandaRepository : IComandaRepository
     public async Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
         DateTime deUtc,
         DateTime ateUtc,
-        StatusComanda? status,
+        FiltroVendas filtro,
         int pular,
         int quantidade,
         CancellationToken cancellationToken = default)
@@ -56,9 +56,19 @@ internal sealed class ComandaRepository : IComandaRepository
         IQueryable<Comanda> query = _db.Comandas
             .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc);
 
-        if (status is { } filtro)
+        if (filtro.Status is { } status)
         {
-            query = query.Where(c => c.Status == filtro);
+            query = query.Where(c => c.Status == status);
+        }
+
+        if (filtro.UsuarioId is { } usuarioId)
+        {
+            query = query.Where(c => c.UsuarioId == usuarioId);
+        }
+
+        if (filtro.Forma is { } forma)
+        {
+            query = query.Where(c => c.Pagamentos.Any(p => p.Forma == forma));
         }
 
         var total = await query.CountAsync(cancellationToken);

@@ -37,7 +37,7 @@ public sealed class RelatorioService
         var ticketMedio = fechadas.Count == 0 ? 0m : Moeda.Arredondar(total / fechadas.Count);
 
         var (_, canceladas) = await _comandas.ListarPorPeriodoAsync(
-            inicioUtc, fimUtc, StatusComanda.Cancelada, pular: 0, quantidade: 1, cancellationToken);
+            inicioUtc, fimUtc, new FiltroVendas(StatusComanda.Cancelada), pular: 0, quantidade: 1, cancellationToken);
 
         return new ResumoDiaDto(
             data,

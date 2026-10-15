@@ -53,7 +53,7 @@ Abra o **endereço do painel** (no alto desta página) e entre com o usuário **
 | Tela | O que mostra | O que dá para fazer |
 |---|---|---|
 | **Hoje** | Total vendido, número de vendas, ticket médio, quanto entrou em cada forma de pagamento, caixa atual | Trocar o dia (ontem, semana passada…) |
-| **Vendas** | Cada comanda do dia com itens, pagamentos e troco | **Estornar** uma venda errada, escrevendo o motivo (a venda fica no histórico como estornada; nada some) |
+| **Vendas** | Cada comanda do dia com itens, pagamentos e troco. Dá para ver só as de uma atendente ou de uma forma de pagamento (a venda paga metade no Pix e metade no dinheiro aparece nas duas) | **Estornar** uma venda errada, escrevendo o motivo (a venda fica no histórico como estornada; nada some) |
 | **Caixas** | Cada abertura e fechamento: fundo, vendas em dinheiro, retiradas, reforços, **esperado × contado × diferença** | Ver quem abriu/fechou e o que foi registrado |
 | **Produtos** | Cardápio que aparece no tablet | Cadastrar, mudar preço, **desativar** (nunca apagar) e escolher a **ordem dos botões** (os mais vendidos primeiro) |
 | **Configurações** | Nome da loja nas mensagens e o **seu WhatsApp** | Cadastrar o número que recebe o urgente na hora e o resumo do fim do dia; "Enviar mensagem de teste" |

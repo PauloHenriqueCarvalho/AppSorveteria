@@ -28,11 +28,14 @@ public sealed class ComandaConsultaService
     /// <summary>
     /// Vendas cujo dia comercial (RN-RL-02) da venda — fechamento, cancelamento ou, se ainda aberta, criação — está entre
     /// <paramref name="deDia"/> e <paramref name="ateDia"/> (inclusive). Sem datas = hoje. <paramref name="status"/>: "Fechada", "Cancelada"...
+    /// <paramref name="atendenteId"/>: quem fez a venda. <paramref name="forma"/>: venda com pelo menos um pagamento nessa forma.
     /// </summary>
     public async Task<PaginaDto<ComandaResumoDto>> ListarAsync(
         DateOnly? deDia,
         DateOnly? ateDia,
         string? status,
+        Guid? atendenteId,
+        string? forma,
         int? pagina,
         int? tamanho,
         CancellationToken cancellationToken = default)
@@ -48,7 +51,7 @@ public sealed class ComandaConsultaService
             throw new DomainException($"Página deve ser 1 ou mais e o tamanho de 1 a {TamanhoMaximo}.");
         }
 
-        var filtro = LerStatus(status);
+        var filtro = new FiltroVendas(LerStatus(status), atendenteId, LerForma(forma));
         var (inicioUtc, fimUtc) = DiaComercial.IntervaloUtc(de, ate);
         var (comandas, total) = await _comandas.ListarPorPeriodoAsync(
             inicioUtc, fimUtc, filtro, (numeroPagina - 1) * itensPorPagina, itensPorPagina, cancellationToken);
@@ -103,6 +106,21 @@ public sealed class ComandaConsultaService
                 .OrderBy(p => p.Forma)
                 .Select(p => new PagamentoDto(p.Id, p.Forma.ToString(), p.Valor, p.ValorRecebido, p.Troco))
                 .ToList());
+    }
+
+    private static FormaPagamento? LerForma(string? forma)
+    {
+        if (string.IsNullOrWhiteSpace(forma))
+        {
+            return null;
+        }
+
+        if (Enum.TryParse<FormaPagamento>(forma, ignoreCase: true, out var valor) && Enum.IsDefined(valor) && !int.TryParse(forma, out _))
+        {
+            return valor;
+        }
+
+        throw new DomainException($"Forma de pagamento inválida: \"{forma}\". Use {string.Join(", ", Enum.GetNames<FormaPagamento>())}.");
     }
 
     private static StatusComanda? LerStatus(string? status)

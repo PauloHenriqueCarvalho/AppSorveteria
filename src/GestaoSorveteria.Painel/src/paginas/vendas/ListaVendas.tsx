@@ -4,11 +4,13 @@ import { Link, useNavigate } from 'react-router'
 import { CHAVE_COMANDAS, listarComandas, listarTodasAsComandas, VENDAS_POR_PAGINA } from '../../api/comandas.ts'
 import { mensagemDoErro } from '../../api/erros.ts'
 import type { ComandaResumoDto, StatusComanda } from '../../api/tipos.ts'
+import { CHAVE_USUARIOS, listarUsuarios } from '../../api/usuarios.ts'
 import Consulta from '../../componentes/Consulta.tsx'
 import FiltroPeriodo, { type Periodo } from '../../componentes/FiltroPeriodo.tsx'
 import { CabecalhoPagina, Selo, type Tom } from '../../componentes/Ui.tsx'
 import { baixarCsv, celulaDinheiro, montarCsv } from '../../exportar.ts'
 import {
+  FORMAS_DE_PAGAMENTO,
   formatarData,
   formatarDia,
   formatarHora,
@@ -40,15 +42,29 @@ export default function ListaVendas() {
   const navegar = useNavigate()
   const [periodo, setPeriodo] = useState<Periodo>(() => ({ de: hojeNaLoja(), ate: hojeNaLoja() }))
   const [status, setStatus] = useState<StatusComanda | undefined>(undefined)
+  const [atendente, setAtendente] = useState('')
+  const [forma, setForma] = useState('')
   const [pagina, setPagina] = useState(1)
   const [exportando, setExportando] = useState(false)
   const [erroExportar, setErroExportar] = useState<string | null>(null)
 
+  const filtro = { de: periodo.de, ate: periodo.ate, status, atendente: atendente || undefined, forma: forma || undefined }
   const vendas = useQuery({
-    queryKey: [...CHAVE_COMANDAS, 'lista', periodo.de, periodo.ate, status, pagina],
-    queryFn: () => listarComandas({ de: periodo.de, ate: periodo.ate, status, pagina }),
+    queryKey: [...CHAVE_COMANDAS, 'lista', filtro, pagina],
+    queryFn: () => listarComandas({ ...filtro, pagina }),
     placeholderData: keepPreviousData,
   })
+  // Quem vendeu: ativos primeiro (quem já saiu continua aparecendo nas vendas antigas).
+  const usuarios = useQuery({ queryKey: CHAVE_USUARIOS, queryFn: listarUsuarios })
+  const atendentes = [...(usuarios.data ?? [])].sort((a, b) => Number(b.ativo) - Number(a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'))
+  const nomeAtendente = atendentes.find((u) => u.id === atendente)?.nome
+  const descricaoFiltros = [
+    status ? FILTROS.find((f) => f.valor === status)?.texto : null,
+    nomeAtendente ? `vendidas por ${nomeAtendente}` : null,
+    forma ? `com ${nomeDaForma(forma).toLowerCase()}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   function trocarPeriodo(novo: Periodo) {
     setPeriodo(novo)
@@ -60,11 +76,21 @@ export default function ListaVendas() {
     setPagina(1)
   }
 
+  function trocarAtendente(novo: string) {
+    setAtendente(novo)
+    setPagina(1)
+  }
+
+  function trocarForma(nova: string) {
+    setForma(nova)
+    setPagina(1)
+  }
+
   async function exportar() {
     setExportando(true)
     setErroExportar(null)
     try {
-      const todas = await listarTodasAsComandas({ de: periodo.de, ate: periodo.ate, status })
+      const todas = await listarTodasAsComandas(filtro)
       const csv = montarCsv(
         ['Nº', 'Data', 'Hora', 'Tipo', 'Atendente', 'Pagamento', 'Situação', 'Total (R$)', 'Chegou após fechar o caixa'],
         todas.map((v) => {
@@ -96,13 +122,13 @@ export default function ListaVendas() {
     <>
       <p className="so-impressao">
         {NOME_LOJA} · Vendas de {descricaoPeriodo(periodo)}
-        {status ? ` · ${FILTROS.find((f) => f.valor === status)?.texto}` : ''}
+        {descricaoFiltros ? ` · ${descricaoFiltros}` : ''}
       </p>
       <CabecalhoPagina
         titulo="Vendas"
         subtitulo={
           vendas.data
-            ? `${total} venda${total === 1 ? '' : 's'} em ${descricaoPeriodo(periodo)}`
+            ? `${total} venda${total === 1 ? '' : 's'} em ${descricaoPeriodo(periodo)}${descricaoFiltros ? ` · ${descricaoFiltros}` : ''}`
             : `Vendas de ${descricaoPeriodo(periodo)}`
         }
         acoes={
@@ -132,6 +158,31 @@ export default function ListaVendas() {
             </button>
           ))}
         </div>
+        {atendentes.length > 0 && (
+          <label className="campo-inline">
+            Atendente
+            <select value={atendente} onChange={(e) => trocarAtendente(e.target.value)}>
+              <option value="">Todos</option>
+              {atendentes.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nome}
+                  {u.ativo ? '' : ' (desativado)'}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="campo-inline">
+          Pagamento
+          <select value={forma} onChange={(e) => trocarForma(e.target.value)}>
+            <option value="">Todas as formas</option>
+            {FORMAS_DE_PAGAMENTO.map((f) => (
+              <option key={f} value={f}>
+                {nomeDaForma(f)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {erroExportar && <p className="alerta alerta-erro">Não foi possível exportar: {erroExportar}</p>}
@@ -141,7 +192,12 @@ export default function ListaVendas() {
           const paginas = Math.max(1, Math.ceil(resultado.totalItens / VENDAS_POR_PAGINA))
           const primeiro = (pagina - 1) * VENDAS_POR_PAGINA + 1
           if (resultado.itens.length === 0) {
-            return <p className="secao suave">Nenhuma venda em {descricaoPeriodo(periodo)}.</p>
+            return (
+              <p className="secao suave">
+                Nenhuma venda em {descricaoPeriodo(periodo)}
+                {descricaoFiltros ? ` com esses filtros (${descricaoFiltros})` : ''}.
+              </p>
+            )
           }
           return (
             <section className="secao secao-tabela">

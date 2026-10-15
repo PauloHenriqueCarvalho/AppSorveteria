@@ -24,7 +24,8 @@ public sealed class ComandasController : ControllerBase
 
     /// <summary>
     /// Vendas do período (dias no horário de Brasília, formato 2026-09-30, inclusive; sem datas = hoje; máx. 93 dias),
-    /// mais recente primeiro. <c>status</c>: Fechada, Cancelada ou Aberta. <c>tamanho</c>: 1 a 100 (padrão 50).
+    /// mais recente primeiro. <c>status</c>: Fechada, Cancelada, Estornada ou Aberta. <c>atendente</c>: Id de quem vendeu.
+    /// <c>forma</c>: Dinheiro, Pix, CartaoDebito ou CartaoCredito (venda com pelo menos um pagamento nela). <c>tamanho</c>: 1 a 100 (padrão 50).
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PaginaDto<ComandaResumoDto>), StatusCodes.Status200OK)]
@@ -35,10 +36,12 @@ public sealed class ComandasController : ControllerBase
         [FromQuery] DateOnly? de,
         [FromQuery] DateOnly? ate,
         [FromQuery] string? status,
+        [FromQuery] Guid? atendente,
+        [FromQuery] string? forma,
         [FromQuery] int? pagina,
         [FromQuery] int? tamanho,
         CancellationToken cancellationToken) =>
-        Ok(await _comandas.ListarAsync(de, ate, status, pagina, tamanho, cancellationToken));
+        Ok(await _comandas.ListarAsync(de, ate, status, atendente, forma, pagina, tamanho, cancellationToken));
 
     /// <summary>Venda com itens e pagamentos.</summary>
     [HttpGet("{id:guid}")]
