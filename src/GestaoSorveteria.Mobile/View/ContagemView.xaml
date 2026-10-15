@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
+             x:Class="SorveteriaMaui.View.ContagemView"
+             x:DataType="vm:ContagemViewModel"
+             Title="Contagem semanal"
+             BackgroundColor="#F5F5F5">
+
+    <!-- Baixa a lista de itens de novo (sem internet, usa a que está no tablet) -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Atualizar" Command="{Binding AtualizarCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <!-- Fase 2 (docs/10 §2.1, RN-ES-05/06): topo com o progresso, lista na ordem da planilha, rodapé com salvar e concluir -->
+    <Grid RowDefinitions="Auto, *, Auto">
+
+        <VerticalStackLayout Grid.Row="0" Padding="12,10,12,4" Spacing="8">
+            <Border Padding="14,10" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#E0E0E0">
+                <VerticalStackLayout Spacing="4">
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="{Binding Cabecalho}" FontSize="18" FontAttributes="Bold" TextColor="#212121" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Progresso}" FontSize="16" FontAttributes="Bold" TextColor="#4527A0" VerticalOptions="Center" />
+                    </Grid>
+                    <Label Text="Conte o que tem no freezer agora. Número vazio = ainda não contado. A contagem anterior aparece só para comparar."
+                           FontSize="13" TextColor="#616161" />
+                    <Label Text="{Binding SituacaoEnvio}" IsVisible="{Binding TemSituacaoEnvio}" FontSize="13" FontAttributes="Bold" TextColor="#5D4037" />
+                    <Label Text="{Binding UltimaConcluidaTexto}" IsVisible="{Binding SemContagem}" FontSize="13" TextColor="#616161">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding UltimaRecusada}" Value="True">
+                                <Setter Property="TextColor" Value="#BF360C" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="{Binding Situacao}" FontSize="12" TextColor="#9E9E9E" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Recusada pelo servidor: nunca some em silêncio; dá para corrigir (sobe de novo) ou começar outra -->
+            <Border IsVisible="{Binding Recusada}" Padding="14,10" StrokeShape="RoundRectangle 12" Stroke="#E65100" BackgroundColor="#FFF3E0">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="{Binding MotivoRecusa}" FontSize="14" FontAttributes="Bold" TextColor="#BF360C" />
+                    <Label Text="Corrija o número e a contagem é enviada de novo, ou comece outra contagem." FontSize="13" TextColor="#5D4037" />
+                    <Button Text="Começar outra contagem"
+                            FontSize="15"
+                            FontAttributes="Bold"
+                            HeightRequest="48"
+                            BackgroundColor="#FFE0B2"
+                            TextColor="#BF360C"
+                            CornerRadius="10"
+                            IsEnabled="{Binding Livre}"
+                            Command="{Binding ComecarOutraCommand}" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- Lista: grupo (Picolé de fruta, ao leite, Skimo, Massa, Açaí, Potes) → item, como na planilha da dona -->
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Grupos}"
+                        IsGrouped="True"
+                        SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="A lista de itens ainda não chegou neste tablet. Conecte à internet e toque em Atualizar."
+                       Margin="24" FontSize="16" TextColor="#616161" HorizontalTextAlignment="Center" />
+            </CollectionView.EmptyView>
+
+            <CollectionView.GroupHeaderTemplate>
+                <DataTemplate x:DataType="vm:GrupoDaContagem">
+                    <Grid Padding="16,18,16,6" ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="{Binding Nome}" FontSize="20" FontAttributes="Bold" TextColor="#4527A0" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Progresso}" FontSize="14" TextColor="#616161" VerticalOptions="Center" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.GroupHeaderTemplate>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:LinhaContagem">
+                    <Border Margin="12,4" Padding="12,10" StrokeShape="RoundRectangle 10" BackgroundColor="White" Stroke="#E0E0E0">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding Contou}" Value="True">
+                                <Setter Property="Stroke" Value="#81C784" />
+                                <Setter Property="BackgroundColor" Value="#F1F8E9" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="8">
+                            <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Nome}" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
+                                <Label Text="{Binding Embalagem}" FontSize="13" TextColor="#757575" />
+                                <!-- RN-ES-06: a anterior é só referência; o número desta contagem começa vazio -->
+                                <Label Text="{Binding AnteriorTexto}" IsVisible="{Binding TemAnterior}" FontSize="14" TextColor="#4527A0" />
+                            </VerticalStackLayout>
+
+                            <!-- RN-ES-06: "Não tem nenhum" grava 0 em um toque -->
+                            <Button Grid.Row="0"
+                                    Grid.Column="1"
+                                    Text="Não tem nenhum"
+                                    HeightRequest="56"
+                                    Padding="14,0"
+                                    VerticalOptions="Start"
+                                    CornerRadius="12"
+                                    FontSize="15"
+                                    FontAttributes="Bold"
+                                    BackgroundColor="#FFEBEE"
+                                    TextColor="#C62828"
+                                    CommandParameter="{Binding .}"
+                                    Command="{Binding NenhumCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
+
+                            <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="64, *, 64" ColumnSpacing="10">
+                                <Button Grid.Column="0"
+                                        Text="−"
+                                        WidthRequest="64"
+                                        HeightRequest="64"
+                                        CornerRadius="32"
+                                        FontSize="28"
+                                        FontAttributes="Bold"
+                                        BackgroundColor="#F0F0F0"
+                                        TextColor="#333"
+                                        CommandParameter="{Binding .}"
+                                        Command="{Binding MenosCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
+
+                                <!-- Toque no número para digitar ("2,5"); em branco apaga -->
+                                <Border Grid.Column="1" HeightRequest="64" Padding="4" StrokeShape="RoundRectangle 10" Stroke="#BDBDBD" StrokeThickness="2" BackgroundColor="#FAFAFA">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Nenhum}" Value="True">
+                                            <Setter Property="Stroke" Value="#C62828" />
+                                            <Setter Property="BackgroundColor" Value="#FFEBEE" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                              Command="{Binding DigitarCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout VerticalOptions="Center" Spacing="0">
+                                        <Label Text="{Binding ValorTexto}" FontSize="26" FontAttributes="Bold" TextColor="#212121" HorizontalTextAlignment="Center" />
+                                        <Label Text="{Binding UnidadeTexto}" FontSize="12" TextColor="#757575" HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Button Grid.Column="2"
+                                        Text="+"
+                                        WidthRequest="64"
+                                        HeightRequest="64"
+                                        CornerRadius="32"
+                                        FontSize="28"
+                                        FontAttributes="Bold"
+                                        BackgroundColor="#E3F2FD"
+                                        TextColor="#1976D2"
+                                        CommandParameter="{Binding .}"
+                                        Command="{Binding MaisCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Cada número já fica gravado no tablet: "Salvar" sai e continua depois; "Concluir" fecha (depois não muda) -->
+        <Grid Grid.Row="2" ColumnDefinitions="*, *" ColumnSpacing="10" Padding="12,8,12,12" BackgroundColor="White">
+            <Button Grid.Column="0"
+                    Text="💾  Salvar e continuar depois"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    HeightRequest="60"
+                    BackgroundColor="#EDE7F6"
+                    TextColor="#4527A0"
+                    CornerRadius="12"
+                    IsEnabled="{Binding Livre}"
+                    Command="{Binding SalvarCommand}" />
+            <Button Grid.Column="1"
+                    Text="✅  Concluir contagem"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    HeightRequest="60"
+                    BackgroundColor="#2E7D32"
+                    TextColor="White"
+                    CornerRadius="12"
+                    IsEnabled="{Binding Livre}"
+                    Command="{Binding ConcluirCommand}" />
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -1,5 +1,8 @@
 using System.Text.Json.Serialization;
 using GestaoSorveteria.Contracts.Auth;
+using GestaoSorveteria.Contracts.Avisos;
+using GestaoSorveteria.Contracts.Contagens;
+using GestaoSorveteria.Contracts.Estoque;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Contracts.Sync;
 
@@ -25,4 +28,20 @@ public sealed record ProblemaApi(string? Title, string? Detail, int? Status, Dic
 [JsonSerializable(typeof(SyncCaixasRequest))]
 [JsonSerializable(typeof(SyncComandasRequest))]
 [JsonSerializable(typeof(SyncResponse))]
+// Fase 2: catálogo de estoque, configuração da loja e avisos "Está acabando"
+[JsonSerializable(typeof(CatalogoEstoqueAppResponse))]
+[JsonSerializable(typeof(GrupoEstoqueDto))]
+[JsonSerializable(typeof(ItemEstoqueAppDto))]
+[JsonSerializable(typeof(ConfiguracaoLojaDto))]
+[JsonSerializable(typeof(List<AvisoDto>))]
+[JsonSerializable(typeof(AvisoDto))]
+[JsonSerializable(typeof(SyncAvisosRequest))]
+[JsonSerializable(typeof(AvisoSyncDto))]
+[JsonSerializable(typeof(SyncAvisosResponse))]
+[JsonSerializable(typeof(ResultadoSyncAvisoDto))]
+[JsonSerializable(typeof(ResumoDoDiaResponse))]
+// Fase 2: contagem semanal feita no tablet
+[JsonSerializable(typeof(SyncContagensRequest))]
+[JsonSerializable(typeof(ContagemSyncDto))]
+[JsonSerializable(typeof(LinhaContagemSyncDto))]
 internal sealed partial class ApiJsonContext : JsonSerializerContext;

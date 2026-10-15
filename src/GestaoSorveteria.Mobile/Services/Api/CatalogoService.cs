@@ -14,6 +14,13 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos, 
 {
     private const string ChaveGeradoEm = "catalogo_gerado_em_ticks";
     private const string ChaveUrl = "catalogo_url"; // de qual servidor veio o carimbo
+    private const string ChaveVersaoCache = "catalogo_versao_cache";
+
+    /// <summary>
+    /// Sobe quando o cache ganha campo novo que o "desde" não traria de volta. 2 = Sprint 7 (grupo de estoque e sabor):
+    /// produto ligado ao grupo antes desta versão do app não mudou de novo no servidor, então só a carga cheia o traz ligado.
+    /// </summary>
+    private const int VersaoCache = 2;
 
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
     private bool _tentouAoAbrir;
@@ -40,9 +47,11 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos, 
         {
             // Carga cheia quando nunca baixou, quando o cache está vazio (banco novo) ou quando o servidor mudou
             // (URL trocada em Debug / APK apontando para outro lugar): um "desde" de outro servidor deixaria o catálogo
-            // incompleto em silêncio. Senão, incremental.
+            // incompleto em silêncio. Também uma vez depois de atualizar o app para uma versão com campo novo no cache
+            // (VersaoCache). Senão, incremental.
             var cargaCheia = UltimaAtualizacaoUtc is null
                 || Preferences.Default.Get(ChaveUrl, string.Empty) != configuracao.UrlBase
+                || Preferences.Default.Get(ChaveVersaoCache, 1) < VersaoCache
                 || await produtos.ContarAsync() == 0;
             var desde = cargaCheia ? null : UltimaAtualizacaoUtc;
 
@@ -60,6 +69,7 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos, 
 
             Preferences.Default.Set(ChaveGeradoEm, DateTime.SpecifyKind(catalogo.GeradoEmUtc, DateTimeKind.Utc).Ticks);
             Preferences.Default.Set(ChaveUrl, configuracao.UrlBase);
+            Preferences.Default.Set(ChaveVersaoCache, VersaoCache);
             return linhas.Count;
         }
         finally
@@ -143,5 +153,8 @@ public sealed class CatalogoService(ApiCliente api, ProdutoRepository produtos, 
         Ordem = dto.Ordem,
         CriadoEm = dto.AtualizadoEmUtc, // a API não manda a criação; o app só usa a data para remontar o Produto do Domain
         AtualizadoEm = dto.AtualizadoEmUtc,
+        GrupoEstoqueId = dto.GrupoEstoqueId, // RN-PR-06: potes pedem sabor pelo modo do grupo (RN-ES-09)
+        UnidadesPorVenda = dto.UnidadesPorVenda < 1 ? 1 : dto.UnidadesPorVenda,
+        PedeSabor = dto.PedeSabor,
     };
 }

@@ -86,8 +86,8 @@ Plano detalhado em docs/06, seção 4.
 - [x] Início: 4 indicadores, formas de pagamento, "Precisa da sua atenção", últimas vendas em tabela, caixa atual
 - [x] API do dashboard: vendas por hora, comparativo com o mesmo dia da semana anterior, mais vendidos (RN-RL-03/06/07); gráfico no Início
 - [x] Vendas e Caixas em tabela com filtro de período (atalhos Hoje, Ontem, 7 dias, 30 dias, Este mês) e situação, exportar Excel (CSV brasileiro) e imprimir; relatório de fechamento imprimível no detalhe do caixa
-- [ ] Filtro de vendas por atendente e por forma de pagamento (precisa de parâmetro novo na API)
-- [ ] Produtos e Usuários no mesmo padrão
+- [x] Filtro de vendas por atendente e por forma de pagamento (`atendente` e `forma` em `GET /api/comandas`; vale também para exportar e imprimir)
+- [x] Produtos e Usuários no mesmo padrão (tabela; Produtos com filtro de categoria e o que cada um baixa do estoque)
 
 ### Sprint 4 — Piloto na loja com hospedagem gratuita (semana 4)
 
@@ -102,7 +102,7 @@ Detalhes em docs/07.
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
-- [ ] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, pode adiantar da Fase 2
+- [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — PR aberto para teste no tablet
 - [ ] Guia de uso de 1 página (com prints): abrir caixa, vender, fechar caixa, ver o painel — texto pronto em `docs/09-guia-de-uso.md` (07/10); faltam os prints e os links, depois do deploy e da Etapa C
 
 **Pronto quando:** a dona opera um dia inteiro sem ajuda. Fim do piloto → decidir se sai do gratuito (docs/07).
@@ -112,35 +112,47 @@ Detalhes em docs/07.
 Redesenhada em 13/10 e revista com o Paulo em 14/10 (docs/10): picolé e massa por **contagem semanal**, potes com **sabor na venda** (teste), botão **"Está acabando"** com prioridade, **urgente na hora e resumo do dia** pelo WhatsApp da dona, **fornecedores separados** e **pedido impresso** para a fábrica.
 
 ### Sprint 5 — Catálogo, contagem e avisos
-- [ ] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso` + testes (RN-ES-01…07, RN-AV-01…05) + migração
-- [ ] API: catálogo (importar CSV), configuração (WhatsApp da dona), contagens, avisos (criar, "ainda falta", fechar), resumo do dia; `POST /api/sync/estoque`
-- [ ] App: quantidade digitada na venda (RN-ES-04); botão **"Está acabando"** (busca, quantidade, prioridade, sem duplicar); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa
-- [ ] App: tela de **contagem semanal** na ordem da planilha (meia caixa, "não tem nenhum", salvar parcial); lembrete na véspera do pedido
-- [ ] Painel: avisos abertos (fechar com motivo), contagem pelo painel, catálogo com fornecedor/alvo/mínimo, cadastro de insumos e fornecedores, WhatsApp da dona
+- [x] Domain: `Fornecedor`, `GrupoEstoque` (modo de controle), `ItemEstoque`, `Contagem`, `Aviso`, `CalculoEstoque` + 24 testes (RN-ES-01…07, RN-AV-01/03/05/08, RN-PF-01) — 14/10
+- [x] Application: catálogo — fornecedores, grupos, itens e importação da planilha com prévia (RN-ES-10/11, RN-PF-09) + testes — 14/10
+- [x] Infrastructure + API do catálogo: tabelas da Fase 2 (migração `Fase2Estoque`), `GET /api/estoque/catalogo` e alterações (Admin), `GET /api/estoque/itens` (app, sem custo) — 14/10
+- [x] API: avisos (criar sem duplicar, "ainda falta", fechar, WhatsApp aberto), resumo do dia, configuração (WhatsApp da dona), `POST /api/sync/avisos` (RN-AV-01…10) — 14/10
+- [x] API: contagens pelo painel (modelo, rascunho, concluir) e `POST /api/sync/contagens`; `diasDeContagem` para o lembrete do app (RN-ES-05/06) — 14/10
+- [x] Saída da semana (RN-ES-07): média por semana entre contagens, somando o que foi recebido no intervalo — entra no pedido sugerido (Sprint 6) — 14/10
+- [x] Diferenças da contagem dos potes no resumo do dia (sistema × contado, mais de 1) — Sprint 7
+- [ ] App: quantidade digitada na venda (RN-ES-04) — PR #67
+- [x] App: botão **"Está acabando"** (busca em todos os grupos ou "Outro", quantidade, prioridade, sem duplicar com "Ainda falta"); mensagem **urgente** pelo WhatsApp; **resumo do dia** no fechamento do caixa (e botão na aba Caixa); avisos na fila de envio com recusado em laranja; cache do catálogo de estoque, WhatsApp da dona e dias de contagem no tablet (RN-AV-01/02/03/06/07/08/09) — PR aberto para teste no tablet (14/10)
+- [x] App: tela de **contagem semanal** na ordem da planilha (− e + de meia em meia caixa, toque no número para digitar, "não tem nenhum", contagem anterior do tablet só como referência, salvar parcial e continuar, concluir pelas regras do Domain); fila de envio `POST /api/sync/contagens` com recusada em laranja; lembrete **"Hoje é dia de contagem"** na véspera do pedido (tela de comandas e aba Caixa) (RN-ES-05/06) — PR aberto para teste no tablet, empilhado no do "Está acabando" (14/10)
+- [x] Painel: catálogo de estoque (por grupo, filtros, exportar), importação da planilha com prévia, item, grupo (modo de controle) e fornecedores — 14/10
+- [x] Painel: avisos (abertos/fechados, contador no menu, novo, "ainda falta", fechar com motivo), resumo do dia, configurações (WhatsApp da dona) — 14/10
+- [x] Painel: contagem semanal (lista, nova com a anterior de referência, rascunho, concluir, ver concluída) — 14/10
 
 **Pronto quando:** o atendente avisa "acabou Coco preto" e a dona recebe no WhatsApp na hora; no fim do dia chega o resumo; a contagem semanal substitui a planilha.
 
 ### Sprint 6 — Pedido, impressão e entrega
-- [ ] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes
-- [ ] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou — RN-PF-02…04), +/−, enviar, cancelar, folha, receber, histórico
-- [ ] Painel: pedido por fornecedor com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças) com mensagem para o fornecedor; histórico
+- [x] Domain: `PedidoFornecedor` + linhas, status, diferenças (RN-PF-05/06/08, RN-RC-02/03) + testes — 14/10
+- [x] API: montar sugerido por fornecedor (saída semanal, alvo, avisos abertos, faltou, entregas depois da contagem e o que está a caminho — RN-PF-02…04), +/−, enviar (mensagem do WhatsApp), cancelar, receber (fecha avisos, custo novo, mensagem das diferenças), histórico; migração `PedidosFornecedor` — 14/10
+- [x] Painel: pedido por fornecedor (rascunho montado sozinho no dia do pedido, +/−, acrescentar item, refazer a sugestão) com **Imprimir** (folha A4 com colunas Veio/Obs., RN-PF-07) e **WhatsApp**; conferência da entrega ("chegou tudo certo" ou só as diferenças, sabor trocado, preço novo) com mensagem para o fornecedor; histórico de 30 dias no fornecedor; `GET /api/pedidos-fornecedor/{id}/mensagens` — 14/10
 
 **Pronto quando:** a dona imprime o pedido da semana para os pais, confere a entrega pela folha preenchida em menos de 2 minutos e o que faltou volta no pedido seguinte.
 
 ### Sprint 7 — Potes automáticos (teste)
-- [ ] Produto de venda ligado a grupo (RN-PR-06); grade de sabores **só nos potes**; `ItemEstoqueId` opcional no sync; baixa e estorno no servidor (RN-ES-08/09)
-- [ ] Aviso automático de mínimo e zerado (RN-AV-04); conferência do saldo na contagem semanal
+- [x] Domain: produto ligado a grupo (RN-PR-06), sabor na linha da venda, movimentos de estoque e saldo com a contagem como base; hora em que a entrega chegou e em que cada item foi contado (RN-ES-08/09) — #81
+- [x] API: `ItemEstoqueId` opcional no sync com baixa no servidor, estorno, entrada na conferência, aviso automático de mínimo e zerado (RN-AV-04), `GET /api/estoque/saldos`, `PUT /api/produtos/{id}/estoque`, pedido dos potes pelo saldo e pelas vendas — #82
+- [x] Painel: produto ligado ao grupo, saldo dos potes, diferença da contagem (saldo × contado) e no resumo do dia — #84
+- [ ] Virada: **fazer uma contagem dos potes antes de ligar os produtos de pote** (o saldo parte dela; entregas conferidas antes não têm entrada)
+- [x] App: grade de sabores **só nos potes** — decide pelo modo do grupo baixado em `GET /api/estoque/itens` (o `pedeSabor` do produto é a reserva enquanto o tablet não conhece o grupo); 1 toque no sabor, "Voltar" sem lançar, pote sem sabores no tablet vende sem sabor e avisa; cada sabor uma linha pelo Domain ("Pote 1L · Flocos"); `GrupoEstoqueId`/`UnidadesPorVenda` no cache de produtos (carga cheia única depois da atualização); `itemEstoqueId` gravado no SQLite e no `POST /api/sync/comandas`; hora de cada item na contagem (`contadoEm`) no tablet e no envio; "Atualizar" da aba Produtos também baixa os sabores (RN-PR-06, RN-ES-06/08/09) — PR aberto para teste no tablet, empilhado no do "Está acabando" (14/10) — #83
 - [ ] Avaliar com a dona depois de 2 semanas: se as diferenças dos potes forem grandes, o grupo volta para `Contagem`
 
 ## Fase 3 — Análise e relatórios
 
 ### Sprint 8 — Gráficos e ranking
-- [ ] Vendas por dia/semana/mês, comparativo com o período anterior, horários de pico
-- [ ] Ranking de produtos (quantidade e valor), por categoria
+- [x] API: `GET /api/relatorios/periodo` — vendas por dia/semana/mês, comparativo com o período anterior, horários e dias de pico (RN-RL-08/09/10); ranking de produtos (quantidade e valor), por categoria e por sabor dos potes (RN-RL-03)
+- [x] Painel: tela Relatórios (Análise → Relatórios): período com atalhos, gráfico por dia/semana/mês com o período anterior, horários e dias de pico, produtos (por valor ou quantidade), categorias, formas de pagamento e sabores, exportar Excel e imprimir
 
 ### Sprint 9 — Lucro e exportação
-- [ ] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque), margem por produto, por sabor e por período
-- [ ] Exportação CSV/Excel por período; relatório de fechamentos de caixa
+- [x] Custo estimado por produto (RN-PR-07, pelo custo da embalagem do estoque ou informado), margem por produto, por sabor e por período (RN-RL-04): API (`GET /api/produtos/custos`, `PUT /api/produtos/{id}/custo`, margem no relatório de período)
+- [x] Painel: custo e margem no produto (Custo e margem, com o custo informado) e nos Relatórios (indicador, produtos por margem, sabores, Excel)
+- [x] Exportação CSV/Excel por período (Vendas, Caixas, Catálogo e Relatórios — tudo numa planilha) e relatório de fechamento imprimível no detalhe do caixa
 
 ## Fase 4 — Expansões (a combinar)
 Ficha técnica de insumos (se a dona quiser controlar insumo além do produto pronto) · fidelidade por pontos · impressora de cupom · integração iFood · relatório financeiro com custo de produção · multi-loja.

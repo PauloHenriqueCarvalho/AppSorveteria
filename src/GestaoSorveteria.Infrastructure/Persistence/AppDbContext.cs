@@ -1,5 +1,7 @@
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Comandas;
+using GestaoSorveteria.Domain.Estoque;
+using GestaoSorveteria.Domain.Loja;
 using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Domain.Usuarios;
@@ -25,6 +27,18 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Comanda> Comandas => Set<Comanda>();
     public DbSet<ItemComanda> ItensComanda => Set<ItemComanda>();
     public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
+
+    // Fase 2 — estoque (docs/10)
+    public DbSet<Fornecedor> Fornecedores => Set<Fornecedor>();
+    public DbSet<GrupoEstoque> GruposEstoque => Set<GrupoEstoque>();
+    public DbSet<ItemEstoque> ItensEstoque => Set<ItemEstoque>();
+    public DbSet<Contagem> Contagens => Set<Contagem>();
+    public DbSet<ItemContagem> ItensContagem => Set<ItemContagem>();
+    public DbSet<Aviso> Avisos => Set<Aviso>();
+    public DbSet<ConfiguracaoLoja> ConfiguracoesLoja => Set<ConfiguracaoLoja>();
+    public DbSet<PedidoFornecedor> PedidosFornecedor => Set<PedidoFornecedor>();
+    public DbSet<ItemPedidoFornecedor> ItensPedidoFornecedor => Set<ItemPedidoFornecedor>();
+    public DbSet<MovimentoEstoque> MovimentosEstoque => Set<MovimentoEstoque>();
 
     public void DescartarAlteracoes() => ChangeTracker.Clear();
 

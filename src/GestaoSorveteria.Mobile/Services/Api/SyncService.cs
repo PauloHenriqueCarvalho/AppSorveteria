@@ -1,11 +1,17 @@
 using System.Diagnostics;
+using GestaoSorveteria.Contracts.Avisos;
+using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Sync;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 
 namespace SorveteriaMaui.Services.Api;
 
-/// <summary>Situação da fila para a tela (indicador "X vendas aguardando envio", RN-SY-05).</summary>
+/// <summary>
+/// Situação da fila para a tela (indicador "X vendas aguardando envio", RN-SY-05). <see cref="Pendentes"/> conta só
+/// vendas e caixas; os avisos "Está acabando" e as contagens semanais à espera vêm à parte (<see cref="AvisosPendentes"/>,
+/// <see cref="ContagensPendentes"/>).
+/// </summary>
 public sealed record EstadoSync(
     int ComandasPendentes,
     int CaixasPendentes,
@@ -13,7 +19,9 @@ public sealed record EstadoSync(
     bool Sincronizando,
     bool PrecisaPin,
     string UltimaMensagem,
-    DateTime? UltimoEnvioUtc)
+    DateTime? UltimoEnvioUtc,
+    int AvisosPendentes,
+    int ContagensPendentes = 0)
 {
     public int Pendentes => ComandasPendentes + CaixasPendentes;
 }
@@ -21,13 +29,18 @@ public sealed record EstadoSync(
 /// <summary>
 /// Sincronização local-first (C4, docs/03 §8, skill <c>sincronizacao-local-first</c>). Envia os documentos
 /// prontos — caixas e comandas fechadas/canceladas — para <c>POST /api/sync/*</c>, idempotente pelo Id (RN-SY-02),
-/// na ordem caixa aberto → comandas do caixa → caixa fechado (RN-SY-03). Dispara ao fechar/cancelar comanda, ao mexer
-/// no caixa, a cada 1 min e ao abrir o app. Falha de rede pausa sem descartar nada; <c>rejeitada</c> fica visível com o motivo.
-/// A venda nunca espera este serviço.
+/// na ordem caixa aberto → comandas do caixa → caixa fechado (RN-SY-03); depois, os avisos "Está acabando" (RN-AV-09) e as
+/// contagens semanais (RN-ES-05). Dispara ao fechar/cancelar comanda, ao mexer no caixa, ao salvar aviso, ao salvar ou
+/// concluir contagem, a cada 1 min e ao abrir o app. Falha de rede pausa sem descartar nada; <c>rejeitada</c> fica visível
+/// com o motivo. A venda nunca espera este serviço.
 /// </summary>
-public sealed class SyncService(ApiCliente api, ComandaRepository comandas, CaixaRepository caixas, SessaoUsuario sessao)
+public sealed class SyncService(
+    ApiCliente api, ComandaRepository comandas, CaixaRepository caixas, SessaoUsuario sessao, AvisoRepository avisos, ContagemRepository contagens)
 {
     public static readonly TimeSpan Intervalo = TimeSpan.FromMinutes(1);
+
+    /// <summary>Limite do lote de <c>POST /api/sync/contagens</c> (<c>SyncContagensRequest</c>).</summary>
+    private const int MaximoContagensPorLote = 20;
 
     private readonly SemaphoreSlim _umaPorVez = new(1, 1);
     private bool _sincronizando;
@@ -42,6 +55,12 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
     /// <summary>Tarefa extra do ciclo de 1 min (atualização do catálogo), ligada na composição do app.</summary>
     public Func<Task>? CatalogoNoCiclo { get; set; }
 
+    /// <summary>
+    /// Outra tarefa do ciclo (Fase 2): catálogo de estoque, configuração da loja e avisos abertos, no máximo a cada 5 min.
+    /// Ligada na composição do app, como <see cref="CatalogoNoCiclo"/>; não pode lançar (o ciclo pararia).
+    /// </summary>
+    public Func<Task>? EstoqueNoCiclo { get; set; }
+
     public async Task<EstadoSync> EstadoAsync() => new(
         await comandas.ContarPendentesEnvioAsync(),
         await caixas.ContarPendentesEnvioAsync(),
@@ -49,7 +68,9 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
         _sincronizando,
         _precisaPin,
         _ultimaMensagem,
-        _ultimoEnvioUtc);
+        _ultimoEnvioUtc,
+        await avisos.ContarPendentesEnvioAsync(),
+        await contagens.ContarPendentesEnvioAsync());
 
     /// <summary>Liga o ciclo de 1 min (RN-SY-03). Chamado uma vez, ao abrir o app; idempotente.</summary>
     public void IniciarCiclo()
@@ -72,6 +93,11 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
                     if (CatalogoNoCiclo is { } catalogo)
                     {
                         await catalogo(); // C2: preço mudado no painel chega ao balcão sem reabrir o app
+                    }
+
+                    if (EstoqueNoCiclo is { } estoque)
+                    {
+                        await estoque(); // Fase 2: aviso fechado pela dona sai da lista do tablet
                     }
                 }
             }
@@ -211,8 +237,121 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
             }
         }
 
+        // 4. Avisos "Está acabando", depois das vendas (a venda tem a vez).
+        if (sessao.UsuarioId is { } usuarioAtual)
+        {
+            await EnviarAvisosAsync(usuarioAtual);
+        }
+
+        // 5. Contagens semanais (parciais e concluídas), por último.
+        await EnviarContagensAsync();
+
         return true;
     }
+
+    /// <summary>
+    /// RN-ES-05: cada contagem pendente vai inteira, como está no tablet (em andamento ou concluída), em lotes de até 20.
+    /// aceita / ja_recebida → sai da fila (se não mudou durante o envio); rejeitada → motivo guardado e laranja na tela da
+    /// contagem. Rede/sessão lançam e a fila espera, sem perder nada.
+    /// </summary>
+    private async Task EnviarContagensAsync()
+    {
+        var pendentes = await contagens.ListarPendentesEnvioAsync();
+        var recusadas = 0;
+        foreach (var lote in pendentes.Chunk(MaximoContagensPorLote))
+        {
+            var dtos = new List<ContagemSyncDto>(lote.Length);
+            foreach (var contagem in lote)
+            {
+                var linhas = await contagens.ListarLinhasParaEnvioAsync(contagem.Id);
+                dtos.Add(new ContagemSyncDto(
+                    contagem.Id,
+                    contagem.UsuarioId,
+                    contagem.IniciadaEm,
+                    contagem.ConcluidaEm,
+                    // RN-ES-06/08: a hora de cada item vai junto (base do saldo dos potes); o servidor a encaixa na contagem
+                    linhas.Select(l => new LinhaContagemSyncDto(l.Id, l.ItemEstoqueId, l.Embalagens, l.QuandoContado)).ToList()));
+            }
+
+            var resposta = await api.EnviarContagensAsync(new SyncContagensRequest(dtos));
+            var porId = resposta.Resultados.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First());
+            foreach (var contagem in lote)
+            {
+                if (!porId.TryGetValue(contagem.Id, out var resultado))
+                {
+                    await contagens.RegistrarFalhaEnvioAsync(contagem.Id, "O servidor não devolveu resultado para esta contagem.");
+                }
+                else if (resultado.Status == StatusSync.Rejeitada)
+                {
+                    await contagens.MarcarRecusadoAsync(contagem.Id, contagem.Versao, resultado.Motivo ?? "Recusada pelo servidor sem motivo.");
+                    recusadas++;
+                }
+                else
+                {
+                    await contagens.MarcarEnviadoAsync(contagem.Id, contagem.Versao); // aceita ou ja_recebida
+                }
+            }
+        }
+
+        if (recusadas > 0)
+        {
+            AvisoRapido.Mostrar("A contagem do freezer foi recusada pelo sistema: veja o motivo na tela Contagem");
+        }
+    }
+
+    /// <summary>
+    /// RN-AV-09 / docs/03 §5: cada aviso pendente vai com o <b>estado atual</b>, em lotes de até 100.
+    /// aceita / ja_recebida → sai da fila (com o Id do servidor, se foi juntado a outro; fechado pela dona → sai da lista);
+    /// rejeitada → motivo guardado e aviso em laranja na tela. Rede/sessão lançam e a fila espera, sem perder nada.
+    /// </summary>
+    private async Task EnviarAvisosAsync(Guid usuarioAtual)
+    {
+        var pendentes = await avisos.ListarPendentesEnvioAsync();
+        var recusados = 0;
+        foreach (var lote in pendentes.Chunk(LimitesSync.MaximoPorLote))
+        {
+            var resposta = await api.EnviarAvisosAsync(new SyncAvisosRequest(lote.Select(a => ParaDto(a, usuarioAtual)).ToList()));
+            var porId = resposta.Resultados.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First());
+            foreach (var aviso in lote)
+            {
+                if (!porId.TryGetValue(aviso.Id, out var resultado))
+                {
+                    await avisos.RegistrarFalhaEnvioAsync(aviso.Id, "O servidor não devolveu resultado para este aviso.");
+                }
+                else if (resultado.Status == StatusSync.Rejeitada)
+                {
+                    await avisos.MarcarRecusadoAsync(aviso.Id, aviso.Versao, resultado.Motivo ?? "Recusado pelo servidor sem motivo.");
+                    recusados++;
+                }
+                else
+                {
+                    await avisos.MarcarEnviadoAsync(aviso.Id, aviso.Versao, resultado.AvisoId, resultado.Aberto ?? true);
+                }
+            }
+        }
+
+        if (recusados > 0)
+        {
+            AvisoRapido.Mostrar($"{recusados} aviso(s) de estoque recusado(s): veja em \"Está acabando\"");
+        }
+    }
+
+    /// <summary>
+    /// Estado atual do aviso. Aviso baixado do servidor não traz o Id de quem criou: vai o atendente do aparelho, que o
+    /// servidor só confere se existe (o autor do aviso de lá não muda).
+    /// </summary>
+    private static AvisoSyncDto ParaDto(AvisoLocal a, Guid usuarioAtual) => new(
+        a.Id,
+        a.ItemEstoqueId,
+        a.TextoLivre,
+        a.QuantidadeAtual,
+        a.Prioridade.ToString(),
+        a.Observacao,
+        a.CriadoPorUsuarioId ?? a.AtualizadoPorUsuarioId ?? usuarioAtual,
+        a.CriadoEm,
+        a.AtualizadoPorUsuarioId,
+        a.AtualizadoEm,
+        a.WhatsAppAbertoEm);
 
     /// <summary><c>true</c> aceito/já recebido, <c>null</c> rejeitado (motivo gravado). Rede/sessão lançam.</summary>
     private async Task<bool?> EnviarCaixaAsync(Caixa caixa, bool comFechamento)
@@ -269,7 +408,8 @@ public sealed class SyncService(ApiCliente api, ComandaRepository comandas, Caix
         var pagamentos = await comandas.ListarPagamentosAsync(c.Id);
         return new ComandaSyncDto(
             c.Id, c.CaixaId, c.UsuarioId, c.Numero, c.Tipo.ToString(), c.Status.ToString(), c.Total, c.CriadaEm,
-            itens.Select(i => new ItemComandaSyncDto(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.Subtotal)).ToList(),
+            // RN-ES-09: o sabor do pote vai na linha; a comanda fechada baixa o saldo dele no servidor
+            itens.Select(i => new ItemComandaSyncDto(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.Subtotal, i.ItemEstoqueId)).ToList(),
             pagamentos.Select(p => new PagamentoSyncDto(p.Id, p.Forma.ToString(), p.Valor, p.ValorRecebido, p.Troco)).ToList(),
             c.Observacao, c.FechadaEm, c.CanceladaEm, c.MotivoCancelamento);
     }

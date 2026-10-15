@@ -92,6 +92,51 @@
                     BackgroundColor="#B71C1C" TextColor="White" CornerRadius="12" Margin="0,8,0,16"
                     Command="{Binding FecharCaixaCommand}" />
 
+            <!-- RN-ES-05: contagem semanal do freezer; no dia dela (véspera do pedido) o cartão fica em destaque -->
+            <Border Padding="14" StrokeShape="RoundRectangle 12" Stroke="#E0E0E0" BackgroundColor="White">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding LembreteContagem}" Value="True">
+                        <Setter Property="Stroke" Value="#4527A0" />
+                        <Setter Property="StrokeThickness" Value="2" />
+                        <Setter Property="BackgroundColor" Value="#EDE7F6" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Contagem semanal do freezer" FontSize="16" FontAttributes="Bold" TextColor="#212121" />
+                    <Label Text="{Binding TextoContagem}" FontSize="14" TextColor="#424242">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding LembreteContagem}" Value="True">
+                                <Setter Property="TextColor" Value="#4527A0" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Button Text="📋  Abrir a contagem" FontSize="16" FontAttributes="Bold" HeightRequest="56"
+                            BackgroundColor="#4527A0" TextColor="White" CornerRadius="10"
+                            Command="{Binding ContagemCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- RN-AV-07: resumo do dia para o WhatsApp da dona — oferecido ao fechar o caixa; aqui a qualquer hora -->
+            <Border Padding="14" StrokeShape="RoundRectangle 12" Stroke="#E0E0E0" BackgroundColor="White" Margin="0,0,0,16">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding ResumoPendente}" Value="True">
+                        <Setter Property="Stroke" Value="#E65100" />
+                        <Setter Property="BackgroundColor" Value="#FFF3E0" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Resumo do dia para a dona" FontSize="16" FontAttributes="Bold" TextColor="#212121" />
+                    <Label Text="⚠ O resumo de hoje ainda não foi enviado." IsVisible="{Binding ResumoPendente}" FontSize="14" FontAttributes="Bold" TextColor="#BF360C" />
+                    <Label Text="O que está acabando e o total vendido hoje, pronto para mandar no WhatsApp." FontSize="13" TextColor="#616161" />
+                    <Label Text="{Binding MensagemResumo}" IsVisible="{Binding TemMensagemResumo}" FontSize="13" TextColor="#5D4037" />
+                    <Button Text="📲  Enviar resumo do dia" FontSize="16" FontAttributes="Bold" HeightRequest="56"
+                            BackgroundColor="#128C7E" TextColor="White" CornerRadius="10"
+                            IsEnabled="{Binding PodeEnviarResumo}"
+                            Command="{Binding EnviarResumoCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

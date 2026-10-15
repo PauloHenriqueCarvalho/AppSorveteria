@@ -63,6 +63,9 @@ const FORMAS: Record<string, string> = {
   CartaoCredito: 'Cartão de crédito',
 }
 
+/** As formas aceitas pela API, na ordem do app. */
+export const FORMAS_DE_PAGAMENTO = Object.keys(FORMAS)
+
 /** "CartaoDebito" → "Cartão de débito". Desconhecida aparece como veio. */
 export function nomeDaForma(forma: string): string {
   return FORMAS[forma] ?? forma

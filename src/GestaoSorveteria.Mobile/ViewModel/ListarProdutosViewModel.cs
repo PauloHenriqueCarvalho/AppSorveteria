@@ -17,17 +17,22 @@ public class ListarProdutosViewModel : BindableObject
     private readonly ProdutoRepository _produtos;
     private readonly CatalogoService _catalogo;
     private readonly SessaoUsuario _sessao;
+    private readonly ItemEstoqueRepository _itensEstoque;
+    private readonly EstoqueService _estoque;
 
     private bool _ocupado;
     private string _mensagem = string.Empty;
     private string _ultimaAtualizacao = string.Empty;
     private bool _semProdutos;
 
-    public ListarProdutosViewModel(ProdutoRepository produtos, CatalogoService catalogo, SessaoUsuario sessao)
+    public ListarProdutosViewModel(
+        ProdutoRepository produtos, CatalogoService catalogo, SessaoUsuario sessao, ItemEstoqueRepository itensEstoque, EstoqueService estoque)
     {
         _produtos = produtos;
         _catalogo = catalogo;
         _sessao = sessao;
+        _itensEstoque = itensEstoque;
+        _estoque = estoque;
         // Sem canExecute: o RefreshView espelha CanExecute em IsEnabled e derrubaria IsRefreshing no meio; o botão usa Livre
         AtualizarCommand = new Command(async () => await AtualizarAsync());
     }
@@ -77,6 +82,15 @@ public class ListarProdutosViewModel : BindableObject
         await Operacao.CarregarAsync(async () =>
         {
             var lista = await _produtos.ListarAtivosAsync();
+
+            // RN-ES-09: mostra quais produtos pedem o sabor na venda (potes), pelo modo do grupo que o tablet conhece
+            var modos = await _itensEstoque.ModosDosGruposAsync();
+            foreach (var produto in lista)
+            {
+                produto.PedeSaborNaVenda = produto.PedeSaborNoModo(
+                    produto.GrupoEstoqueId is { } grupoId && modos.TryGetValue(grupoId, out var modo) ? modo : null);
+            }
+
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 Produtos.Clear();
@@ -121,6 +135,18 @@ public class ListarProdutosViewModel : BindableObject
         {
             var quantidade = await _catalogo.AtualizarAsync();
             Mensagem = quantidade == 0 ? "O catálogo já estava em dia." : $"{quantidade} produto(s) atualizado(s).";
+
+            // RN-ES-09: os sabores dos potes vêm da lista do estoque; baixa junto para o pote recém-ligado já pedir o sabor.
+            // Se falhar, os produtos já estão gravados e a venda segue (o pote vende sem sabor até a lista chegar).
+            try
+            {
+                await _estoque.AtualizarAsync();
+            }
+            catch (ApiException ex) when (ex is not SessaoExpiradaException)
+            {
+                Mensagem += $" Sabores dos potes não atualizados: {ex.Message}";
+            }
+
             await CarregarProdutos();
         }
         catch (SessaoExpiradaException ex)

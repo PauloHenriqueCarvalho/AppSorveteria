@@ -44,11 +44,20 @@ internal sealed class ComandasEmMemoria : IComandaRepository
         Task.FromResult<IReadOnlyList<Comanda>>(
             Comandas.Where(c => c.ContaNoCaixa && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
 
+    public Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        ListarFechadasAsync(deUtc, ateUtc, cancellationToken);
+
+    public Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<VendaFechada>>(Comandas
+            .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .Select(c => new VendaFechada(c.FechadaEm!.Value, c.Total))
+            .ToList());
+
     public Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
-        DateTime deUtc, DateTime ateUtc, StatusComanda? status, int pular, int quantidade, CancellationToken cancellationToken = default)
+        DateTime deUtc, DateTime ateUtc, FiltroVendas filtro, int pular, int quantidade, CancellationToken cancellationToken = default)
     {
         var filtradas = Comandas
-            .Where(c => DataDaVenda(c) >= deUtc && DataDaVenda(c) < ateUtc && (status is null || c.Status == status))
+            .Where(c => DataDaVenda(c) >= deUtc && DataDaVenda(c) < ateUtc && FiltroVendasFake.Passa(filtro, c))
             .OrderByDescending(DataDaVenda)
             .ThenByDescending(c => c.Numero)
             .ToList();
@@ -77,4 +86,12 @@ internal sealed class ComandasEmMemoria : IComandaRepository
         Comandas.Add(comanda);
         return Task.CompletedTask;
     }
+}
+
+internal static class FiltroVendasFake
+{
+    public static bool Passa(FiltroVendas filtro, Comanda c) =>
+        (filtro.Status is null || c.Status == filtro.Status)
+        && (filtro.UsuarioId is null || c.UsuarioId == filtro.UsuarioId)
+        && (filtro.Forma is null || c.Pagamentos.Any(p => p.Forma == filtro.Forma));
 }

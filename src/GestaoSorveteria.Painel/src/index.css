@@ -451,6 +451,7 @@ textarea {
 }
 
 .campo-inline input,
+.campo-inline select,
 .data-compacta {
   min-height: 40px;
   padding: 0 0.6rem;
@@ -839,6 +840,28 @@ textarea {
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
+/* Relatório de período: até 93 colunas — as barras se ajustam à largura e a dica abre para dentro do gráfico. */
+.grafico-trechos .grafico-par {
+  width: 84%;
+  justify-content: center;
+}
+
+.grafico-trechos .grafico-barra {
+  flex: 1 1 0;
+  width: auto;
+  max-width: 14px;
+}
+
+.grafico-trechos .grafico-dica {
+  left: 0;
+  transform: none;
+}
+
+.grafico-trechos .grafico-dica-esquerda {
+  left: auto;
+  right: 0;
+}
+
 .grafico-dica span {
   display: inline-flex;
   align-items: center;
@@ -933,6 +956,12 @@ textarea {
 .secao-tabela .tabela-caixa {
   margin: 0;
   border-top: 0;
+}
+
+/* Tabela com título dentro do bloco (Pedidos, itens do rascunho): o cabeçalho mantém o respiro do bloco. */
+.secao-tabela > .secao-cabecalho {
+  margin: 0;
+  padding: 1.1rem 1.25rem 0.85rem;
 }
 
 .rodape-tabela {
@@ -1404,6 +1433,366 @@ a.lista-item:hover {
 
 /* ---------------------------------------------------------------- telas médias */
 
+/* ---------------------------------------------------------------- estoque e fornecedores (Fase 2) */
+
+.voltar {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.voltar a {
+  color: var(--cor-texto-suave);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.voltar a:hover {
+  color: var(--cor-marca);
+}
+
+/* Estado vazio com chamada para a primeira ação. */
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--cor-texto-suave);
+}
+
+.vazio h2 {
+  margin: 0.25rem 0 0;
+  color: var(--cor-texto);
+}
+
+.vazio p {
+  max-width: 34rem;
+  margin: 0 0 0.5rem;
+}
+
+/* Linha que abre cada grupo na tabela do catálogo (como as seções da planilha). */
+.tabela .linha-grupo th {
+  padding: 0.55rem 1.25rem;
+  background: var(--cor-marca-clara);
+  border-top: 1px solid var(--cor-borda);
+  color: var(--cor-texto);
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tabela tbody:first-of-type .linha-grupo th {
+  border-top: 0;
+}
+
+.linha-grupo-conteudo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  font-weight: 400;
+}
+
+.linha-grupo-editar {
+  margin-left: auto;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cor-marca-forte);
+}
+
+/* Formulário em duas colunas no computador, uma no celular. */
+.grade-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.rodape-formulario {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin: 0.25rem -1.25rem -1.1rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--cor-cabecalho-tabela);
+  border-top: 1px solid var(--cor-borda);
+  border-radius: 0 0 var(--raio) var(--raio);
+}
+
+/* Escolha com explicação (modo de controle do grupo). */
+.opcoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.opcao input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--cor-marca);
+}
+
+.opcao .bloco {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.opcao-ativa {
+  border-color: var(--cor-marca);
+  background: var(--cor-marca-clara);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chips .aba {
+  min-width: 52px;
+}
+
+/* Input de arquivo escondido dentro de um botão (o rótulo é o botão). */
+.escondido {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.botao:has(.escondido:focus-visible) {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: 2px;
+}
+
+.rodape-acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.rodape-acao p {
+  margin: 0;
+}
+
+.rodape-acao .alerta {
+  flex-basis: 100%;
+}
+
+/* Blocos empilhados direto na página (formulário + desativar, passos da importação) ganham respiro. */
+.conteudo > .secao + .secao,
+.conteudo > .secao + .grade-indicadores,
+.conteudo > .grade-indicadores + .secao,
+.conteudo > .secao + .alerta,
+.conteudo > .alerta + .secao {
+  margin-top: 1rem;
+}
+
+.tabela .linha-grupo .selo {
+  background: var(--cor-cartao);
+}
+
+.filtros .campo-inline {
+  flex: 1 1 140px;
+  max-width: 240px;
+}
+
+.filtros .campo-inline select {
+  width: 100%;
+}
+
+/* Ficha de informações (rótulo à esquerda, valor ao lado), como no detalhe do aviso. */
+.ficha {
+  display: grid;
+  grid-template-columns: minmax(110px, 160px) 1fr;
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+
+.ficha-linha {
+  display: contents;
+}
+
+.ficha dt {
+  color: var(--cor-texto-suave);
+}
+
+.ficha dd {
+  margin: 0;
+}
+
+.texto-ruim {
+  color: var(--cor-ruim);
+}
+
+.sem-quebra {
+  white-space: nowrap;
+}
+
+.acoes + .dica {
+  display: block;
+  margin: 0.75rem 0 0;
+}
+
+.campo-com-botao {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.campo-com-botao input {
+  flex: 1;
+  min-width: 0;
+}
+
+.formulario > h2 {
+  margin: 0;
+}
+
+.formulario > h2 + .suave {
+  margin: -0.6rem 0 0;
+}
+
+.mensagem-whatsapp {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--raio-pequeno);
+  background: #e7f8e9;
+  border: 1px solid #c7ebcc;
+  color: var(--cor-texto);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Contador ao lado do item do menu (avisos abertos). */
+.lateral-contador {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--cor-lateral-ativo);
+  color: var(--cor-lateral-texto);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.lateral-contador-urgente {
+  background: var(--cor-ruim);
+  color: #fff;
+}
+
+.barra-item {
+  position: relative;
+}
+
+.barra-contador {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--cor-ruim);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+.so-estreito {
+  display: none;
+}
+
+/* Campo da contagem com − e + (meia caixa por toque). */
+.contador-campo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.contador-campo .botao {
+  min-height: 38px;
+  min-width: 38px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+.contador-campo input {
+  width: 4.5rem;
+  min-height: 38px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+  font-weight: 700;
+  text-align: center;
+}
+
+.contador-campo input:focus {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: 1px;
+}
+
+.tabela-contagem td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+/* Linha de botões que não estica (estado vazio, importação). */
+.acoes-inicio {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.acoes-inicio .botao {
+  flex: 0 0 auto;
+}
+
+.vazio .acoes-inicio {
+  justify-content: center;
+}
+
+code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: var(--cor-linha);
+  font-size: 0.85em;
+}
+
+@media (max-width: 760px) {
+  .grade-campos,
+  .opcoes {
+    grid-template-columns: 1fr;
+  }
+
+  .linha-grupo-editar {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 1180px) {
   .grade-indicadores {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1542,6 +1931,11 @@ a.lista-item:hover {
   .so-largo {
     display: none;
   }
+
+  /* O que a coluna escondida mostrava, embaixo do nome (ex.: contagem anterior). */
+  .so-estreito {
+    display: inline;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1552,6 +1946,371 @@ a.lista-item:hover {
 
   .lateral {
     transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- pedidos aos fornecedores (Fase 2) */
+
+.grade-fornecedores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cartao-fornecedor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.cartao-fornecedor .secao-cabecalho {
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.cartao-fornecedor .lista-simples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cartao-fornecedor .acoes {
+  margin-top: auto;
+}
+
+.link-discreto {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link-discreto:hover {
+  text-decoration: underline;
+}
+
+.botao-pequeno {
+  min-height: 32px;
+  padding: 0 0.7rem;
+  font-size: 0.85rem;
+}
+
+.botao-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cor-marca);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.links-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.5rem;
+}
+
+.botao-link:disabled {
+  color: var(--cor-texto-suave);
+  cursor: default;
+}
+
+.grade-indicadores-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Barra de ações que acompanha a rolagem nas listas compridas (rascunho, conferência). */
+.rodape-fixo {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 5;
+  box-shadow: 0 6px 24px rgb(19 32 44 / 0.14);
+}
+
+.tabela-pedido td .selo {
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}
+
+.linha-apagada td {
+  color: var(--cor-texto-suave);
+}
+
+.linha-apagada td strong {
+  font-weight: 600;
+}
+
+.linha-destaque td {
+  background: #fffaf2;
+}
+
+.contador-campo input.campo-mudou {
+  border-color: var(--cor-marca);
+  background: var(--cor-marca-clara);
+}
+
+.campo-tabela {
+  width: 7.5rem;
+  min-height: 38px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+}
+
+.campo-preco {
+  margin-top: 0.4rem;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.campo-preco input {
+  width: 8rem;
+  min-height: 34px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+}
+
+.tabela-pedido .campo-marcar {
+  margin-top: 0.35rem;
+}
+
+.linha-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0;
+}
+
+.subtitulo {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.lista-faltas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-faltas li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--cor-linha);
+}
+
+.valor-negativo {
+  color: var(--cor-ruim);
+  font-weight: 700;
+}
+
+/* Folha impressa do pedido (RN-PF-07): A4, letra grande, para preencher à mão na entrega. */
+.folha-pagina {
+  min-height: 100vh;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--cor-fundo);
+}
+
+.folha-barra {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 210mm;
+  margin: 0 auto 1rem;
+}
+
+.folha {
+  position: relative;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 14mm 14mm 12mm;
+  background: #fff;
+  border: 1px solid var(--cor-borda);
+  box-shadow: 0 4px 18px rgb(19 32 44 / 0.08);
+  color: #000;
+  font-size: 15px;
+}
+
+.folha-rascunho {
+  margin: 0 0 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border: 2px dashed #000;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.folha-cabecalho {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 3px solid #000;
+}
+
+.folha-cabecalho h1 {
+  margin: 0;
+  font-size: 1.6em;
+}
+
+.folha-cabecalho p {
+  margin: 0.15rem 0 0;
+  font-size: 1.1em;
+}
+
+.folha-dados {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  text-align: right;
+}
+
+.folha-dados div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.folha-dados dt {
+  font-weight: 400;
+}
+
+.folha-dados dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.folha-tabela {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 1em;
+}
+
+.folha-col-sabor {
+  width: 42%;
+}
+
+.folha-col-pedido,
+.folha-col-veio {
+  width: 16%;
+}
+
+.folha-tabela th,
+.folha-tabela td {
+  height: 2.1rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #000;
+  text-align: left;
+}
+
+.folha-tabela thead th {
+  background: #e9e9e9;
+  font-size: 0.95em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.folha-grupo th {
+  padding-top: 0.6rem;
+  background: #f4f4f4;
+  font-size: 1em;
+}
+
+.folha-quantidade {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.folha-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  margin-top: 1.25rem;
+  font-size: 1.05em;
+}
+
+.folha-rodape p {
+  margin: 0;
+}
+
+.folha-assinatura span {
+  display: inline-block;
+  width: 14rem;
+  margin: 0 1rem 0 0.35rem;
+  border-bottom: 1px solid #000;
+}
+
+.folha-assinatura .folha-curto {
+  width: 6rem;
+}
+
+@media (max-width: 760px) {
+  .grade-indicadores-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .rodape-fixo {
+    bottom: calc(var(--altura-barra-celular) + env(safe-area-inset-bottom, 0px) + 0.5rem);
+    padding: 0.75rem;
+  }
+
+  /* No celular a barra fica só com os botões, para não cobrir a lista. */
+  .rodape-fixo > p.suave {
+    display: none;
+  }
+
+  .rodape-fixo .pagina-acoes {
+    flex-wrap: nowrap;
+  }
+
+  .bloco.so-estreito {
+    display: block;
+  }
+
+  .campo-preco.so-estreito {
+    display: flex;
+  }
+
+  .folha {
+    padding: 1rem;
+    font-size: 13px;
+  }
+
+  .folha-cabecalho {
+    grid-template-columns: 1fr;
+  }
+
+  .folha-cabecalho img {
+    display: none;
+  }
+
+  .folha-dados {
+    text-align: left;
+  }
+
+  .folha-dados div {
+    justify-content: flex-start;
   }
 }
 
@@ -1639,4 +2398,47 @@ a.lista-item:hover {
     color: inherit;
     text-decoration: none;
   }
+
+  /* Folha do pedido: ocupa a página inteira, sem moldura, letra grande. */
+  .folha-pagina {
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .folha {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    font-size: 14pt;
+  }
+
+
+  .folha-tabela tr {
+    break-inside: avoid;
+  }
+
+  .folha-tabela thead {
+    display: table-header-group;
+  }
+}
+
+/* ---------------------------------------------------------------- relatórios */
+
+.coluna-secoes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.abas-pequenas .aba {
+  min-height: 32px;
+  padding: 0 0.7rem;
+  font-size: 0.8rem;
+}
+
+.secao-tabela > p {
+  padding: 0 1.25rem 1rem;
 }

@@ -26,6 +26,7 @@ public class DetalhesComandaViewModel : BindableObject
 
     public ICommand AumentarQuantidadeCommand { get; }
     public ICommand DiminuirQuantidadeCommand { get; }
+    public ICommand DigitarQuantidadeCommand { get; }
     public ObservableCollection<ItemComanda> Itens { get; set; } = new();
     public ICommand RemoverItemCommand { get; }
     public ICommand EditarNomeCommand { get; }
@@ -43,6 +44,7 @@ public class DetalhesComandaViewModel : BindableObject
         EditarObservacaoCommand = new Command(async () => await EditarObservacao());
         AumentarQuantidadeCommand = new Command<ItemComanda>(async (item) => await AlterarQuantidade(item, item.Quantidade + 1));
         DiminuirQuantidadeCommand = new Command<ItemComanda>(async (item) => await DiminuirQuantidade(item));
+        DigitarQuantidadeCommand = new Command<ItemComanda>(async (item) => await DigitarQuantidade(item));
         FinalizarComandaCommand = new Command(async () => await FinalizarComanda());
         CancelarComandaCommand = new Command(async () => await CancelarComanda());
     }
@@ -64,6 +66,15 @@ public class DetalhesComandaViewModel : BindableObject
         if (confirmar)
         {
             await Executar(() => _comandas.RemoverItemAsync(item.ComandaId, item.Id));
+        }
+    }
+
+    /// <summary>RN-ES-04: quantidade digitada no teclado numérico, gravada pelo Domain (total recalculado).</summary>
+    private async Task DigitarQuantidade(ItemComanda item)
+    {
+        if (await PedirQuantidade.PerguntarAsync(item.Descricao, item.Quantidade) is { } digitada && digitada != item.Quantidade)
+        {
+            await AlterarQuantidade(item, digitada);
         }
     }
 

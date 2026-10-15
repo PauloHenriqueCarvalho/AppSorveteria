@@ -17,9 +17,16 @@ public class ItemComanda
     [Column("produto_id")]
     public Guid? ProdutoId { get; set; }
 
-    /// <summary>Nome do produto no momento da venda ou texto livre (RN-PR-04).</summary>
+    /// <summary>Nome do produto no momento da venda ou texto livre (RN-PR-04). Pote com sabor: "Pote 1L · Flocos" (Domain).</summary>
     [Column("descricao")]
     public string Descricao { get; set; } = string.Empty;
+
+    /// <summary>
+    /// RN-ES-09: sabor do pote (item do catálogo de estoque de um grupo <c>SaldoPelaVenda</c>); cada sabor é uma linha.
+    /// Nulo no resto (picolé, massa, item livre) e nas linhas gravadas antes da Sprint 7.
+    /// </summary>
+    [Column("item_estoque_id")]
+    public Guid? ItemEstoqueId { get; set; }
 
     [Column("quantidade")]
     public int Quantidade { get; set; } = 1;

@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { CHAVE_AVISOS, listarAvisos } from '../api/avisos.ts'
 import { formatarDiaPorExtenso, hojeNaLoja, iniciais } from '../formatacao.ts'
 import { LOGO_LOJA, NOME_LOJA, SUBTITULO_LOJA } from '../marca.ts'
 import { useSessao } from '../sessao/contexto.ts'
@@ -11,9 +13,11 @@ interface ItemMenu {
   icone: NomeIcone
   /** Aparece na barra de baixo do celular. */
   noCelular?: boolean
+  /** Mostra quantos avisos estão abertos (vermelho se algum for urgente). */
+  contaAvisos?: boolean
 }
 
-// Menu agrupado como num ERP. Cada tela nova do painel entra no grupo dela (Fase 2: "Estoque e compras").
+// Menu agrupado como num ERP. Cada tela nova do painel entra no grupo dela.
 const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   {
     titulo: 'Operação',
@@ -24,10 +28,26 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     ],
   },
   {
+    titulo: 'Análise',
+    itens: [{ para: '/relatorios', texto: 'Relatórios', icone: 'relatorios' }],
+  },
+  {
+    titulo: 'Estoque e compras',
+    itens: [
+      { para: '/avisos', texto: 'Avisos', icone: 'avisos', noCelular: true, contaAvisos: true },
+      { para: '/contagens', texto: 'Contagem', icone: 'contagem' },
+      { para: '/pedidos', texto: 'Pedidos', icone: 'pedidos' },
+      { para: '/potes', texto: 'Potes', icone: 'potes' },
+      { para: '/estoque', texto: 'Catálogo', icone: 'estoque' },
+      { para: '/fornecedores', texto: 'Fornecedores', icone: 'fornecedor' },
+    ],
+  },
+  {
     titulo: 'Cadastros',
     itens: [
-      { para: '/produtos', texto: 'Produtos', icone: 'produtos', noCelular: true },
+      { para: '/produtos', texto: 'Produtos', icone: 'produtos' },
       { para: '/usuarios', texto: 'Usuários', icone: 'usuarios' },
+      { para: '/configuracoes', texto: 'Configurações', icone: 'configuracao' },
     ],
   },
 ]
@@ -42,6 +62,23 @@ function itemAtual(caminho: string) {
   )
 }
 
+/** Último pedaço da trilha: "/estoque/itens/novo" → "Novo"; "/estoque/importar" → "Importar"; resto → "Detalhe". */
+function nomeDoDetalhe(caminho: string): string {
+  if (caminho.endsWith('/novo')) {
+    return 'Novo'
+  }
+  if (caminho.endsWith('/importar')) {
+    return 'Importar'
+  }
+  if (caminho.endsWith('/resumo')) {
+    return 'Resumo do dia'
+  }
+  if (caminho.endsWith('/conferir')) {
+    return 'Conferir entrega'
+  }
+  return 'Detalhe'
+}
+
 export default function Layout() {
   const { usuario, sair } = useSessao()
   const { pathname } = useLocation()
@@ -52,6 +89,14 @@ export default function Layout() {
   const fecharMenu = () => setMenuAbertoEm(null)
   const atual = itemAtual(pathname)
   const emDetalhe = atual !== null && pathname !== atual.para
+  // Mesma consulta da tela de avisos (cache compartilhado); atualiza sozinha a cada 2 minutos.
+  const avisos = useQuery({
+    queryKey: [...CHAVE_AVISOS, 'abertos'],
+    queryFn: () => listarAvisos(false),
+    refetchInterval: 120_000,
+  })
+  const abertos = avisos.data?.length ?? 0
+  const urgentes = avisos.data?.filter((a) => a.prioridade === 'Urgente').length ?? 0
 
   // Ao navegar, a página volta ao topo.
   useEffect(() => {
@@ -80,6 +125,14 @@ export default function Layout() {
                 <NavLink key={item.para} to={item.para} end={item.para === '/'} className="lateral-item">
                   <Icone nome={item.icone} />
                   {item.texto}
+                  {item.contaAvisos && abertos > 0 && (
+                    <span
+                      className={urgentes > 0 ? 'lateral-contador lateral-contador-urgente' : 'lateral-contador'}
+                      title={`${abertos} ${abertos === 1 ? 'aviso aberto' : 'avisos abertos'}${urgentes > 0 ? `, ${urgentes} urgente${urgentes === 1 ? '' : 's'}` : ''}`}
+                    >
+                      {abertos}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -118,7 +171,7 @@ export default function Layout() {
                 {emDetalhe && (
                   <>
                     <span aria-hidden="true">/</span>
-                    <strong>Detalhe</strong>
+                    <strong>{nomeDoDetalhe(pathname)}</strong>
                   </>
                 )}
               </>
@@ -154,6 +207,11 @@ export default function Layout() {
           <NavLink key={item.para} to={item.para} end={item.para === '/'} className="barra-item">
             <Icone nome={item.icone} tamanho={20} />
             {item.texto}
+            {item.contaAvisos && urgentes > 0 && (
+              <span className="barra-contador" aria-label={`${urgentes} urgentes`}>
+                {urgentes}
+              </span>
+            )}
           </NavLink>
         ))}
         <button type="button" className="barra-item" aria-expanded={menuAberto} onClick={abrirMenu}>

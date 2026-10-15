@@ -220,29 +220,34 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 Desenho em docs/10 (revisto em 14/10); regras RN-ES / RN-AV / RN-PF / RN-RC em docs/02, seção 6. Mesmas convenções da Fase 1 (uuid gerado no cliente/domínio, `numeric(12,2)` para dinheiro, `timestamptz`, enums como texto, nada apagado).
 
 ```
-configuracoes_loja  (id, whatsapp_dona varchar(20), nome_loja)          -- 1 linha
+configuracao_loja   (id fixo, nome_loja varchar(60), whatsapp_dona varchar(13)?, atualizado_em)  -- 1 linha
 
-fornecedores        (id, nome, whatsapp?, dias_pedido varchar(30) -- "Seg",
+fornecedores        (id, nome, nome_normalizado, whatsapp varchar(13)?, dias_pedido text[] -- {"Monday","Thursday"},
                      prazo_entrega_dias int, aceita_meia_caixa bool,
                      envio varchar(20) -- Impresso | WhatsApp | Ambos, mostrar_precos bool, ativo)
+                                                     -- único (nome_normalizado)
 
-grupos_estoque      (id, nome, modo_controle varchar(20) -- Contagem | SaldoPelaVenda | SoAviso, ordem)
+grupos_estoque      (id, nome, nome_normalizado, modo_controle varchar(20) -- Contagem | SaldoPelaVenda | SoAviso, ordem)
+                                                     -- único (nome_normalizado)
 
 itens_estoque       (id, grupo_id FK, fornecedor_id FK, nome varchar(80),
                      unidade_compra varchar(10) -- Caixa | Balde | Unidade | Pacote,
                      unidades_por_embalagem int ≥ 1, custo_embalagem numeric(12,2),
-                     estoque_alvo_embalagens numeric(6,1)?, minimo_unidades int?, ordem, ativo,
-                     saldo_unidades int?            -- só SaldoPelaVenda; cache do Σ movimentos
-                    )                                -- único (grupo_id, lower(nome))
+                     estoque_alvo_embalagens numeric(6,1)?, minimo_unidades int?, ordem, ativo)
+                                                     -- único (grupo_id, nome_normalizado)
 
-movimentos_estoque  (id, item_estoque_id FK, tipo varchar(20), quantidade_unidades int,
-                     comanda_id?, item_comanda_id?, pedido_id?, contagem_id?, usuario_id, em, motivo?)
-                     tipo: Entrada | BaixaVenda | EstornoVenda | AjusteContagem
-                     -- só para grupos SaldoPelaVenda; único (item_comanda_id, tipo)
+movimentos_estoque  (id, item_estoque_id FK, tipo varchar(15) -- Entrada | BaixaVenda | EstornoVenda,
+                     unidades int > 0, em, registrado_em, pedido_id FK?, comanda_id FK?, item_comanda_id FK?)
+                     -- só grupos SaldoPelaVenda (potes); nunca apagado. em = quando aconteceu na loja (entrega chegou,
+                     -- venda fechada; o estorno repete o em da venda); registrado_em = quando o servidor gravou.
+                     -- único (tipo, item_comanda_id) e (tipo, pedido_id, item_estoque_id): a sincronização repetida não baixa duas vezes
+                     -- saldo (RN-ES-08) = contado na última contagem + Σ movimentos com em depois da hora em que o item foi contado
 
 contagens           (id, usuario_id, iniciada_em, concluida_em?, origem varchar(10) -- App | Painel)
 itens_contagem      (id, contagem_id FK, item_estoque_id FK, contado_unidades int?,  -- null = não contado
-                     saldo_sistema_unidades int?)  -- potes: para mostrar a diferença
+                     saldo_sistema_unidades int?,  -- reservado: o saldo esperado é calculado na leitura (RN-ES-08)
+                     contado_em timestamptz?)      -- quando o item foi contado (base do saldo); null = vale concluida_em
+                                                   -- único (contagem_id, item_estoque_id)
 
 avisos              (id, item_estoque_id?, texto_livre varchar(120)?, quantidade_atual int,
                      prioridade varchar(10) -- Urgente | Alta | Media, observacao?,
@@ -253,7 +258,8 @@ avisos              (id, item_estoque_id?, texto_livre varchar(120)?, quantidade
                      -- índice único parcial: 1 Aberto por item_estoque_id
 
 pedidos_fornecedor  (id, fornecedor_id FK, numero int, status varchar(15), criado_em, enviado_em?,
-                     recebido_em?, cancelado_em?, motivo_cancelamento?, total_pedido numeric(12,2),
+                     recebido_em?  -- conferência no sistema, chegou_em?  -- quando a entrega chegou (conta para o estoque),
+                     cancelado_em?, motivo_cancelamento?, total_pedido numeric(12,2),
                      total_recebido numeric(12,2)?, percentual_atendido numeric(5,2)?, usuario_id)
                      -- índice único parcial: 1 Rascunho por fornecedor
 
@@ -262,31 +268,44 @@ itens_pedido_fornecedor (id, pedido_id FK, item_estoque_id FK, sugerido_embalage
                      custo_embalagem numeric(12,2), alterado_pela_dona bool, origem varchar(20)
                      -- Sugestao | Aviso | FaltouAnterior, pedir_de_novo bool, nao_pedido bool)
 
-produtos            + grupo_estoque_id uuid null, + unidades_por_venda int default 1
-                    + custo_manual numeric(12,2) null    -- Fase 3
-itens_comanda       + item_estoque_id uuid null           -- sabor do pote (RN-ES-09)
+produtos            + grupo_estoque_id FK uuid null, + unidades_por_venda int default 1   -- RN-PR-06 (Sprint 7)
+produtos            + custo_informado numeric(12,2) null                                  -- RN-PR-07 (Sprint 9)
+itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-ES-09); só em item de produto
 ```
 
 **Sincronização (local-first):**
 - Comanda: `ItemComandaSyncDto` ganha `ItemEstoqueId` **opcional** (só potes). App antigo continua aceito; a baixa sai no servidor ao gravar a comanda fechada, na mesma transação.
-- Novo `POST /api/sync/estoque`: lote de **contagens** e **avisos** criados/atualizados no tablet, idempotente pelo `Id` (`aceita` / `ja_recebida` / `rejeitada`).
-- O app baixa grupos, itens (sabores e insumos) e avisos abertos junto com o catálogo: `GET /api/estoque/itens?desde=`, `GET /api/avisos?abertos=true`.
-- O WhatsApp sai do aparelho (link `wa.me`), não do servidor. `GET /api/avisos/resumo-do-dia?data=` devolve o texto pronto para o app e o painel.
+- **`POST /api/sync/avisos`**: avisos criados ou atualizados no tablet, cada um com o **estado atual** (não o histórico de toques), idempotente pelo `Id`. Resultado por aviso: `aceita` / `ja_recebida` / `rejeitada` + `avisoId` (o que vale no servidor) + `aberto`.
+  - Item que já tem aviso aberto no servidor (do painel ou de outro aparelho): o do tablet é **juntado** a ele e o app passa a usar o `avisoId` devolvido.
+  - Prioridade fica com a **maior**; quantidade e observação só mudam se a informação for **mais nova** que a do servidor (reenvio fora de ordem não volta a quantidade).
+  - Aviso que a dona (ou a entrega) **fechou**: reenvio sem novidade → `ja_recebida` com `aberto = false` (o app tira da lista); mudança feita no tablet **depois** do fechamento → `rejeitada` com "A dona fechou este aviso às HH:mm. Se ainda está faltando, avise de novo".
+  - Aviso juntado a outro que depois foi fechado: se tudo o que o tablet sabe é anterior ao fechamento, não reabre (`ja_recebida`, `aberto = false`).
+  - Datas além de agora + 10 min são recusadas (relógio do tablet adiantado travaria as atualizações seguintes).
+- **`POST /api/sync/contagens`**: contagem do tablet com **todas as linhas registradas** (embalagens; nulo = não contado), parcial ou concluída (`concluidaEm`), idempotente pelo `Id`. Aberta no servidor recebe as linhas; reenvio igual → `ja_recebida`; mudança numa contagem já concluída → `rejeitada` ("faça uma nova contagem").
+- O app sabe quando lembrar da contagem por `diasDeContagem` em `GET /api/estoque/itens` (véspera do dia de pedido de cada fornecedor com item na contagem).
+- O app baixa grupos e itens **sem custo** em `GET /api/estoque/itens` e os avisos abertos em `GET /api/avisos?abertos=true`; o WhatsApp da dona vem de `GET /api/configuracoes`.
+- O WhatsApp sai do aparelho (link `wa.me`), não do servidor. O texto do urgente é montado no próprio app (`MensagensWhatsApp.Urgente`, no Domain), para sair mesmo sem internet. `GET /api/avisos/resumo-do-dia` devolve o texto do resumo e o link; o app pede **depois de enviar a fila** (o total vendido conta só as vendas que já chegaram). Atendente só pede o de hoje; outros dias, só a dona.
 
 **Endpoints (Admin, painel):**
 
 | Método | Rota | Uso |
 |---|---|---|
-| GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja |
-| GET/POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` | catálogo; `POST /api/estoque/itens/importar` recebe o CSV |
-| GET/POST | `/api/estoque/contagens` | contagem pelo painel; histórico e saída semanal por item |
-| GET/POST/PUT | `/api/avisos` | listar, criar, "ainda falta", fechar com motivo |
+| GET/PUT | `/api/configuracoes` | WhatsApp da dona, nome da loja (GET para todos; PUT só Admin) |
+| GET/POST | `/api/avisos`, `/api/avisos/{id}/ainda-falta`, `/{id}/whatsapp-aberto` | listar e criar avisos, "ainda falta" (atendente e dona) |
+| POST | `/api/avisos/{id}/fechar` | fechar com motivo (só Admin) |
+| GET | `/api/avisos/resumo-do-dia?data=` | texto e link do resumo (RN-AV-07) |
+| GET | `/api/estoque/catalogo` | fornecedores, grupos e itens (com custo) para o painel |
+| POST/PUT | `/api/fornecedores`, `/api/estoque/grupos`, `/api/estoque/itens` (+ `/{id}/ativar`, `/{id}/desativar`) | catálogo (RN-ES-01/02/11, RN-PF-01/09) |
+| POST | `/api/estoque/itens/importar` | CSV da planilha; `simular: true` devolve a prévia sem gravar (RN-ES-10) |
+| GET | `/api/estoque/saldos` | saldo de cada pote (grupos `SaldoPelaVenda`): última contagem + entregas − vendas depois dela, mínimo, vendidos na semana (RN-ES-08) |
+| GET/POST | `/api/estoque/contagens`, `/api/estoque/contagens/nova`, `/{id}` | contagem pelo painel (rascunho e concluir), histórico; a contagem anterior vem como referência (só Admin) |
 | POST | `/api/pedidos-fornecedor/montar?fornecedorId=` | monta/atualiza o rascunho |
 | PUT | `/api/pedidos-fornecedor/{id}/itens` | +/− nas linhas |
 | POST | `/api/pedidos-fornecedor/{id}/enviar` | confirma; devolve texto do WhatsApp |
-| GET | `/api/pedidos-fornecedor/{id}/folha` | dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
+| GET | `/api/pedidos-fornecedor?fornecedorId=`, `/api/pedidos-fornecedor/{id}` | lista (90 dias + não recebidos) e o pedido completo — também os dados da folha impressa (o painel renderiza e chama a impressão do navegador) |
 | POST | `/api/pedidos-fornecedor/{id}/receber` | conferência; diferenças e texto para o fornecedor |
 | POST | `/api/pedidos-fornecedor/{id}/cancelar` | com motivo |
+| GET | `/api/pedidos-fornecedor/{id}/mensagens` | WhatsApp para reabrir: o pedido (fornecedor que recebe por WhatsApp) e o que veio diferente na entrega |
 | GET | `/api/fornecedores/{id}/historico` | % atendido, itens que mais faltam |
 
 **Montagem automática do rascunho:** o painel chama `montar` ao abrir no dia do pedido (idempotente); um `BackgroundService` faz o mesmo quando a API estiver acordada. Não depende de agendador pago.
@@ -303,6 +322,9 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | GET | `/api/produtos/{id}` | qualquer | um produto (tela de edição do painel) |
 | POST/PUT | `/api/produtos`, `/api/produtos/{id}` | Admin | cadastro pelo painel (`SalvarProdutoRequest`); nome repetido → 400 (RN-PR-01); POST devolve 201 |
 | POST | `/api/produtos/{id}/ativar` · `/desativar` | Admin | nunca apaga (RN-PR-03); devolve o produto atualizado |
+| GET | `/api/produtos/custos` | Admin | custo estimado de uma unidade vendida (pelo estoque ou informado), a origem e a margem sobre o preço de cada produto (RN-PR-07, RN-RL-04) — só o painel; o catálogo do app não traz custo |
+| PUT | `/api/produtos/{id}/custo` | Admin | `{ custo }` informa o custo de uma unidade vendida (nulo apaga) — para produto sem vínculo de estoque ou grupo sem custo |
+| PUT | `/api/produtos/{id}/estoque` | Admin | liga o produto a um grupo de estoque (`grupoEstoqueId` nulo = desliga) e quantas unidades saem por venda (RN-PR-06). Grupo de potes → `pedeSabor` no produto: o app mostra a grade de sabores e manda `itemEstoqueId` na linha da venda (RN-ES-09) |
 | GET | `/api/usuarios`, `/api/usuarios/{id}` | Admin | todos os usuários, inclusive desativados (`UsuarioDto`) |
 | POST | `/api/usuarios` | Admin | cria atendente (PIN) ou Admin (senha) — `CriarUsuarioRequest` (`perfil` = `Atendente`/`Admin`); login repetido → 400 (RN-US-02); senha fora da política → 400 (RN-US-03); 201 |
 | POST | `/api/usuarios/{id}/redefinir-senha` | Admin | `RedefinirSenhaRequest { novaSenha }`; sem pedir a antiga (RN-US-08); vale a política do perfil do usuário |
@@ -311,6 +333,7 @@ Modelo local-first: o app **não** chama a API a cada toque. Ele envia documento
 | POST | `/api/sync/comandas` | qualquer | lote de comandas **fechadas ou canceladas** com itens e pagamentos; idempotente pelo `id`; a API reconstrói o agregado com as regras do Domain e devolve, por comanda, `aceita`/`já recebida`/`rejeitada` + motivo |
 | POST | `/api/comandas/{id}/estornar` | Admin | estorno pelo painel (RN-CM-09) |
 | GET | `/api/relatorios/dia?data=` | Admin | resumo do dia para o painel |
+| GET | `/api/relatorios/periodo?de=&ate=&agrupar=` | Admin | relatório de período (Sprint 8) |
 | GET | `/api/caixas?de=&ate=` | Admin | histórico de fechamentos |
 | POST | `/api/caixas/{id}/fechar-forcado` | Admin | RN-CX-09: `{ "motivo": "..." }`; contado = 0, vendas em dinheiro = as já recebidas, diferença gravada; caixa já fechado → 400; corrida com a sincronização → 409 (xmin) |
 | GET | `/api/versao` | público | `versaoApi`, `versaoMinimaApp`, `versaoAtualApp`, `linkApk` (configuração `App:*`); abaixo da mínima o app exige atualizar, abaixo da atual só avisa |
@@ -324,7 +347,8 @@ O painel **não calcula dinheiro** (ADR 018): totais, ticket médio, esperado ×
 | Método | Rota | Tela | Resposta |
 |---|---|---|---|
 | GET | `/api/relatorios/dia?data=` | Dashboard — **pronto** (sem data = hoje; vendas estornadas à parte; vendas por hora, mesmo dia da semana anterior e mais vendidos desde 14/10 — RN-RL-03/06/07) | `ResumoDiaDto` |
-| GET | `/api/comandas?de=&ate=&status=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
+| GET | `/api/relatorios/periodo?de=&ate=&agrupar=` | Relatório de período — **pronto** (sem datas = este mês até hoje; até 366 dias; `agrupar` = dia, semana ou mes; faturamento por trecho, período anterior, por hora, por dia da semana, rankings de produtos, categorias e sabores e a margem estimada por produto, sabor e período — RN-RL-03/04/08/09/10) | `RelatorioPeriodoDto` |
+| GET | `/api/comandas?de=&ate=&status=&atendente=&forma=&pagina=&tamanho=` | Vendas (lista) — **pronto** (dia da venda = fechamento, senão cancelamento, senão criação; sem datas = hoje; `atendente` = Id de quem vendeu; `forma` = Dinheiro, Pix, CartaoDebito ou CartaoCredito — venda com pelo menos um pagamento nela, então o pagamento dividido aparece nas duas; tamanho 1–100, padrão 50) | `PaginaDto<ComandaResumoDto>` |
 | GET | `/api/comandas/{id}` | Vendas (detalhe) — **pronto** | `ComandaDetalheDto` |
 | POST | `/api/comandas/{id}/estornar` | Vendas (estorno — RN-CM-09) — **pronto** (corpo `{ "motivo": "..." }`; não altera o caixa) | `ComandaDetalheDto` |
 | GET | `/api/caixas?de=&ate=` | Caixas (histórico) — **pronto** (sem datas: 30 dias; máx. 93; hoje faz 1 consulta por caixa — agregar no repositório se pesar) | `IReadOnlyList<CaixaResumoDto>` |

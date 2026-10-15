@@ -97,11 +97,13 @@ Exemplo de resumo:
 ```
 Resumo de quarta 14/10 — Sorveteria
 🔴 Urgente (1): Picolé ao leite Coco preto — acabou
-🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1 pacote
-🟡 Média (1): Massa Pistache — 1 balde
+🟠 Alta (2): Pote 1L Flocos — 1 · Copo 300 ml — 1
+🟡 Média (1): Massa Pistache — 1
 📦 Potes no mínimo: Pote 1L Amarena (2)
 Vendas do dia: R$ 1.284,50 · Caixa fechado por Ana
 ```
+
+Quantidades na menor unidade (picolé, pote, balde, copo). Hoje o resumo já traz urgentes, altas, médias e vendas do dia; **potes no mínimo** entram com o saldo dos potes (Sprint 7), **diferenças da contagem** com a contagem semanal, e "caixa fechado por" quando o app pedir o resumo no fechamento. Urgente que a dona já resolveu no dia aparece com "(resolvido)".
 
 ### 2.4 Fornecedores e pedido
 
@@ -138,7 +140,7 @@ Na entrega, a dona (ou o atendente) abre o pedido no painel: **"Chegou tudo cert
 
 | # | Pergunta | Padrão adotado |
 |---|---|---|
-| 1 | Qual o dia do pedido de cada fornecedor e em quantos dias chega? | Fábrica: pedido semanal, entrega em 2 dias; contagem na véspera |
+| 1 | Qual o dia do pedido de cada fornecedor e em quantos dias chega? | Fábrica: pedido semanal na **segunda-feira**, entrega em 2 dias; contagem na véspera (domingo). A dona troca o dia no painel |
 | 2 | A fábrica aceita **meia caixa** de picolé? | Não: pedido em caixas inteiras |
 | 3 | Skimo vem em caixa de 24? Moreninha é por unidade? Pote de açaí 1,5L custa R$ 18? | Como está na planilha; corrigir no catálogo |
 | 4 | O que são os "Outros" dos potes de 2L e 5L? | Cadastrar os sabores reais |

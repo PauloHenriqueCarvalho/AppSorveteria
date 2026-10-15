@@ -1,4 +1,8 @@
+using GestaoSorveteria.Application.Avisos;
+using GestaoSorveteria.Application.Contagens;
 using GestaoSorveteria.Application.Sync;
+using GestaoSorveteria.Contracts.Avisos;
+using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Sync;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +22,14 @@ namespace GestaoSorveteria.Server.Controllers;
 public sealed class SyncController : ControllerBase
 {
     private readonly SyncService _sync;
+    private readonly AvisoService _avisos;
+    private readonly ContagemService _contagens;
 
-    public SyncController(SyncService sync)
+    public SyncController(SyncService sync, AvisoService avisos, ContagemService contagens)
     {
         _sync = sync;
+        _avisos = avisos;
+        _contagens = contagens;
     }
 
     /// <summary>
@@ -47,4 +55,28 @@ public sealed class SyncController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<SyncResponse>> Comandas(SyncComandasRequest request, CancellationToken cancellationToken) =>
         Ok(await _sync.ReceberComandasAsync(request, cancellationToken));
+
+    /// <summary>
+    /// Avisos "Está acabando" criados ou atualizados no tablet (estado atual de cada um). Item que já tinha aviso aberto no
+    /// servidor é juntado a ele (<c>avisoId</c> diferente do enviado); aviso que a dona fechou volta com <c>aberto = false</c>.
+    /// </summary>
+    [HttpPost("avisos")]
+    [ProducesResponseType(typeof(SyncAvisosResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SyncAvisosResponse>> Avisos(SyncAvisosRequest request, CancellationToken cancellationToken) =>
+        Ok(await _avisos.ReceberSyncAsync(request, cancellationToken));
+
+    /// <summary>
+    /// Contagens semanais feitas no tablet (RN-ES-05), parciais ou concluídas, com todas as linhas registradas.
+    /// Reenvio sem novidade → <c>ja_recebida</c>; mudança numa contagem já concluída → <c>rejeitada</c> (correção = nova contagem).
+    /// </summary>
+    [HttpPost("contagens")]
+    [ProducesResponseType(typeof(SyncResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<SyncResponse>> Contagens(SyncContagensRequest request, CancellationToken cancellationToken) =>
+        Ok(await _contagens.ReceberSyncAsync(request, cancellationToken));
 }
