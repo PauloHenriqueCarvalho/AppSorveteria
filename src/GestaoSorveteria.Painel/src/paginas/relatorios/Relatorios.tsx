@@ -142,17 +142,14 @@ function Conteudo({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
           valor={formatarMoeda(relatorio.ticketMedio)}
           detalhe={<Comparacao variacao={antes.variacaoTicketPercentual} contexto={contexto} anterior={formatarMoeda(antes.ticketMedio)} />}
         />
-        <Indicador
-          rotulo="Estornos"
-          valor={formatarMoeda(relatorio.totalEstornado)}
-          detalhe={
-            relatorio.quantidadeEstornos === 0
-              ? 'nenhuma venda estornada'
-              : `${relatorio.quantidadeEstornos} venda${relatorio.quantidadeEstornos === 1 ? '' : 's'} estornada${relatorio.quantidadeEstornos === 1 ? '' : 's'} (fora do faturamento)`
-          }
-          tom={relatorio.quantidadeEstornos > 0 ? 'atencao' : 'neutro'}
-        />
+        <IndicadorMargem relatorio={relatorio} />
       </section>
+      {relatorio.quantidadeEstornos > 0 && (
+        <p className="suave pequeno">
+          {relatorio.quantidadeEstornos} venda{relatorio.quantidadeEstornos === 1 ? '' : 's'} estornada
+          {relatorio.quantidadeEstornos === 1 ? '' : 's'} ({formatarMoeda(relatorio.totalEstornado)}) fora do faturamento.
+        </p>
+      )}
 
       <Secao titulo={`Faturamento por ${nomeTrecho}`}>
         <GraficoTrechos
@@ -205,6 +202,36 @@ function Conteudo({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
   )
 }
 
+/** "n/d" para o que não tem custo (RN-RL-04): nunca mostra zero. */
+function dinheiroOuNd(valor: number | null): string {
+  return valor === null ? 'n/d' : formatarMoeda(valor)
+}
+
+function percentualOuNada(valor: number | null): string {
+  return valor === null ? '' : `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
+}
+
+/** RN-RL-04: margem só com o que tem custo; o que ficou de fora aparece no detalhe. */
+function IndicadorMargem({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
+  const m = relatorio.margem
+  if (m.faturamentoComCusto === 0) {
+    return (
+      <Indicador
+        rotulo="Margem estimada"
+        valor="n/d"
+        detalhe={relatorio.totalVendido > 0 ? 'nenhum produto vendido tem custo cadastrado' : 'sem vendas no período'}
+      />
+    )
+  }
+  const detalhe = [
+    `${percentualOuNada(m.margemPercentual)} sobre ${formatarMoeda(m.faturamentoComCusto)}`,
+    m.faturamentoSemCusto > 0 ? `${formatarMoeda(m.faturamentoSemCusto)} sem custo` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  return <Indicador rotulo="Margem estimada" valor={formatarMoeda(m.margemEstimada)} detalhe={detalhe} />
+}
+
 function DiasDaSemana({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
   const maior = Math.max(0, ...relatorio.porDiaDaSemana.map((d) => d.mediaPorDia))
   return (
@@ -231,14 +258,24 @@ function DiasDaSemana({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
   )
 }
 
-type Ordem = 'valor' | 'quantidade'
+type Ordem = 'valor' | 'quantidade' | 'margem'
+
+const ORDENS: { valor: Ordem; texto: string }[] = [
+  { valor: 'valor', texto: 'Por valor' },
+  { valor: 'quantidade', texto: 'Por quantidade' },
+  { valor: 'margem', texto: 'Por margem' },
+]
 
 function Produtos({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
   const [ordem, setOrdem] = useState<Ordem>('valor')
   const [todos, setTodos] = useState(false)
-  // A API manda por faturamento; por quantidade é só reordenar a mesma lista.
+  // A API manda por faturamento; por quantidade ou margem é só reordenar a mesma lista (sem custo vai para o fim).
   const ordenados =
-    ordem === 'valor' ? relatorio.produtos : [...relatorio.produtos].sort((a, b) => b.quantidade - a.quantidade || b.total - a.total)
+    ordem === 'valor'
+      ? relatorio.produtos
+      : ordem === 'quantidade'
+        ? [...relatorio.produtos].sort((a, b) => b.quantidade - a.quantidade || b.total - a.total)
+        : [...relatorio.produtos].sort((a, b) => (b.margem ?? -Infinity) - (a.margem ?? -Infinity) || b.total - a.total)
   const visiveis = todos ? ordenados : ordenados.slice(0, PRODUTOS_NA_LISTA)
 
   return (
@@ -247,9 +284,15 @@ function Produtos({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
       className="grade-largo secao-tabela"
       acao={
         <div className="abas abas-pequenas" role="group" aria-label="Ordenar produtos">
-          {(['valor', 'quantidade'] as const).map((o) => (
-            <button key={o} type="button" className={ordem === o ? 'aba aba-ativa' : 'aba'} aria-pressed={ordem === o} onClick={() => setOrdem(o)}>
-              {o === 'valor' ? 'Por valor' : 'Por quantidade'}
+          {ORDENS.map((o) => (
+            <button
+              key={o.valor}
+              type="button"
+              className={ordem === o.valor ? 'aba aba-ativa' : 'aba'}
+              aria-pressed={ordem === o.valor}
+              onClick={() => setOrdem(o.valor)}
+            >
+              {o.texto}
             </button>
           ))}
         </div>
@@ -267,9 +310,6 @@ function Produtos({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
                     #
                   </th>
                   <th scope="col">Produto</th>
-                  <th scope="col" className="so-largo">
-                    Categoria
-                  </th>
                   <th scope="col" className="numero">
                     Qtd.
                   </th>
@@ -279,6 +319,12 @@ function Produtos({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
                   <th scope="col" className="numero so-largo">
                     Parte
                   </th>
+                  <th scope="col" className="numero so-largo">
+                    Custo
+                  </th>
+                  <th scope="col" className="numero">
+                    Margem
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -287,11 +333,15 @@ function Produtos({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
                     <td className="numero suave">{i + 1}º</td>
                     <td>
                       <strong>{p.descricao}</strong>
+                      {p.produtoId !== null && <span className="suave bloco pequeno">{p.categoria}</span>}
                     </td>
-                    <td className="so-largo suave">{p.categoria}</td>
                     <td className="numero">{p.quantidade}</td>
                     <td className="numero forte">{formatarMoeda(p.total)}</td>
                     <td className="numero so-largo suave">{p.percentual.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}%</td>
+                    <td className="numero so-largo suave">{dinheiroOuNd(p.custoEstimado)}</td>
+                    <td className="numero" title={p.margemPercentual === null ? 'Sem custo cadastrado' : `${percentualOuNada(p.margemPercentual)} do total`}>
+                      {p.margem === null ? <span className="suave">n/d</span> : formatarMoeda(p.margem)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -362,6 +412,7 @@ function Sabores({ relatorio }: { relatorio: RelatorioPeriodoDto }) {
                   <strong>{s.descricao}</strong>{' '}
                   <span className="suave">
                     · {s.unidades} {s.unidades === 1 ? 'pote' : 'potes'}
+                    {s.margem !== null && ` · margem ${formatarMoeda(s.margem)}`}
                   </span>
                 </span>
                 <strong className="numero">{formatarMoeda(s.total)}</strong>
@@ -385,6 +436,8 @@ function exportar(r: RelatorioPeriodoDto) {
     ['Vendas', r.quantidadeComandas, r.anterior.quantidadeComandas],
     ['Ticket médio (R$)', celulaDinheiro(r.ticketMedio), celulaDinheiro(r.anterior.ticketMedio)],
     ['Estornos (R$)', celulaDinheiro(r.totalEstornado)],
+    ['Margem estimada (R$)', celulaDinheiro(r.margem.margemEstimada), 'sobre (R$)', celulaDinheiro(r.margem.faturamentoComCusto)],
+    ['Faturamento sem custo (R$)', celulaDinheiro(r.margem.faturamentoSemCusto)],
     [],
     [nomeTrecho, 'Total (R$)', 'Vendas', 'Anterior', 'Total anterior (R$)'],
     ...Array.from({ length: Math.max(r.porTrecho.length, r.anterior.porTrecho.length) }, (_, i) => {
@@ -399,8 +452,17 @@ function exportar(r: RelatorioPeriodoDto) {
       ]
     }),
     [],
-    ['Produto', 'Categoria', 'Quantidade', 'Total (R$)', 'Parte (%)'],
-    ...r.produtos.map((p) => [p.descricao, p.categoria, p.quantidade, celulaDinheiro(p.total), celulaDinheiro(p.percentual)]),
+    ['Produto', 'Categoria', 'Quantidade', 'Total (R$)', 'Parte (%)', 'Custo estimado (R$)', 'Margem (R$)', 'Margem (%)'],
+    ...r.produtos.map((p) => [
+      p.descricao,
+      p.categoria,
+      p.quantidade,
+      celulaDinheiro(p.total),
+      celulaDinheiro(p.percentual),
+      p.custoEstimado === null ? 'n/d' : celulaDinheiro(p.custoEstimado),
+      p.margem === null ? 'n/d' : celulaDinheiro(p.margem),
+      p.margemPercentual === null ? 'n/d' : celulaDinheiro(p.margemPercentual),
+    ]),
     [],
     ['Categoria', 'Quantidade', 'Total (R$)', 'Parte (%)'],
     ...r.categorias.map((c) => [c.categoria, c.quantidade, celulaDinheiro(c.total), celulaDinheiro(c.percentual)]),
@@ -412,7 +474,17 @@ function exportar(r: RelatorioPeriodoDto) {
     ...r.porHora.map((h) => [`${h.hora}h`, h.quantidade, celulaDinheiro(h.total)]),
   ]
   if (r.sabores.length > 0) {
-    linhas.push([], ['Sabor', 'Potes', 'Total (R$)'], ...r.sabores.map((s) => [s.descricao, s.unidades, celulaDinheiro(s.total)]))
+    linhas.push(
+      [],
+      ['Sabor', 'Potes', 'Total (R$)', 'Custo estimado (R$)', 'Margem (R$)'],
+      ...r.sabores.map((s) => [
+        s.descricao,
+        s.unidades,
+        celulaDinheiro(s.total),
+        s.custoEstimado === null ? 'n/d' : celulaDinheiro(s.custoEstimado),
+        s.margem === null ? 'n/d' : celulaDinheiro(s.margem),
+      ]),
+    )
   }
   baixarCsv(`relatorio-${r.de}-a-${r.ate}.csv`, montarCsv([`Relatório de vendas — ${NOME_LOJA}`], linhas))
 }

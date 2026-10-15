@@ -63,6 +63,24 @@ export interface ProdutoDto {
   pedeSabor?: boolean
 }
 
+/**
+ * GET /api/produtos/custos (Admin) — RN-PR-07/RN-RL-04: custo de uma unidade vendida e margem sobre o preço, calculados pela API.
+ * origem: "Estoque" (catálogo) ou "Informado"; null = sem custo (margem "n/d").
+ */
+export interface CustoProdutoDto {
+  produtoId: string
+  custoInformado: number | null
+  custoEstimado: number | null
+  origem: 'Estoque' | 'Informado' | null
+  margem: number | null
+  margemPercentual: number | null
+}
+
+/** PUT /api/produtos/{id}/custo — nulo apaga. */
+export interface InformarCustoProdutoRequest {
+  custo: number | null
+}
+
 /** PUT /api/produtos/{id}/estoque (RN-PR-06) */
 export interface LigarProdutoEstoqueRequest {
   grupoEstoqueId: string | null
@@ -648,6 +666,16 @@ export interface RelatorioPeriodoDto {
   produtos: ProdutoNoRankingDto[]
   categorias: CategoriaNoRankingDto[]
   sabores: SaborNoRankingDto[]
+  /** RN-RL-04: só com os produtos que têm custo; o resto em faturamentoSemCusto. */
+  margem: MargemPeriodoDto
+}
+
+export interface MargemPeriodoDto {
+  faturamentoComCusto: number
+  custoEstimado: number
+  margemEstimada: number
+  margemPercentual: number | null
+  faturamentoSemCusto: number
 }
 
 export type AgrupamentoRelatorio = 'Dia' | 'Semana' | 'Mes'
@@ -691,6 +719,10 @@ export interface ProdutoNoRankingDto {
   quantidade: number
   total: number
   percentual: number
+  /** RN-RL-04: null ("n/d") quando alguma venda do produto não tem custo. */
+  custoEstimado: number | null
+  margem: number | null
+  margemPercentual: number | null
 }
 
 export interface CategoriaNoRankingDto {
@@ -706,4 +738,7 @@ export interface SaborNoRankingDto {
   descricao: string
   unidades: number
   total: number
+  custoEstimado: number | null
+  margem: number | null
+  margemPercentual: number | null
 }
