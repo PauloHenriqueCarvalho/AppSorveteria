@@ -100,6 +100,7 @@ Detalhes em docs/07.
 - [x] Fechamento forçado do caixa pelo painel (RN-CX-09 — adiado do Sprint 3; entregue em 07/10/2026)
   - [x] API: `POST /api/caixas/{id}/fechar-forcado` com motivo, contado = 0, diferença registrada; caixa marcado `fechamento_forcado` (migração `CaixaFechamentoForcado`) (#51)
   - [x] Painel: botão "Fechar este caixa pelo painel" no detalhe do caixa aberto, com motivo e confirmação; etiqueta "Fechado pelo painel"
+- [x] Painel: **Primeiros passos** no Início (catálogo, cardápio, atendentes, WhatsApp, primeira contagem, primeira venda do tablet — RN-LJ-01), para a implantação não travar em "lista vazia"
 - [ ] Instalar no celular da sorveteria; cadastrar produtos reais com a dona; simular um turno inteiro
 - [ ] Corrigir o que aparecer no teste real
 - [x] App: quantidade digitada no item (tocar no número abre teclado numérico; "50 picolés" sem 49 toques) — RN-ES-04, adiantado da Fase 2 — #67

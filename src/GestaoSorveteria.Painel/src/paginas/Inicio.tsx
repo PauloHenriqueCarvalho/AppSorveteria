@@ -6,6 +6,7 @@ import { CHAVE_RELATORIOS, obterResumoDoDia } from '../api/relatorios.ts'
 import type { ComandaResumoDto, ResumoDiaDto } from '../api/tipos.ts'
 import Comparacao from '../componentes/Comparacao.tsx'
 import Consulta from '../componentes/Consulta.tsx'
+import PrimeirosPassos from '../componentes/PrimeirosPassos.tsx'
 import { ConferenciaCaixa, ResultadoCaixa } from '../componentes/ConferenciaCaixa.tsx'
 import GraficoHoras from '../componentes/GraficoHoras.tsx'
 import Icone from '../componentes/Icone.tsx'
@@ -62,6 +63,7 @@ export default function Inicio() {
           </>
         }
       />
+      {hoje && <PrimeirosPassos />}
       <Consulta consulta={resumo}>{(r) => <Painel resumo={r} hoje={hoje} dia={dia} />}</Consulta>
     </>
   )

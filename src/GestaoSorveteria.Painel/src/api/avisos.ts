@@ -5,6 +5,7 @@ import type {
   AvisoSalvoResponse,
   ConfiguracaoLojaDto,
   CriarAvisoRequest,
+  PrimeirosPassosDto,
   ResumoDoDiaResponse,
 } from './tipos.ts'
 
@@ -42,4 +43,11 @@ export function obterConfiguracao(): Promise<ConfiguracaoLojaDto> {
 
 export function salvarConfiguracao(dados: ConfiguracaoLojaDto): Promise<ConfiguracaoLojaDto> {
   return requisicao<ConfiguracaoLojaDto>('/api/configuracoes', { metodo: 'PUT', corpo: dados })
+}
+
+export const CHAVE_PRIMEIROS_PASSOS = ['primeiros-passos'] as const
+
+/** GET /api/configuracoes/primeiros-passos (Admin) — RN-LJ-01: o que falta para a loja começar a usar o sistema. */
+export function obterPrimeirosPassos(): Promise<PrimeirosPassosDto> {
+  return requisicao<PrimeirosPassosDto>('/api/configuracoes/primeiros-passos')
 }
