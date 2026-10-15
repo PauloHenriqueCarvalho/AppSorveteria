@@ -1,4 +1,5 @@
 using GestaoSorveteria.Domain.Caixas;
+using GestaoSorveteria.Domain.Clima;
 using GestaoSorveteria.Domain.Comandas;
 using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Loja;
@@ -39,6 +40,10 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<PedidoFornecedor> PedidosFornecedor => Set<PedidoFornecedor>();
     public DbSet<ItemPedidoFornecedor> ItensPedidoFornecedor => Set<ItemPedidoFornecedor>();
     public DbSet<MovimentoEstoque> MovimentosEstoque => Set<MovimentoEstoque>();
+
+    // Clima e calendário (docs/02, seção 9b)
+    public DbSet<ClimaDia> ClimaDias => Set<ClimaDia>();
+    public DbSet<PrevisaoClima> PrevisoesClima => Set<PrevisaoClima>();
 
     public void DescartarAlteracoes() => ChangeTracker.Clear();
 

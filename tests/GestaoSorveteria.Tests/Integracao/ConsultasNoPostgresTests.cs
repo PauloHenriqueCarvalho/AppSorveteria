@@ -1,6 +1,7 @@
 using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Avisos;
 using GestaoSorveteria.Application.Caixas;
+using GestaoSorveteria.Application.Clima;
 using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Contagens;
 using GestaoSorveteria.Application.Estoque;
@@ -8,7 +9,9 @@ using GestaoSorveteria.Application.Pedidos;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Relatorios;
 using GestaoSorveteria.Application.Sync;
+using GestaoSorveteria.Contracts.Clima;
 using GestaoSorveteria.Contracts.Sync;
+using GestaoSorveteria.Domain.Clima;
 using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Produtos;
 using GestaoSorveteria.Domain.Repositories;
@@ -65,6 +68,15 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
         public PedidoService Pedidos =>
             new(R<IPedidoFornecedorRepository>(), R<IEstoqueRepository>(), R<IContagemRepository>(), R<IAvisoRepository>(), R<IUsuarioRepository>(),
                 R<IConfiguracaoLojaRepository>(), Saldos, Uow, clock);
+
+        public ColetaClimaService Coleta(IFonteClima fonte, SituacaoColetaClima situacao) =>
+            new(fonte, R<IClimaRepository>(), R<IConfiguracaoLojaRepository>(), R<IComandaRepository>(), Uow, clock, situacao);
+
+        public ClimaService Clima(IFonteClima fonte, SituacaoColetaClima situacao) =>
+            new(fonte, R<IClimaRepository>(), R<IConfiguracaoLojaRepository>(), Uow, clock, situacao, Coleta(fonte, situacao));
+
+        public ClimaVendasService ClimaVendas(IFonteClima fonte) =>
+            new(R<IComandaRepository>(), R<IProdutoRepository>(), R<IAvisoRepository>(), R<IClimaRepository>(), R<IConfiguracaoLojaRepository>(), fonte, clock);
 
         public T Repositorio<T>() where T : notnull => R<T>();
     }
@@ -251,5 +263,80 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
         // O rascunho do pedido saiu das consultas de contagens, recebimentos, avisos e movimentos.
         Assert.Equal("Rascunho", pedido.Status);
         Assert.Contains(pedido.Linhas, l => l.ItemEstoqueId == flocos.Id);
+    }
+
+    [Fact]
+    public async Task Clima_ColetaRelatorioEIndices_NoPostgres()
+    {
+        // Janeiro: a venda mais antiga do banco (os outros testes vendem a partir de março) — a coleta começa nela (RN-CL-04).
+        var joana = Usuario.Criar("Joana Janeiro", "joana_janeiro", "hash", PerfilUsuario.Atendente, Em(1, 2, 9));
+        await NoBanco(Em(1, 2, 10), async s =>
+        {
+            await s.Repositorio<IUsuarioRepository>().AdicionarAsync(joana, Ct);
+            await s.Uow.SaveChangesAsync(Ct);
+        });
+
+        var caixaId = Guid.NewGuid();
+        await NoBanco(Em(1, 5, 20), async s =>
+        {
+            await EnviarCaixa(s, new CaixaSyncDto(caixaId, joana.Id, Em(1, 5, 9), 50m, []));
+            await Enviar(s, Venda(caixaId, joana.Id, 1, Em(1, 5, 15), [new ItemComandaSyncDto(Guid.NewGuid(), null, "Venda avulsa", 1, 12m, 12m)], Pix(12m)));
+            await EnviarCaixa(s, new CaixaSyncDto(caixaId, joana.Id, Em(1, 5, 9), 50m, [],
+                new FechamentoCaixaSyncDto(joana.Id, Em(1, 5, 19), 50m, 0m, 50m, 0m)));
+        });
+
+        var fonte = new FonteClimaFake { Hoje = new DateOnly(2026, 1, 20) };
+        var situacao = new SituacaoColetaClima();
+
+        // Terça 20/01, 12h: a dona confirma o local e a API já coleta desde 05/01 com a previsão dos próximos 14 dias.
+        var local = new DefinirLocalLojaRequest("Ribeirão Preto, SP, Brasil", -21.1775m, -47.8103m);
+        var depoisDoLocal = await NoBanco(Em(1, 20, 12), s => s.Clima(fonte, situacao).DefinirLocalAsync(local, Ct));
+        Assert.Equal(new DateTime(2026, 1, 5, 18, 0, 0, DateTimeKind.Utc), await NoBanco(Em(1, 20, 12), s => s.Repositorio<IComandaRepository>().PrimeiraVendaEmAsync(Ct)));
+        Assert.Equal(((DateOnly?)new DateOnly(2026, 1, 5), (DateOnly?)new DateOnly(2026, 1, 20), 16),
+            (depoisDoLocal.PrimeiroDia, depoisDoLocal.UltimoDia, depoisDoLocal.DiasComClima));
+        Assert.Equal(-21.1775m, depoisDoLocal.Local!.Latitude);
+
+        // 3 h depois: só 19 e 20/01 (ainda abertos) mudam; o resto já é definitivo.
+        fonte.MaximaPadrao = 35m;
+        var tresHorasDepois = await NoBanco(Em(1, 20, 15), s => s.Coleta(fonte, situacao).ColetarAsync(forcar: false, Ct));
+        Assert.Equal((2, 0), (tresHorasDepois.DiasGravados, tresHorasDepois.PrevisoesGravadas));
+
+        // Quarta 21/01: nova previsão guardada sem apagar a de ontem; o relatório lê tudo do banco.
+        fonte.Hoje = new DateOnly(2026, 1, 21);
+        await NoBanco(Em(1, 21, 12), s => s.Coleta(fonte, situacao).ColetarAsync(forcar: false, Ct));
+        await NoBanco(Em(1, 21, 13), async s =>
+        {
+            var ponto = PontoClima.De(-21.1775m, -47.8103m);
+            var clima = s.Repositorio<IClimaRepository>();
+            var dias = await clima.ListarDiasAsync(ponto, new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31), Ct);
+            Assert.Equal(17, dias.Count);
+            Assert.Equal((28m, true), (dias.Single(d => d.Data == new DateOnly(2026, 1, 17)).TempMax, dias.Single(d => d.Data == new DateOnly(2026, 1, 17)).Definitivo));
+            Assert.Equal((35m, true), (dias.Single(d => d.Data == new DateOnly(2026, 1, 19)).TempMax, dias.Single(d => d.Data == new DateOnly(2026, 1, 19)).Definitivo));
+            Assert.True(await clima.ExistePrevisaoFeitaNoDiaAsync(ponto, new DateOnly(2026, 1, 20), Ct));
+
+            var proximos = await clima.ListarUltimaPrevisaoAsync(ponto, new DateOnly(2026, 1, 22), new DateOnly(2026, 1, 28), Ct);
+            Assert.Equal(7, proximos.Count);
+            Assert.All(proximos, p => Assert.Equal(new DateOnly(2026, 1, 21), p.FeitaNoDia));
+            Assert.Equal(new ResumoClimaGuardado(new DateOnly(2026, 1, 5), new DateOnly(2026, 1, 21), 17), await clima.ResumoAsync(ponto, Ct));
+
+            var relatorio = await s.ClimaVendas(fonte).ObterAsync(new DateOnly(2026, 1, 5), new DateOnly(2026, 1, 21), Ct);
+            var segunda = relatorio.Dias[0];
+            Assert.Equal((12m, 1, true), (segunda.Faturamento, segunda.Vendas, segunda.EntraNasMedias));
+            Assert.Equal(28m, segunda.Clima!.TempMax);
+            Assert.Equal(1, relatorio.PorTemperatura.Single(f => f.Faixa == "25 a 30 °C").DiasUteis.Dias);
+            Assert.Equal(7, relatorio.ProximosDias.Count);
+            Assert.Equal(0, relatorio.DiasSemClima);
+        });
+
+        // Índice único (ponto, dia): o mesmo dia de novo não entra.
+        await Assert.ThrowsAsync<DbUpdateException>(() => NoBanco(Em(1, 21, 14), async s =>
+        {
+            var repetido = ClimaDia.Registrar(
+                PontoClima.De(-21.18m, -47.81m),
+                new LeituraClima(new DateOnly(2026, 1, 10), 30m, 20m, 25m, null, 0m, null, null, null, null, null, null, OrigemClima.Observado),
+                "Teste", Em(1, 21, 14), new DateOnly(2026, 1, 21));
+            await s.Repositorio<IClimaRepository>().AdicionarDiaAsync(repetido, Ct);
+            await s.Uow.SaveChangesAsync(Ct);
+        }));
     }
 }

@@ -4,6 +4,7 @@ using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Auth;
 using GestaoSorveteria.Application.Avisos;
 using GestaoSorveteria.Application.Caixas;
+using GestaoSorveteria.Application.Clima;
 using GestaoSorveteria.Application.Comandas;
 using GestaoSorveteria.Application.Contagens;
 using GestaoSorveteria.Application.Estoque;
@@ -15,7 +16,9 @@ using GestaoSorveteria.Application.Sync;
 using GestaoSorveteria.Application.Usuarios;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Infrastructure;
+using GestaoSorveteria.Infrastructure.Clima;
 using GestaoSorveteria.Infrastructure.Seed;
+using GestaoSorveteria.Server.Clima;
 using GestaoSorveteria.Server.Configuracao;
 using GestaoSorveteria.Server.Middleware;
 using GestaoSorveteria.Server.Security;
@@ -71,6 +74,15 @@ builder.Services.AddScoped<ContagemService>();
 builder.Services.AddScoped<PedidoService>();
 builder.Services.AddScoped<SaldoEstoqueService>();
 builder.Services.AddScoped<PrimeirosPassosService>();
+
+// ---------- Clima (docs/02, seção 9b): fonte, coleta em segundo plano e relatório Clima × vendas ----------
+var clima = builder.Configuration.GetSection(ClimaOptions.Secao).Get<ClimaOptions>() ?? new ClimaOptions();
+builder.Services.AddFonteClima(clima);
+builder.Services.AddSingleton<SituacaoColetaClima>();
+builder.Services.AddScoped<ColetaClimaService>();
+builder.Services.AddScoped<ClimaService>();
+builder.Services.AddScoped<ClimaVendasService>();
+builder.Services.AddHostedService<ColetaClimaEmSegundoPlano>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------
 var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();

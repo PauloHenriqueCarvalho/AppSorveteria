@@ -146,6 +146,12 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
     public Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         ListarFechadasAsync(deUtc, ateUtc, cancellationToken);
 
+    public Task<DateTime?> PrimeiraVendaEmAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Comandas
+            .Where(c => (c.Status is StatusComanda.Fechada or StatusComanda.Estornada) && c.FechadaEm is not null)
+            .Select(c => c.FechadaEm)
+            .Min());
+
     public Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<VendaFechada>>(Comandas
             .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)

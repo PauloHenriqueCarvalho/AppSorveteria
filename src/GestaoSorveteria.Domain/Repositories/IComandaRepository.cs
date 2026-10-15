@@ -20,6 +20,9 @@ public interface IComandaRepository
     /// </summary>
     Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 
+    /// <summary>Fechamento mais antigo entre as vendas (<c>Fechada</c> ou <c>Estornada</c>); nulo sem venda. RN-CL-04: o clima é coletado desde o primeiro dia com venda.</summary>
+    Task<DateTime?> PrimeiraVendaEmAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Fechamento e total das comandas <c>Fechada</c> (sem as estornadas) com fechamento em [de, ate) — comparativos.</summary>
     Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default);
 

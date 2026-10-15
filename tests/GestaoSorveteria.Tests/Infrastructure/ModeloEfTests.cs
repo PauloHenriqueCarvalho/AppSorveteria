@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Clima;
 using GestaoSorveteria.Domain.Estoque;
 using GestaoSorveteria.Domain.Loja;
 using GestaoSorveteria.Infrastructure.Persistence;
@@ -73,6 +74,31 @@ public class ModeloEfTests
 
         Assert.Equal("configuracao_loja", configuracao.GetTableName());
         Assert.Equal("whatsapp_dona", configuracao.FindProperty(nameof(ConfiguracaoLoja.WhatsAppDona))!.GetColumnName());
+    }
+
+    [Fact]
+    public void Clima_TabelasColunasEIndicesUnicosComoNoDocs03()
+    {
+        using var db = Contexto();
+        var modelo = ModeloDeDesign(db);
+        var dia = modelo.FindEntityType(typeof(ClimaDia))!;
+        var previsao = modelo.FindEntityType(typeof(PrevisaoClima))!;
+        var configuracao = modelo.FindEntityType(typeof(ConfiguracaoLoja))!;
+
+        Assert.Equal("clima_dias", dia.GetTableName());
+        Assert.Equal("previsoes_clima", previsao.GetTableName());
+        Assert.Equal("chuva_horas_pct", dia.FindProperty(nameof(ClimaDia.ChuvaHorasPct))!.GetColumnName());
+        Assert.Equal("numeric(5,2)", dia.FindProperty(nameof(ClimaDia.Latitude))!.GetColumnType());
+        Assert.Equal("numeric(4,1)", dia.FindProperty(nameof(ClimaDia.TempMax))!.GetColumnType());
+        Assert.Equal("feita_no_dia", previsao.FindProperty(nameof(PrevisaoClima.FeitaNoDia))!.GetColumnName());
+        Assert.Equal("local_nome", configuracao.FindProperty(nameof(ConfiguracaoLoja.LocalNome))!.GetColumnName());
+        Assert.Equal("numeric(7,4)", configuracao.FindProperty(nameof(ConfiguracaoLoja.Latitude))!.GetColumnType());
+        Assert.Null(dia.FindProperty(nameof(ClimaDia.Ponto)));
+        Assert.Null(configuracao.FindProperty(nameof(ConfiguracaoLoja.PontoClima)));
+
+        Assert.Contains(dia.GetIndexes(), i => i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "Latitude", "Longitude", "Data" }));
+        Assert.Contains(previsao.GetIndexes(), i => i.IsUnique
+            && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "Latitude", "Longitude", "FeitaNoDia", "Data" }));
     }
 
     [Fact]

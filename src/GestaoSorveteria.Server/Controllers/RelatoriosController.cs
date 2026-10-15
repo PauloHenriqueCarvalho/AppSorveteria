@@ -1,4 +1,5 @@
 using GestaoSorveteria.Application.Relatorios;
+using GestaoSorveteria.Contracts.Clima;
 using GestaoSorveteria.Contracts.Relatorios;
 using GestaoSorveteria.Server.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -15,11 +16,13 @@ public sealed class RelatoriosController : ControllerBase
 {
     private readonly RelatorioService _relatorios;
     private readonly RelatorioPeriodoService _periodo;
+    private readonly ClimaVendasService _climaVendas;
 
-    public RelatoriosController(RelatorioService relatorios, RelatorioPeriodoService periodo)
+    public RelatoriosController(RelatorioService relatorios, RelatorioPeriodoService periodo, ClimaVendasService climaVendas)
     {
         _relatorios = relatorios;
         _periodo = periodo;
+        _climaVendas = climaVendas;
     }
 
     /// <summary>Resumo de um dia (horário de Brasília, formato 2026-09-30; sem data = hoje): vendas, ticket médio, formas de pagamento e caixa aberto.</summary>
@@ -47,4 +50,20 @@ public sealed class RelatoriosController : ControllerBase
         [FromQuery] string? agrupar,
         CancellationToken cancellationToken) =>
         Ok(await _periodo.ObterAsync(de, ate, agrupar, cancellationToken));
+
+    /// <summary>
+    /// RN-CL-06: Clima × vendas (dias no horário de Brasília, inclusive; sem datas = últimos 30 dias; até 366 dias, sem passar de
+    /// hoje): cada dia com clima, feriado, faturamento, vendas, categorias e avisos urgentes; médias por faixa da máxima e
+    /// com/sem chuva (dias úteis × fins de semana e feriados); previsão dos próximos 7 dias.
+    /// </summary>
+    [HttpGet("clima-vendas")]
+    [ProducesResponseType(typeof(ClimaVendasDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ClimaVendasDto>> ClimaVendas(
+        [FromQuery] DateOnly? de,
+        [FromQuery] DateOnly? ate,
+        CancellationToken cancellationToken) =>
+        Ok(await _climaVendas.ObterAsync(de, ate, cancellationToken));
 }
