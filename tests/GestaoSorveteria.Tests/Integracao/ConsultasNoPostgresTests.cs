@@ -153,7 +153,7 @@ public sealed class ConsultasNoPostgresTests(BancoPostgres banco) : IClassFixtur
         });
 
         var dia = new DateOnly(2026, 3, 10);
-        await NoBanco(Em(3, 10, 20), async s =>
+        await NoBanco(Em(3, 16, 9), async s => // segunda seguinte: a semana inteira já passou
         {
             // Filtros do painel (FiltroVendas): atendente + forma de pagamento com pagamento dividido.
             var daAnaEmDinheiro = await s.Vendas.ListarAsync(dia, dia, null, ana.Id, "Dinheiro", 1, 50, Ct);
