@@ -5,7 +5,7 @@ export interface Periodo {
   ate: string
 }
 
-interface Atalho {
+export interface Atalho {
   texto: string
   periodo: (hoje: string) => Periodo
 }
@@ -18,8 +18,16 @@ const ATALHOS: Atalho[] = [
   { texto: 'Este mês', periodo: (hoje) => ({ de: inicioDoMes(hoje), ate: hoje }) },
 ]
 
-/** De / Até com atalhos. Os dias são do calendário da loja ("2026-10-14"); a API limita a 93 dias. */
-export default function FiltroPeriodo({ periodo, aoMudar }: { periodo: Periodo; aoMudar: (p: Periodo) => void }) {
+/** De / Até com atalhos. Os dias são do calendário da loja ("2026-10-14"); a API limita o tamanho (93 dias nas listas). */
+export default function FiltroPeriodo({
+  periodo,
+  aoMudar,
+  atalhos = ATALHOS,
+}: {
+  periodo: Periodo
+  aoMudar: (p: Periodo) => void
+  atalhos?: Atalho[]
+}) {
   const hoje = hojeNaLoja()
   return (
     <>
@@ -43,7 +51,7 @@ export default function FiltroPeriodo({ periodo, aoMudar }: { periodo: Periodo; 
         />
       </label>
       <div className="abas" role="group" aria-label="Atalhos de período">
-        {ATALHOS.map((a) => {
+        {atalhos.map((a) => {
           const p = a.periodo(hoje)
           const ativo = p.de === periodo.de && p.ate === periodo.ate
           return (

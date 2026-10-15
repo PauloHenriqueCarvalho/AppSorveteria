@@ -44,10 +44,26 @@ internal sealed class ComandaRepository : IComandaRepository
             .OrderBy(c => c.FechadaEm)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        await _db.Comandas
+            .AsNoTracking()
+            .Include(c => c.Itens)
+            .Include(c => c.Pagamentos)
+            .Where(c => (c.Status == StatusComanda.Fechada || c.Status == StatusComanda.Estornada) && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .OrderBy(c => c.FechadaEm)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        await _db.Comandas
+            .AsNoTracking()
+            .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .Select(c => new VendaFechada(c.FechadaEm!.Value, c.Total))
+            .ToListAsync(cancellationToken);
+
     public async Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
         DateTime deUtc,
         DateTime ateUtc,
-        StatusComanda? status,
+        FiltroVendas filtro,
         int pular,
         int quantidade,
         CancellationToken cancellationToken = default)
@@ -56,9 +72,19 @@ internal sealed class ComandaRepository : IComandaRepository
         IQueryable<Comanda> query = _db.Comandas
             .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc);
 
-        if (status is { } filtro)
+        if (filtro.Status is { } status)
         {
-            query = query.Where(c => c.Status == filtro);
+            query = query.Where(c => c.Status == status);
+        }
+
+        if (filtro.UsuarioId is { } usuarioId)
+        {
+            query = query.Where(c => c.UsuarioId == usuarioId);
+        }
+
+        if (filtro.Forma is { } forma)
+        {
+            query = query.Where(c => c.Pagamentos.Any(p => p.Forma == forma));
         }
 
         var total = await query.CountAsync(cancellationToken);

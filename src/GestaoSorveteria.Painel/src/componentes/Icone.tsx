@@ -18,6 +18,8 @@ const CAMINHOS = {
   contagem: 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M8 11l2 2 4-4M8 17h8',
   estoque: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9',
   fornecedor: 'M2 6h12v10H2zM14 10h4l4 4v2h-8M6.5 19.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4M17.5 19.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  potes: 'M6 7h12l-1 13H7zM5 4h14v3H5zM9.5 11v5M14.5 11v5',
+  relatorios: 'M3 20h18M6 20v-7M11 20V5M16 20v-10M21 20V9',
   pedidos: 'M3 4h2.5l2.2 10.5h10.6L20.5 7H6.4M9.5 20a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6M17 20a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6',
 } as const
 

@@ -28,11 +28,16 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     ],
   },
   {
+    titulo: 'Análise',
+    itens: [{ para: '/relatorios', texto: 'Relatórios', icone: 'relatorios' }],
+  },
+  {
     titulo: 'Estoque e compras',
     itens: [
       { para: '/avisos', texto: 'Avisos', icone: 'avisos', noCelular: true, contaAvisos: true },
       { para: '/contagens', texto: 'Contagem', icone: 'contagem' },
       { para: '/pedidos', texto: 'Pedidos', icone: 'pedidos' },
+      { para: '/potes', texto: 'Potes', icone: 'potes' },
       { para: '/estoque', texto: 'Catálogo', icone: 'estoque' },
       { para: '/fornecedores', texto: 'Fornecedores', icone: 'fornecedor' },
     ],

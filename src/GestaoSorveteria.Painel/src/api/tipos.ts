@@ -55,6 +55,36 @@ export interface ProdutoDto {
   /** Posição do botão no app (RN-PR-05). */
   ordem: number
   atualizadoEmUtc: string
+  /** RN-PR-06: grupo de estoque que a venda movimenta (nulo = não mexe no estoque). */
+  grupoEstoqueId?: string | null
+  /** Quantas unidades do grupo saem por unidade vendida. */
+  unidadesPorVenda?: number
+  /** Grupo de potes: o tablet pede o sabor (RN-ES-09). */
+  pedeSabor?: boolean
+}
+
+/**
+ * GET /api/produtos/custos (Admin) — RN-PR-07/RN-RL-04: custo de uma unidade vendida e margem sobre o preço, calculados pela API.
+ * origem: "Estoque" (catálogo) ou "Informado"; null = sem custo (margem "n/d").
+ */
+export interface CustoProdutoDto {
+  produtoId: string
+  custoInformado: number | null
+  custoEstimado: number | null
+  origem: 'Estoque' | 'Informado' | null
+  margem: number | null
+  margemPercentual: number | null
+}
+
+/** PUT /api/produtos/{id}/custo — nulo apaga. */
+export interface InformarCustoProdutoRequest {
+  custo: number | null
+}
+
+/** PUT /api/produtos/{id}/estoque (RN-PR-06) */
+export interface LigarProdutoEstoqueRequest {
+  grupoEstoqueId: string | null
+  unidadesPorVenda: number
 }
 
 /** Contracts/Produtos/CatalogoProdutosResponse */
@@ -598,4 +628,118 @@ export interface ItemQueMaisFaltaDto {
   descricao: string
   vezesQueFaltou: number
   embalagensQueFaltaram: number
+}
+
+/** GET /api/estoque/saldos (RN-ES-08): saldo de cada pote = última contagem + entregas − vendas depois dela. */
+export interface SaldoPoteDto {
+  itemEstoqueId: string
+  grupoId: string
+  grupoNome: string
+  itemNome: string
+  /** Pode ser negativo: a venda nunca é bloqueada ("conferir"). */
+  saldoUnidades: number
+  minimoUnidades: number | null
+  ultimaContagemUnidades: number | null
+  ultimaContagemEm: string | null
+  /** Vendas dos últimos 7 dias menos estornos. */
+  vendidosNaSemana: number
+  ativo: boolean
+}
+
+/** Contracts/Relatorios/RelatorioPeriodoDto — GET /api/relatorios/periodo. Tudo calculado na API (RN-RL-01/03/08/09/10). */
+export interface RelatorioPeriodoDto {
+  de: string
+  ate: string
+  agrupamento: AgrupamentoRelatorio
+  totalVendido: number
+  quantidadeComandas: number
+  ticketMedio: number
+  totalEstornado: number
+  quantidadeEstornos: number
+  porFormaPagamento: TotalPorFormaDto[]
+  anterior: ComparativoPeriodoDto
+  /** Um por dia/semana/mês do período, inclusive os sem venda. */
+  porTrecho: VendasNoTrechoDto[]
+  porHora: VendasNaHoraDto[]
+  /** Segunda a domingo (0 = domingo), só os dias da semana que o período tem. */
+  porDiaDaSemana: VendasNoDiaDaSemanaDto[]
+  produtos: ProdutoNoRankingDto[]
+  categorias: CategoriaNoRankingDto[]
+  sabores: SaborNoRankingDto[]
+  /** RN-RL-04: só com os produtos que têm custo; o resto em faturamentoSemCusto. */
+  margem: MargemPeriodoDto
+}
+
+/** Nenhum produto vendido com custo → custoEstimado e margemEstimada null ("n/d", nunca zero). */
+export interface MargemPeriodoDto {
+  faturamentoComCusto: number
+  custoEstimado: number | null
+  margemEstimada: number | null
+  margemPercentual: number | null
+  faturamentoSemCusto: number
+}
+
+export type AgrupamentoRelatorio = 'Dia' | 'Semana' | 'Mes'
+
+/** RN-RL-09: período de comparação; trechos pareados por posição com os do período. */
+export interface ComparativoPeriodoDto {
+  de: string
+  ate: string
+  ateMesmoHorario: boolean
+  totalVendido: number
+  quantidadeComandas: number
+  ticketMedio: number
+  variacaoTotalPercentual: number | null
+  variacaoQuantidadePercentual: number | null
+  variacaoTicketPercentual: number | null
+  porTrecho: VendasNoTrechoDto[]
+}
+
+export interface VendasNoTrechoDto {
+  de: string
+  ate: string
+  total: number
+  quantidade: number
+}
+
+export interface VendasNoDiaDaSemanaDto {
+  /** 0 = domingo … 6 = sábado. */
+  diaDaSemana: number
+  /** Quantos desses dias o período tem. */
+  dias: number
+  total: number
+  quantidade: number
+  mediaPorDia: number
+}
+
+/** produtoId nulo = self-service / venda avulsa. Percentual = parte do faturamento (1 casa). */
+export interface ProdutoNoRankingDto {
+  produtoId: string | null
+  descricao: string
+  categoria: string
+  quantidade: number
+  total: number
+  percentual: number
+  /** RN-RL-04: null ("n/d") quando alguma venda do produto não tem custo. */
+  custoEstimado: number | null
+  margem: number | null
+  margemPercentual: number | null
+}
+
+export interface CategoriaNoRankingDto {
+  categoria: string
+  quantidade: number
+  total: number
+  percentual: number
+}
+
+/** Sabor dos potes ("Pote 1L Flocos"); unidades = potes que saíram. */
+export interface SaborNoRankingDto {
+  itemEstoqueId: string
+  descricao: string
+  unidades: number
+  total: number
+  custoEstimado: number | null
+  margem: number | null
+  margemPercentual: number | null
 }

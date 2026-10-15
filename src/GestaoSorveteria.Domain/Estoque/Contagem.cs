@@ -89,13 +89,16 @@ public sealed class ItemContagem : Entity
     /// <summary>Nulo = não contado (RN-ES-06).</summary>
     public int? ContadoUnidades { get; private set; }
 
-    /// <summary>Potes: saldo do sistema no momento da contagem (RN-ES-08).</summary>
+    /// <summary>
+    /// Reservado (sempre nulo hoje): o saldo esperado dos potes é calculado na leitura (RN-ES-08,
+    /// <c>SaldoEstoqueService.SaldoEsperadoNaContagemAsync</c>), para a venda que sincroniza depois entrar certa.
+    /// </summary>
     public int? SaldoSistemaUnidades { get; private set; }
 
     /// <summary>Quando o item foi contado (base do saldo dos potes). Nulo = não informado: vale a conclusão da contagem.</summary>
     public DateTime? ContadoEm { get; private set; }
 
-    /// <summary>Contado − saldo do sistema (potes). Diferença maior que 1 vai no resumo da dona.</summary>
+    /// <summary>Contado − <see cref="SaldoSistemaUnidades"/> (reservado; ver acima).</summary>
     public int? Diferenca => ContadoUnidades is { } contado && SaldoSistemaUnidades is { } saldo ? contado - saldo : null;
 
     // EF Core

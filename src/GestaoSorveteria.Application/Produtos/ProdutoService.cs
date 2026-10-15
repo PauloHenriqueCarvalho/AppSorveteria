@@ -112,6 +112,35 @@ public sealed class ProdutoService
         return produto.ToDto(await GruposAsync(cancellationToken));
     }
 
+    /// <summary>RN-PR-07/RN-RL-04: custo estimado e margem de cada produto, com os custos de hoje do catálogo.</summary>
+    public async Task<IReadOnlyList<CustoProdutoDto>> ListarCustosAsync(CancellationToken cancellationToken = default)
+    {
+        var itens = await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken);
+        return (await _produtos.ListarAsync(somenteAtivos: false, cancellationToken)).Select(p => Custo(p, itens)).ToList();
+    }
+
+    /// <summary>RN-PR-07: informa (ou apaga, com nulo) o custo de uma unidade vendida.</summary>
+    public async Task<CustoProdutoDto> InformarCustoAsync(Guid id, InformarCustoProdutoRequest request, CancellationToken cancellationToken = default)
+    {
+        var produto = await CarregarAsync(id, cancellationToken);
+        produto.InformarCusto(request.Custo);
+        await _uow.SaveChangesAsync(cancellationToken);
+        return Custo(produto, await _estoque.ListarItensAsync(somenteAtivos: false, cancellationToken));
+    }
+
+    private static CustoProdutoDto Custo(Produto produto, IReadOnlyList<ItemEstoque> itens)
+    {
+        var custo = CustoEstimado.PorUnidadeVendida(produto, itens);
+        decimal? margem = custo is { } c && !produto.PermiteValorLivre ? Moeda.Arredondar(produto.Preco - c.Custo) : null;
+        return new CustoProdutoDto(
+            produto.Id,
+            produto.CustoInformado,
+            custo?.Custo,
+            custo?.Origem.ToString(),
+            margem,
+            margem is { } m && produto.Preco > 0 ? Relatorios.CalculoRelatorio.Percentual(m, produto.Preco) : null);
+    }
+
     private async Task<IReadOnlyDictionary<Guid, GrupoEstoque>> GruposAsync(CancellationToken cancellationToken) =>
         (await _estoque.ListarGruposAsync(cancellationToken)).ToDictionary(g => g.Id);
 

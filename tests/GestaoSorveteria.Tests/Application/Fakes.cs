@@ -143,12 +143,21 @@ internal sealed class ComandaRepositoryFake : IComandaRepository
     public Task<IReadOnlyList<Comanda>> ListarFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Comanda>>(Comandas.Where(c => c.ContaNoCaixa && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc).ToList());
 
+    public Task<IReadOnlyList<Comanda>> ListarFechadasParaLeituraAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        ListarFechadasAsync(deUtc, ateUtc, cancellationToken);
+
+    public Task<IReadOnlyList<VendaFechada>> ListarTotaisDasFechadasAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<VendaFechada>>(Comandas
+            .Where(c => c.Status == StatusComanda.Fechada && c.FechadaEm >= deUtc && c.FechadaEm < ateUtc)
+            .Select(c => new VendaFechada(c.FechadaEm!.Value, c.Total))
+            .ToList());
+
     public Task<(IReadOnlyList<Comanda> Itens, int Total)> ListarPorPeriodoAsync(
-        DateTime deUtc, DateTime ateUtc, StatusComanda? status, int pular, int quantidade, CancellationToken cancellationToken = default)
+        DateTime deUtc, DateTime ateUtc, FiltroVendas filtro, int pular, int quantidade, CancellationToken cancellationToken = default)
     {
         var filtradas = Comandas
             .Where(c => (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) >= deUtc && (c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm) < ateUtc)
-            .Where(c => status is null || c.Status == status)
+            .Where(c => FiltroVendasFake.Passa(filtro, c))
             .OrderByDescending(c => c.FechadaEm ?? c.CanceladaEm ?? c.CriadaEm)
             .ToList();
         return Task.FromResult<(IReadOnlyList<Comanda>, int)>((filtradas.Skip(pular).Take(quantidade).ToList(), filtradas.Count));
@@ -301,6 +310,12 @@ internal sealed class ContagemRepositoryFake : IContagemRepository
                 var ultima = g.OrderByDescending(x => x.ConcluidaEm).First();
                 return new UltimaContagemDoItem(ultima.ContadoUnidades!.Value, ultima.ConcluidaEm!.Value, ultima.ContadoEm);
             }));
+
+    public Task<IReadOnlyList<Contagem>> ListarConcluidasEntreAsync(DateTime deUtc, DateTime ateUtc, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Contagem>>(Contagens
+            .Where(c => c.ConcluidaEm >= deUtc && c.ConcluidaEm < ateUtc)
+            .OrderByDescending(c => c.ConcluidaEm)
+            .ToList());
 
     public Task AdicionarAsync(Contagem contagem, CancellationToken cancellationToken = default)
     {

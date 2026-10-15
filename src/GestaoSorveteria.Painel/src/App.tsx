@@ -16,9 +16,11 @@ import Configuracoes from './paginas/configuracoes/Configuracoes.tsx'
 import EditarContagem from './paginas/contagens/EditarContagem.tsx'
 import ListaContagens from './paginas/contagens/ListaContagens.tsx'
 import CatalogoEstoque from './paginas/estoque/CatalogoEstoque.tsx'
+import Relatorios from './paginas/relatorios/Relatorios.tsx'
 import EditarGrupoEstoque from './paginas/estoque/EditarGrupoEstoque.tsx'
 import EditarItemEstoque from './paginas/estoque/EditarItemEstoque.tsx'
 import ImportarCatalogo from './paginas/estoque/ImportarCatalogo.tsx'
+import SaldosPotes from './paginas/estoque/SaldosPotes.tsx'
 import EditarFornecedor from './paginas/fornecedores/EditarFornecedor.tsx'
 import ListaFornecedores from './paginas/fornecedores/ListaFornecedores.tsx'
 import ConferirEntrega from './paginas/pedidos/ConferirEntrega.tsx'
@@ -60,6 +62,7 @@ const router = createBrowserRouter([
           { path: 'vendas', element: <ListaVendas /> },
           { path: 'vendas/:id', element: <DetalheVenda /> },
           { path: 'caixas', element: <ListaCaixas /> },
+          { path: 'relatorios', element: <Relatorios /> },
           { path: 'caixas/:id', element: <DetalheCaixa /> },
           { path: 'produtos', element: <ListaProdutos /> },
           { path: 'produtos/novo', element: <EditarProduto /> },
@@ -74,6 +77,7 @@ const router = createBrowserRouter([
           { path: 'pedidos', element: <ListaPedidos /> },
           { path: 'pedidos/:id', element: <DetalhePedido /> },
           { path: 'pedidos/:id/conferir', element: <ConferirEntrega /> },
+          { path: 'potes', element: <SaldosPotes /> },
           { path: 'estoque', element: <CatalogoEstoque /> },
           { path: 'estoque/importar', element: <ImportarCatalogo /> },
           { path: 'estoque/itens/novo', element: <EditarItemEstoque /> },
