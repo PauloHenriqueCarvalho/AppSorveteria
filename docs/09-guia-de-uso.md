@@ -9,7 +9,7 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
 
 ### 1. Começo do turno: abrir o caixa
 
-1. Abra o app **Sorveteria** e digite seu **PIN** (4 a 6 números).
+1. Abra o app **Verão Tropical** (ícone do Juninho) e digite seu **PIN** (4 a 6 números).
 2. Toque em **Abrir caixa** e digite o **fundo de troco** (o dinheiro que já está na gaveta). Confirme.
 3. Só dá para vender com o caixa aberto. Se outra pessoa deixou o caixa aberto, feche o dela primeiro (item 4).
 

@@ -26,7 +26,13 @@
     <ScrollView>
         <VerticalStackLayout Padding="24,32" Spacing="16" MaximumWidthRequest="440" HorizontalOptions="Center">
 
-            <Label Text="🍦 Sorveteria" FontSize="32" FontAttributes="Bold" TextColor="#6200EE" HorizontalOptions="Center" />
+            <!-- Marca da loja: mascote Juninho, o mesmo do painel (public/marca/juninho.png) -->
+            <Image Source="logo_verao_tropical.png"
+                   HeightRequest="120"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center"
+                   SemanticProperties.Description="Logo da Sorveteria Verão Tropical" />
+            <Label Text="Verão Tropical" FontSize="32" FontAttributes="Bold" TextColor="#B0185C" HorizontalOptions="Center" />
             <Label Text="{Binding Subtitulo}" FontSize="16" TextColor="#555" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
 
             <Frame Padding="16" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0" BackgroundColor="White">
