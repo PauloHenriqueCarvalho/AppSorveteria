@@ -1,0 +1,57 @@
+# APK de TESTE gerado na nuvem, para quando o PC não está por perto (18/10/2026).
+# Assinado com a chave de depuração (o keystore oficial fica só no PC do Paulo):
+# antes de instalar o APK oficial por cima, desinstale este.
+# Dispara a cada push na branch build/apk-teste; publica o APK numa release "apk-teste-<n>".
+name: APK de teste
+
+on:
+  push:
+    branches: [build/apk-teste]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      API_URL: https://sorveteria-api-gvdy.onrender.com
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Instalar workload do MAUI (Android)
+        run: dotnet workload install maui-android
+
+      - name: Gerar APK (Release, chave de depuração, API do Render)
+        shell: pwsh
+        run: |
+          dotnet publish src/GestaoSorveteria.Mobile/GestaoSorveteria.Mobile.csproj -f net10.0-android -c Release `
+            -p:TargetFrameworks=net10.0-android -p:ApplicationDisplayVersion=1.1 -p:ApplicationVersion=2 `
+            -p:ApiUrlPadrao=$env:API_URL -p:AndroidPackageFormats=apk -o publicacao
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $apk = Get-ChildItem publicacao -Filter '*-Signed.apk' | Select-Object -First 1
+          if (-not $apk) { Get-ChildItem publicacao; throw 'Não achei *-Signed.apk' }
+          Copy-Item $apk.FullName verao-tropical-teste.apk
+          "{0:N1} MB" -f ((Get-Item verao-tropical-teste.apk).Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verao-tropical-teste
+          path: verao-tropical-teste.apk
+
+      - name: Publicar na release (link para baixar no celular)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "apk-teste-${{ github.run_number }}"
+          gh release create $tag verao-tropical-teste.apk --target $env:GITHUB_SHA --prerelease `
+            --title "APK de teste $tag" `
+            --notes "APK de TESTE (chave de depuração), API em $env:API_URL. Desinstale antes de instalar o oficial."
