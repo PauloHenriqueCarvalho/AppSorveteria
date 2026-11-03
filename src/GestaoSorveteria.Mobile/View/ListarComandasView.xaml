@@ -61,8 +61,9 @@
                     FontAttributes="Bold"
                     Command="{Binding NovoDeliveryCommand}" />
 
+            <!-- RN-CM-13: balcão — toca nos produtos e cobra; o valor digitado fica lá dentro -->
             <Button Grid.Column="2"
-                    Text="⚡  Venda Rápida"
+                    Text="⚡  Balcão"
                     FontSize="16"
                     HeightRequest="56"
                     BackgroundColor="#FF5722"

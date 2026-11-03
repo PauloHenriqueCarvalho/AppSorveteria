@@ -16,7 +16,7 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
 ### 2. Vender
 
 - **➕ Nova comanda**: para quem senta ou pede mais de uma coisa. Toque nos produtos para adicionar (tocar de novo aumenta a quantidade). Para muitas unidades (ex.: 50 picolés), **toque no número da quantidade** e digite. Use **📝 Observação** para recados ("sem calda").
-- **⚡ Venda rápida**: um produto, pagamento na hora. Vai direto para o pagamento.
+- **⚡ Balcão**: para o cliente que pega, paga e vai embora. Os produtos aparecem em **botões grandes**, os que mais vendem primeiro. Toque no produto (tocar de novo soma mais um), depois em **Cobrar** e escolha a forma de pagamento. Pronto: a tela já fica limpa para o próximo cliente. Um valor sem produto? **✏️ Valor digitado**. Errou um item? Use o **−** ao lado dele.
 - **⚖️ Self-service (peso)**: digite o **valor que a balança mostrou** (em reais).
 - **🛵 Delivery**: igual à comanda, com a observação de endereço/telefone.
 
@@ -24,6 +24,7 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
 
 1. Toque no pote. Aparecem os **sabores**, na ordem da planilha.
 2. Toque no sabor. Pronto: o pote entra na comanda com o sabor ("Pote 1L · Flocos").
+   **Fila no balcão?** Toque em **Sem sabor**. A venda entra certinha; só o estoque daquele pote fica para a contagem da semana acertar. Quando der, escolha o sabor: assim a dona sabe o que vende mais e o pedido sai mais certo.
 3. Mais de um do mesmo sabor? Ajuste a **quantidade** embaixo antes de tocar no sabor (ou use **+** na comanda depois). Sabores diferentes ficam em linhas separadas.
 4. Tocou no pote errado? **Voltar** (nada é lançado).
 
