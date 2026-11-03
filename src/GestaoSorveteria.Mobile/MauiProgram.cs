@@ -73,6 +73,10 @@ namespace SorveteriaMaui
             builder.Services.AddTransient<ContagemView>();
             builder.Services.AddTransient<ContagemViewModel>();
 
+            // Balcão: venda rápida por toque nos produtos (RN-CM-13)
+            builder.Services.AddTransient<BalcaoView>();
+            builder.Services.AddTransient<BalcaoViewModel>();
+
             // Seleção de Produto
             builder.Services.AddTransient<SelecaoProdutoView>();
             builder.Services.AddTransient<SelecaoProdutoViewModel>();
