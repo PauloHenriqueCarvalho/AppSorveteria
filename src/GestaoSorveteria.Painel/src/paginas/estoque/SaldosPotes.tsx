@@ -30,6 +30,10 @@ export default function SaldosPotes() {
 }
 
 function situacao(s: SaldoPoteDto): { nome: string; tom: Tom } {
+  // RN-AV-04: sem a primeira contagem o saldo não tem base — não é "acabou", é "falta contar"
+  if (s.ultimaContagemEm === null) {
+    return { nome: 'Contar', tom: 'atencao' }
+  }
   if (s.saldoUnidades < 0) {
     return { nome: 'Conferir', tom: 'ruim' }
   }
@@ -60,8 +64,9 @@ function Conteudo({ lista }: { lista: SaldoPoteDto[] }) {
     )
   }
 
-  const acabou = lista.filter((s) => s.saldoUnidades <= 0).length
-  const noMinimo = lista.filter((s) => s.saldoUnidades > 0 && s.minimoUnidades !== null && s.saldoUnidades <= s.minimoUnidades).length
+  const contados = lista.filter((s) => s.ultimaContagemEm !== null)
+  const acabou = contados.filter((s) => s.saldoUnidades <= 0).length
+  const noMinimo = contados.filter((s) => s.saldoUnidades > 0 && s.minimoUnidades !== null && s.saldoUnidades <= s.minimoUnidades).length
   const semContagem = lista.filter((s) => s.ultimaContagemEm === null).length
   const grupos = [...new Map(lista.map((s) => [s.grupoId, s.grupoNome])).entries()]
 
