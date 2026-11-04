@@ -34,6 +34,9 @@ public class DetalhesComandaViewModel : BindableObject
     public ICommand FinalizarComandaCommand { get; }
     public ICommand CancelarComandaCommand { get; }
 
+    /// <summary>Abre a seleção de produtos desta comanda (a lista recarrega ao voltar, no OnAppearing).</summary>
+    public ICommand AdicionarProdutoCommand { get; }
+
     public DetalhesComandaViewModel(ComandaAppService comandas, ComandaRepository repositorio, IPaymentService paymentService)
     {
         _comandas = comandas;
@@ -47,6 +50,11 @@ public class DetalhesComandaViewModel : BindableObject
         DigitarQuantidadeCommand = new Command<ItemComanda>(async (item) => await DigitarQuantidade(item));
         FinalizarComandaCommand = new Command(async () => await FinalizarComanda());
         CancelarComandaCommand = new Command(async () => await CancelarComanda());
+        AdicionarProdutoCommand = new Command(async () =>
+        {
+            if (ComandaAtual is null) return;
+            await Shell.Current.GoToAsync("SelecaoProdutoView", new Dictionary<string, object> { { "ComandaSelecionada", ComandaAtual } });
+        });
     }
 
     private async Task DiminuirQuantidade(ItemComanda item)

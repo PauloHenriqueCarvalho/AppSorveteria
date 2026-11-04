@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    Tema Verão Tropical do app do balcão: as mesmas cores do painel (src/GestaoSorveteria.Painel/src/index.css).
+    Tela nova usa estes recursos ({StaticResource CorMarca}, Style="{StaticResource BotaoPrimario}"...), nunca cor solta.
+    Toque grande (mínimo 48), texto legível de longe, uma cor forte por tela para a ação principal.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- ============ Cores ============ -->
+    <Color x:Key="CorMarca">#B0185C</Color>
+    <Color x:Key="CorMarcaForte">#8A1048</Color>
+    <Color x:Key="CorMarcaClara">#F7E1EB</Color>
+    <Color x:Key="CorLaranja">#F07C1E</Color>
+    <Color x:Key="CorLaranjaClara">#FDEBDC</Color>
+    <Color x:Key="CorAmarelo">#FFC23D</Color>
+
+    <Color x:Key="CorTexto">#16202B</Color>
+    <Color x:Key="CorTextoSuave">#5B6878</Color>
+    <Color x:Key="CorTextoApagado">#98A2AE</Color>
+    <Color x:Key="CorFundo">#F3F5F8</Color>
+    <Color x:Key="CorCartao">#FFFFFF</Color>
+    <Color x:Key="CorSuave">#EEF1F5</Color>
+    <Color x:Key="CorBorda">#E2E7ED</Color>
+    <Color x:Key="CorBordaForte">#C9D1DB</Color>
+
+    <Color x:Key="CorBom">#1E7D4F</Color>
+    <Color x:Key="CorBomFundo">#E3F3EA</Color>
+    <Color x:Key="CorAtencao">#8A5300</Color>
+    <Color x:Key="CorAtencaoFundo">#FDF1DC</Color>
+    <Color x:Key="CorRuim">#B42318</Color>
+    <Color x:Key="CorRuimFundo">#FBE3E1</Color>
+    <Color x:Key="CorInfo">#1F5FA8</Color>
+    <Color x:Key="CorInfoFundo">#E3EDF9</Color>
+    <Color x:Key="CorWhatsApp">#128C7E</Color>
+
+    <!-- ============ Cartões (Border) ============ -->
+    <Style x:Key="Cartao" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorCartao}" />
+        <Setter Property="Stroke" Value="{StaticResource CorBorda}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <!-- Número principal da tela (caixa, turno, total) -->
+    <Style x:Key="CartaoDestaque" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorMarca}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+        <Setter Property="Padding" Value="18,16" />
+    </Style>
+
+    <Style x:Key="FaixaAtencao" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorAtencaoFundo}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="Padding" Value="14,10" />
+    </Style>
+
+    <Style x:Key="FaixaInfo" TargetType="Border" BasedOn="{StaticResource FaixaAtencao}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorInfoFundo}" />
+    </Style>
+
+    <Style x:Key="FaixaMarca" TargetType="Border" BasedOn="{StaticResource FaixaAtencao}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorMarcaClara}" />
+    </Style>
+
+    <!-- Selo pequeno (Delivery, sabor, situação) -->
+    <Style x:Key="Selo" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorSuave}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+        <Setter Property="Padding" Value="8,3" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+    </Style>
+
+    <!-- ============ Textos ============ -->
+    <Style x:Key="TituloTela" TargetType="Label">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+    </Style>
+
+    <Style x:Key="TituloSecao" TargetType="Label">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+    </Style>
+
+    <Style x:Key="Texto" TargetType="Label">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+    </Style>
+
+    <Style x:Key="TextoSuave" TargetType="Label">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="TextColor" Value="{StaticResource CorTextoSuave}" />
+    </Style>
+
+    <Style x:Key="Legenda" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="TextColor" Value="{StaticResource CorTextoSuave}" />
+        <Setter Property="CharacterSpacing" Value="0.6" />
+    </Style>
+
+    <Style x:Key="Dinheiro" TargetType="Label">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+    </Style>
+
+    <Style x:Key="TextoSelo" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="TextColor" Value="{StaticResource CorTextoSuave}" />
+    </Style>
+
+    <!-- ============ Botões ============ -->
+    <Style x:Key="BotaoBase" TargetType="Button">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="HeightRequest" Value="56" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="BorderWidth" Value="0" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Opacity" Value="0.45" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Scale" Value="0.97" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <!-- A ação principal da tela (uma só) -->
+    <Style x:Key="BotaoPrimario" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorMarca}" />
+        <Setter Property="TextColor" Value="White" />
+    </Style>
+
+    <!-- Dinheiro entrando: cobrar, abrir caixa, entrar -->
+    <Style x:Key="BotaoSucesso" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorBom}" />
+        <Setter Property="TextColor" Value="White" />
+    </Style>
+
+    <Style x:Key="BotaoSecundario" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorCartao}" />
+        <Setter Property="TextColor" Value="{StaticResource CorMarca}" />
+        <Setter Property="BorderColor" Value="{StaticResource CorBordaForte}" />
+        <Setter Property="BorderWidth" Value="1" />
+    </Style>
+
+    <!-- Voltar, limpar, −/+ -->
+    <Style x:Key="BotaoSuave" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorSuave}" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+    </Style>
+
+    <Style x:Key="BotaoPerigo" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="BackgroundColor" Value="{StaticResource CorRuim}" />
+        <Setter Property="TextColor" Value="White" />
+    </Style>
+
+    <Style x:Key="BotaoTexto" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{StaticResource CorMarca}" />
+        <Setter Property="HeightRequest" Value="48" />
+    </Style>
+
+    <!-- Bolinha de −/+ -->
+    <Style x:Key="BotaoRedondo" TargetType="Button">
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="BackgroundColor" Value="{StaticResource CorSuave}" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+        <Setter Property="BorderWidth" Value="0" />
+    </Style>
+
+    <!-- Número tocável (quantidade): parece um campo -->
+    <Style x:Key="BotaoNumero" TargetType="Button">
+        <Setter Property="WidthRequest" Value="64" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="BackgroundColor" Value="{StaticResource CorCartao}" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+        <Setter Property="BorderColor" Value="{StaticResource CorBordaForte}" />
+        <Setter Property="BorderWidth" Value="1" />
+    </Style>
+
+    <!-- Atalho da tela inicial: ícone + texto, ocupa a célula -->
+    <Style x:Key="BotaoAtalho" TargetType="Button" BasedOn="{StaticResource BotaoBase}">
+        <Setter Property="HeightRequest" Value="64" />
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="BackgroundColor" Value="{StaticResource CorCartao}" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+        <Setter Property="BorderColor" Value="{StaticResource CorBorda}" />
+        <Setter Property="BorderWidth" Value="1" />
+    </Style>
+
+    <!-- ============ Campos ============ -->
+    <Style x:Key="CampoGrande" TargetType="Entry">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="TextColor" Value="{StaticResource CorTexto}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource CorTextoApagado}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource CorSuave}" />
+        <Setter Property="MinimumHeightRequest" Value="56" />
+    </Style>
+
+</ResourceDictionary>

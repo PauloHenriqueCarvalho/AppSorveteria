@@ -5,7 +5,7 @@
              x:Class="SorveteriaMaui.View.ContagemView"
              x:DataType="vm:ContagemViewModel"
              Title="Contagem semanal"
-             BackgroundColor="#F5F5F5">
+             BackgroundColor="{StaticResource CorFundo}">
 
     <!-- Baixa a lista de itens de novo (sem internet, usa a que está no tablet) -->
     <ContentPage.ToolbarItems>
@@ -16,38 +16,38 @@
     <Grid RowDefinitions="Auto, *, Auto">
 
         <VerticalStackLayout Grid.Row="0" Padding="12,10,12,4" Spacing="8">
-            <Border Padding="14,10" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="#E0E0E0">
+            <Border Padding="14,10" StrokeShape="RoundRectangle 12" BackgroundColor="White" Stroke="{StaticResource CorBorda}">
                 <VerticalStackLayout Spacing="4">
                     <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
-                        <Label Grid.Column="0" Text="{Binding Cabecalho}" FontSize="18" FontAttributes="Bold" TextColor="#212121" VerticalOptions="Center" />
-                        <Label Grid.Column="1" Text="{Binding Progresso}" FontSize="16" FontAttributes="Bold" TextColor="#4527A0" VerticalOptions="Center" />
+                        <Label Grid.Column="0" Text="{Binding Cabecalho}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource CorTexto}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Progresso}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource CorMarca}" VerticalOptions="Center" />
                     </Grid>
                     <Label Text="Conte o que tem no freezer agora. Número vazio = ainda não contado. A contagem anterior aparece só para comparar."
-                           FontSize="13" TextColor="#616161" />
-                    <Label Text="{Binding SituacaoEnvio}" IsVisible="{Binding TemSituacaoEnvio}" FontSize="13" FontAttributes="Bold" TextColor="#5D4037" />
-                    <Label Text="{Binding UltimaConcluidaTexto}" IsVisible="{Binding SemContagem}" FontSize="13" TextColor="#616161">
+                           FontSize="13" TextColor="{StaticResource CorTextoSuave}" />
+                    <Label Text="{Binding SituacaoEnvio}" IsVisible="{Binding TemSituacaoEnvio}" FontSize="13" FontAttributes="Bold" TextColor="{StaticResource CorAtencao}" />
+                    <Label Text="{Binding UltimaConcluidaTexto}" IsVisible="{Binding SemContagem}" FontSize="13" TextColor="{StaticResource CorTextoSuave}">
                         <Label.Triggers>
                             <DataTrigger TargetType="Label" Binding="{Binding UltimaRecusada}" Value="True">
-                                <Setter Property="TextColor" Value="#BF360C" />
+                                <Setter Property="TextColor" Value="{StaticResource CorAtencao}" />
                                 <Setter Property="FontAttributes" Value="Bold" />
                             </DataTrigger>
                         </Label.Triggers>
                     </Label>
-                    <Label Text="{Binding Situacao}" FontSize="12" TextColor="#9E9E9E" />
+                    <Label Text="{Binding Situacao}" FontSize="12" TextColor="{StaticResource CorTextoApagado}" />
                 </VerticalStackLayout>
             </Border>
 
             <!-- Recusada pelo servidor: nunca some em silêncio; dá para corrigir (sobe de novo) ou começar outra -->
-            <Border IsVisible="{Binding Recusada}" Padding="14,10" StrokeShape="RoundRectangle 12" Stroke="#E65100" BackgroundColor="#FFF3E0">
+            <Border IsVisible="{Binding Recusada}" Padding="14,10" StrokeShape="RoundRectangle 12" Stroke="{StaticResource CorAtencao}" BackgroundColor="{StaticResource CorAtencaoFundo}">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="{Binding MotivoRecusa}" FontSize="14" FontAttributes="Bold" TextColor="#BF360C" />
-                    <Label Text="Corrija o número e a contagem é enviada de novo, ou comece outra contagem." FontSize="13" TextColor="#5D4037" />
+                    <Label Text="{Binding MotivoRecusa}" FontSize="14" FontAttributes="Bold" TextColor="{StaticResource CorAtencao}" />
+                    <Label Text="Corrija o número e a contagem é enviada de novo, ou comece outra contagem." FontSize="13" TextColor="{StaticResource CorAtencao}" />
                     <Button Text="Começar outra contagem"
                             FontSize="15"
                             FontAttributes="Bold"
                             HeightRequest="48"
-                            BackgroundColor="#FFE0B2"
-                            TextColor="#BF360C"
+                            BackgroundColor="{StaticResource CorAtencaoFundo}"
+                            TextColor="{StaticResource CorAtencao}"
                             CornerRadius="10"
                             IsEnabled="{Binding Livre}"
                             Command="{Binding ComecarOutraCommand}" />
@@ -62,33 +62,33 @@
                         SelectionMode="None">
             <CollectionView.EmptyView>
                 <Label Text="A lista de itens ainda não chegou neste tablet. Conecte à internet e toque em Atualizar."
-                       Margin="24" FontSize="16" TextColor="#616161" HorizontalTextAlignment="Center" />
+                       Margin="24" FontSize="16" TextColor="{StaticResource CorTextoSuave}" HorizontalTextAlignment="Center" />
             </CollectionView.EmptyView>
 
             <CollectionView.GroupHeaderTemplate>
                 <DataTemplate x:DataType="vm:GrupoDaContagem">
                     <Grid Padding="16,18,16,6" ColumnDefinitions="*, Auto" ColumnSpacing="8">
-                        <Label Grid.Column="0" Text="{Binding Nome}" FontSize="20" FontAttributes="Bold" TextColor="#4527A0" VerticalOptions="Center" />
-                        <Label Grid.Column="1" Text="{Binding Progresso}" FontSize="14" TextColor="#616161" VerticalOptions="Center" />
+                        <Label Grid.Column="0" Text="{Binding Nome}" FontSize="20" FontAttributes="Bold" TextColor="{StaticResource CorMarca}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Progresso}" FontSize="14" TextColor="{StaticResource CorTextoSuave}" VerticalOptions="Center" />
                     </Grid>
                 </DataTemplate>
             </CollectionView.GroupHeaderTemplate>
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:LinhaContagem">
-                    <Border Margin="12,4" Padding="12,10" StrokeShape="RoundRectangle 10" BackgroundColor="White" Stroke="#E0E0E0">
+                    <Border Margin="12,4" Padding="12,10" StrokeShape="RoundRectangle 10" BackgroundColor="White" Stroke="{StaticResource CorBorda}">
                         <Border.Triggers>
                             <DataTrigger TargetType="Border" Binding="{Binding Contou}" Value="True">
-                                <Setter Property="Stroke" Value="#81C784" />
-                                <Setter Property="BackgroundColor" Value="#F1F8E9" />
+                                <Setter Property="Stroke" Value="{StaticResource CorBom}" />
+                                <Setter Property="BackgroundColor" Value="{StaticResource CorBomFundo}" />
                             </DataTrigger>
                         </Border.Triggers>
                         <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="8">
                             <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2" VerticalOptions="Center">
-                                <Label Text="{Binding Nome}" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
-                                <Label Text="{Binding Embalagem}" FontSize="13" TextColor="#757575" />
+                                <Label Text="{Binding Nome}" FontSize="18" FontAttributes="Bold" TextColor="{StaticResource CorTexto}" />
+                                <Label Text="{Binding Embalagem}" FontSize="13" TextColor="{StaticResource CorTextoSuave}" />
                                 <!-- RN-ES-06: a anterior é só referência; o número desta contagem começa vazio -->
-                                <Label Text="{Binding AnteriorTexto}" IsVisible="{Binding TemAnterior}" FontSize="14" TextColor="#4527A0" />
+                                <Label Text="{Binding AnteriorTexto}" IsVisible="{Binding TemAnterior}" FontSize="14" TextColor="{StaticResource CorMarca}" />
                             </VerticalStackLayout>
 
                             <!-- RN-ES-06: "Não tem nenhum" grava 0 em um toque -->
@@ -101,8 +101,8 @@
                                     CornerRadius="12"
                                     FontSize="15"
                                     FontAttributes="Bold"
-                                    BackgroundColor="#FFEBEE"
-                                    TextColor="#C62828"
+                                    BackgroundColor="{StaticResource CorRuimFundo}"
+                                    TextColor="{StaticResource CorRuim}"
                                     CommandParameter="{Binding .}"
                                     Command="{Binding NenhumCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
 
@@ -114,17 +114,17 @@
                                         CornerRadius="32"
                                         FontSize="28"
                                         FontAttributes="Bold"
-                                        BackgroundColor="#F0F0F0"
-                                        TextColor="#333"
+                                        BackgroundColor="{StaticResource CorSuave}"
+                                        TextColor="{StaticResource CorTexto}"
                                         CommandParameter="{Binding .}"
                                         Command="{Binding MenosCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
 
                                 <!-- Toque no número para digitar ("2,5"); em branco apaga -->
-                                <Border Grid.Column="1" HeightRequest="64" Padding="4" StrokeShape="RoundRectangle 10" Stroke="#BDBDBD" StrokeThickness="2" BackgroundColor="#FAFAFA">
+                                <Border Grid.Column="1" HeightRequest="64" Padding="4" StrokeShape="RoundRectangle 10" Stroke="{StaticResource CorBordaForte}" StrokeThickness="2" BackgroundColor="{StaticResource CorFundo}">
                                     <Border.Triggers>
                                         <DataTrigger TargetType="Border" Binding="{Binding Nenhum}" Value="True">
-                                            <Setter Property="Stroke" Value="#C62828" />
-                                            <Setter Property="BackgroundColor" Value="#FFEBEE" />
+                                            <Setter Property="Stroke" Value="{StaticResource CorRuim}" />
+                                            <Setter Property="BackgroundColor" Value="{StaticResource CorRuimFundo}" />
                                         </DataTrigger>
                                     </Border.Triggers>
                                     <Border.GestureRecognizers>
@@ -132,8 +132,8 @@
                                                               Command="{Binding DigitarCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout VerticalOptions="Center" Spacing="0">
-                                        <Label Text="{Binding ValorTexto}" FontSize="26" FontAttributes="Bold" TextColor="#212121" HorizontalTextAlignment="Center" />
-                                        <Label Text="{Binding UnidadeTexto}" FontSize="12" TextColor="#757575" HorizontalTextAlignment="Center" />
+                                        <Label Text="{Binding ValorTexto}" FontSize="26" FontAttributes="Bold" TextColor="{StaticResource CorTexto}" HorizontalTextAlignment="Center" />
+                                        <Label Text="{Binding UnidadeTexto}" FontSize="12" TextColor="{StaticResource CorTextoSuave}" HorizontalTextAlignment="Center" />
                                     </VerticalStackLayout>
                                 </Border>
 
@@ -144,8 +144,8 @@
                                         CornerRadius="32"
                                         FontSize="28"
                                         FontAttributes="Bold"
-                                        BackgroundColor="#E3F2FD"
-                                        TextColor="#1976D2"
+                                        BackgroundColor="{StaticResource CorInfoFundo}"
+                                        TextColor="{StaticResource CorInfo}"
                                         CommandParameter="{Binding .}"
                                         Command="{Binding MaisCommand, Source={RelativeSource AncestorType={x:Type vm:ContagemViewModel}}}" />
                             </Grid>
@@ -162,8 +162,8 @@
                     FontSize="16"
                     FontAttributes="Bold"
                     HeightRequest="60"
-                    BackgroundColor="#EDE7F6"
-                    TextColor="#4527A0"
+                    BackgroundColor="{StaticResource CorMarcaClara}"
+                    TextColor="{StaticResource CorMarca}"
                     CornerRadius="12"
                     IsEnabled="{Binding Livre}"
                     Command="{Binding SalvarCommand}" />
@@ -172,7 +172,7 @@
                     FontSize="16"
                     FontAttributes="Bold"
                     HeightRequest="60"
-                    BackgroundColor="#2E7D32"
+                    BackgroundColor="{StaticResource CorBom}"
                     TextColor="White"
                     CornerRadius="12"
                     IsEnabled="{Binding Livre}"

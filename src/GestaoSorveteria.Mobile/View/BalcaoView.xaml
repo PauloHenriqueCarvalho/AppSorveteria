@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
              x:Class="SorveteriaMaui.View.BalcaoView"
              Title="Balcão — venda rápida"
-             BackgroundColor="#F4F4F9">
+             BackgroundColor="{StaticResource CorFundo}">
 
     <!-- RN-CM-13: à esquerda os botões dos produtos (mais vendidos primeiro); à direita a venda e o "Cobrar".
          Pote: grade de sabores com "Sem sabor" (RN-ES-09). Depois de cobrar, a tela fica pronta para o próximo cliente. -->
@@ -23,7 +23,7 @@
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <Border StrokeShape="RoundRectangle 20" Stroke="#6200EE" StrokeThickness="1" Padding="18,10" BackgroundColor="White">
+                        <Border StrokeShape="RoundRectangle 22" Stroke="{StaticResource CorBordaForte}" StrokeThickness="1" Padding="18,10" BackgroundColor="White">
                             <VisualStateManager.VisualStateGroups>
                                 <VisualStateGroup Name="CommonStates">
                                     <VisualState Name="Normal">
@@ -33,12 +33,12 @@
                                     </VisualState>
                                     <VisualState Name="Selected">
                                         <VisualState.Setters>
-                                            <Setter Property="BackgroundColor" Value="#E8DEF8" />
+                                            <Setter Property="BackgroundColor" Value="{StaticResource CorMarcaClara}" />
                                         </VisualState.Setters>
                                     </VisualState>
                                 </VisualStateGroup>
                             </VisualStateManager.VisualStateGroups>
-                            <Label Text="{Binding .}" TextColor="#6200EE" FontAttributes="Bold" FontSize="15" VerticalOptions="Center" />
+                            <Label Text="{Binding .}" TextColor="{StaticResource CorMarca}" FontFamily="OpenSansSemibold" FontSize="15" VerticalOptions="Center" />
                         </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
@@ -48,7 +48,7 @@
                    IsVisible="{Binding SemProdutos}"
                    Margin="10"
                    FontSize="16"
-                   TextColor="#555"
+                   TextColor="{StaticResource CorTextoSuave}"
                    HorizontalTextAlignment="Center"
                    VerticalOptions="Start"
                    Text="Nenhum produto neste aparelho. Na aba Produtos, toque em Atualizar (precisa de internet). O valor digitado continua disponível." />
@@ -59,23 +59,22 @@
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <Border StrokeShape="RoundRectangle 14"
-                                Stroke="#E0E0E0"
-                                StrokeThickness="1"
-                                BackgroundColor="White"
+                        <Border Style="{StaticResource Cartao}"
                                 Padding="10"
-                                HeightRequest="100">
+                                HeightRequest="112">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer CommandParameter="{Binding .}"
                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.TocarProdutoCommand}" />
                             </Border.GestureRecognizers>
-                            <VerticalStackLayout VerticalOptions="Center" Spacing="2">
-                                <Label Text="{Binding Nome}" FontSize="17" FontAttributes="Bold" TextColor="#212121"
+                            <VerticalStackLayout VerticalOptions="Center" Spacing="4">
+                                <Label Text="{Binding Nome}" FontSize="17" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorTexto}"
                                        HorizontalTextAlignment="Center" LineBreakMode="WordWrap" MaxLines="2" />
-                                <Label Text="{Binding Preco, StringFormat='R$ {0:F2}'}" FontSize="15" FontAttributes="Bold" TextColor="#2E7D32"
+                                <Label Text="{Binding Preco, StringFormat='R$ {0:F2}'}" FontSize="16" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorMarca}"
                                        HorizontalTextAlignment="Center" />
-                                <Label Text="sabor" IsVisible="{Binding PedeSaborNaVenda}" FontSize="12" TextColor="#6200EE"
-                                       HorizontalTextAlignment="Center" />
+                                <Border Style="{StaticResource Selo}" BackgroundColor="{StaticResource CorMarcaClara}" HorizontalOptions="Center"
+                                        IsVisible="{Binding PedeSaborNaVenda}">
+                                    <Label Text="sabor" Style="{StaticResource TextoSelo}" TextColor="{StaticResource CorMarca}" />
+                                </Border>
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>
@@ -86,35 +85,23 @@
         <!-- ============ Grade de sabores (cobre os produtos; a venda à direita continua visível) ============ -->
         <Grid Grid.Column="0"
               IsVisible="{Binding EscolhendoSabor}"
-              BackgroundColor="#F4F4F9"
+              BackgroundColor="{StaticResource CorFundo}"
               RowDefinitions="Auto, *"
               Padding="12,12,6,12">
             <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" ColumnSpacing="10" Margin="0,0,0,10">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                    <Label Text="{Binding TituloSabor}" FontSize="20" FontAttributes="Bold" TextColor="#212121" />
-                    <Label Text="Qual sabor? Com fila, toque em Sem sabor." FontSize="14" TextColor="#616161" />
+                    <Label Text="{Binding TituloSabor}" Style="{StaticResource TituloSecao}" FontSize="20" />
+                    <Label Text="Qual sabor? Com fila, toque em Sem sabor." FontSize="14" TextColor="{StaticResource CorTextoSuave}" />
                 </VerticalStackLayout>
                 <!-- RN-ES-09: pular o sabor — a venda entra sem baixa de estoque e a contagem semanal corrige -->
                 <Button Grid.Column="1"
                         Text="Sem sabor"
-                        FontSize="16"
-                        FontAttributes="Bold"
-                        HeightRequest="56"
-                        Padding="18,0"
-                        CornerRadius="10"
-                        BackgroundColor="#6200EE"
-                        TextColor="White"
+                        Style="{StaticResource BotaoPrimario}"
                         VerticalOptions="Center"
                         Command="{Binding SemSaborCommand}" />
                 <Button Grid.Column="2"
                         Text="Voltar"
-                        FontSize="16"
-                        FontAttributes="Bold"
-                        HeightRequest="56"
-                        Padding="18,0"
-                        CornerRadius="10"
-                        BackgroundColor="#F0F0F0"
-                        TextColor="#333"
+                        Style="{StaticResource BotaoSuave}"
                         VerticalOptions="Center"
                         Command="{Binding CancelarSaborCommand}" />
             </Grid>
@@ -125,20 +112,19 @@
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:SaborParaEscolher">
-                        <Border StrokeShape="RoundRectangle 12"
-                                Stroke="#6200EE"
+                        <Border Style="{StaticResource Cartao}"
+                                Stroke="{StaticResource CorMarca}"
                                 StrokeThickness="2"
-                                BackgroundColor="White"
                                 Padding="10"
-                                HeightRequest="80">
+                                HeightRequest="84">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer CommandParameter="{Binding .}"
                                                       Command="{Binding EscolherSaborCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}" />
                             </Border.GestureRecognizers>
                             <Label Text="{Binding Nome}"
                                    FontSize="17"
-                                   FontAttributes="Bold"
-                                   TextColor="#4527A0"
+                                   FontFamily="OpenSansSemibold"
+                                   TextColor="{StaticResource CorMarca}"
                                    HorizontalTextAlignment="Center"
                                    VerticalTextAlignment="Center"
                                    VerticalOptions="Center"
@@ -154,39 +140,36 @@
         <Border Grid.Column="1"
                 BackgroundColor="White"
                 StrokeThickness="0"
-                Padding="14"
-                Shadow="{Shadow Brush=Black, Offset='-3,0', Opacity=0.1}">
+                Padding="16"
+                Shadow="{Shadow Brush=Black, Offset='-3,0', Opacity=0.08, Radius=12}">
             <Grid RowDefinitions="Auto, *, Auto, Auto" RowSpacing="10">
-                <Label Grid.Row="0" Text="Venda do cliente" FontSize="20" FontAttributes="Bold" TextColor="#212121" />
+                <Label Grid.Row="0" Text="Venda do cliente" Style="{StaticResource TituloSecao}" FontSize="20" />
 
                 <Label Grid.Row="1"
                        IsVisible="{Binding SemItens}"
                        Text="Toque nos produtos para montar a venda."
                        FontSize="15"
-                       TextColor="#757575"
+                       TextColor="{StaticResource CorTextoSuave}"
                        VerticalOptions="Start" />
 
                 <CollectionView Grid.Row="1" ItemsSource="{Binding Itens}" SelectionMode="None">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:LinhaDoBalcao">
-                            <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="6" Padding="0,6">
+                            <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="8" Padding="0,8">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                                    <Label Text="{Binding Descricao}" FontSize="15" FontAttributes="Bold" TextColor="#333"
+                                    <Label Text="{Binding Descricao}" FontSize="15" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorTexto}"
                                            LineBreakMode="WordWrap" MaxLines="2" />
-                                    <Label Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" FontSize="14" TextColor="#2E7D32" />
+                                    <Label Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" FontSize="14" TextColor="{StaticResource CorTextoSuave}" />
                                 </VerticalStackLayout>
-                                <Button Grid.Column="1" Text="−" WidthRequest="44" HeightRequest="44" CornerRadius="22"
-                                        BackgroundColor="#F0F0F0" TextColor="#333" FontSize="20" FontAttributes="Bold" Padding="0"
+                                <Button Grid.Column="1" Text="−" Style="{StaticResource BotaoRedondo}" WidthRequest="44" HeightRequest="44" CornerRadius="22"
                                         Command="{Binding MenosUmCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
                                 <!-- RN-ES-04: tocar no número abre o teclado -->
-                                <Button Grid.Column="2" Text="{Binding Quantidade}" WidthRequest="52" HeightRequest="44" CornerRadius="10"
-                                        BackgroundColor="White" BorderColor="#BDBDBD" BorderWidth="1" TextColor="#333" FontSize="18"
-                                        FontAttributes="Bold" Padding="0"
+                                <Button Grid.Column="2" Text="{Binding Quantidade}" Style="{StaticResource BotaoNumero}" WidthRequest="52" HeightRequest="44" FontSize="18"
                                         Command="{Binding DigitarQuantidadeCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
-                                <Button Grid.Column="3" Text="+" WidthRequest="44" HeightRequest="44" CornerRadius="22"
-                                        BackgroundColor="#E3F2FD" TextColor="#1976D2" FontSize="20" FontAttributes="Bold" Padding="0"
+                                <Button Grid.Column="3" Text="+" Style="{StaticResource BotaoRedondo}" WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        BackgroundColor="{StaticResource CorMarcaClara}" TextColor="{StaticResource CorMarca}"
                                         Command="{Binding MaisUmCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
                             </Grid>
@@ -197,33 +180,24 @@
                 <Grid Grid.Row="2" ColumnDefinitions="*, *" ColumnSpacing="10">
                     <Button Grid.Column="0"
                             Text="✏️ Valor digitado"
+                            Style="{StaticResource BotaoSecundario}"
                             FontSize="15"
                             HeightRequest="52"
-                            CornerRadius="10"
-                            BackgroundColor="#FFF3E0"
-                            TextColor="#E65100"
-                            FontAttributes="Bold"
                             Command="{Binding ValorDigitadoCommand}" />
                     <Button Grid.Column="1"
                             Text="Limpar"
+                            Style="{StaticResource BotaoSuave}"
                             FontSize="15"
                             HeightRequest="52"
-                            CornerRadius="10"
-                            BackgroundColor="#F0F0F0"
-                            TextColor="#333"
-                            FontAttributes="Bold"
                             IsEnabled="{Binding TemItens}"
                             Command="{Binding LimparCommand}" />
                 </Grid>
 
                 <Button Grid.Row="3"
                         Text="{Binding TextoCobrar}"
+                        Style="{StaticResource BotaoSucesso}"
                         FontSize="22"
-                        HeightRequest="72"
-                        CornerRadius="12"
-                        BackgroundColor="#2E7D32"
-                        TextColor="White"
-                        FontAttributes="Bold"
+                        HeightRequest="76"
                         IsEnabled="{Binding TemItens}"
                         Command="{Binding CobrarCommand}" />
             </Grid>

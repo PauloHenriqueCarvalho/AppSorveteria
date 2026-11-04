@@ -3,185 +3,133 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
              x:Class="SorveteriaMaui.View.ListarComandasView"
-             Title="Comandas Abertas"
-             BackgroundColor="#F5F5F5">
+             Title="Verão Tropical">
 
     <!-- C1: trocar de atendente (volta para o PIN) -->
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Sair" Command="{Binding SairCommand}" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto, Auto, Auto, *">
+    <!-- Tela inicial do turno: quem está, o caixa, o envio, os atalhos e as comandas abertas. Tudo rola junto. -->
+    <CollectionView ItemsSource="{Binding Comandas}" SelectionMode="None" Margin="0">
 
-        <Frame Grid.Row="0" Margin="10" BackgroundColor="#6200EE" CornerRadius="10" HasShadow="True" BorderColor="Transparent">
-            <Grid ColumnDefinitions="*, Auto">
-                <HorizontalStackLayout Grid.Column="0" Spacing="15" HorizontalOptions="Center">
-                    <Label Text="Comandas Ativas:" TextColor="White" VerticalOptions="Center"/>
-                    <Label Text="{Binding TotalComandasAbertas}" TextColor="White" FontAttributes="Bold" FontSize="20"/>
-                </HorizontalStackLayout>
-                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
-                    <Label Text="{Binding NomeAtendente, StringFormat='👤 {0}'}" TextColor="White" FontSize="14" HorizontalTextAlignment="End"/>
-                    <!-- C3 -->
-                    <Label Text="{Binding EstadoCaixa}" TextColor="White" FontSize="12" HorizontalTextAlignment="End"/>
-                </VerticalStackLayout>
-            </Grid>
-        </Frame>
+        <CollectionView.Header>
+            <VerticalStackLayout Padding="16,16,16,8" Spacing="12">
 
-        <!-- C4 / RN-SY-05: indicador sempre visível; toque envia agora (ou pede o PIN) -->
-        <Border Grid.Row="1" Margin="10,0" Padding="12,8" StrokeThickness="0" BackgroundColor="#FFF8E1" StrokeShape="RoundRectangle 8">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Command="{Binding EnviarAgoraCommand}" />
-            </Border.GestureRecognizers>
-            <VerticalStackLayout Spacing="2">
-                <Label Text="{Binding IndicadorEnvio}" FontSize="14" FontAttributes="Bold" TextColor="#5D4037" />
-                <Label Text="{Binding MensagemEnvio}" FontSize="12" TextColor="#795548" IsVisible="{Binding TemMensagemEnvio}" />
-            </VerticalStackLayout>
-        </Border>
-
-        <!-- Topo fixo com Nova Comanda e Venda Rápida; embaixo, "Está acabando" e a contagem semanal (Fase 2) -->
-        <Grid Grid.Row="2" ColumnDefinitions="*, *, *" RowDefinitions="Auto, Auto, Auto" Padding="10" ColumnSpacing="10" RowSpacing="10">
-            <Button Grid.Column="0"
-                    Text="➕  Nova Comanda"
-                    FontSize="16"
-                    HeightRequest="56"
-                    BackgroundColor="#4CAF50"
-                    TextColor="White"
-                    CornerRadius="10"
-                    FontAttributes="Bold"
-                    Command="{Binding NovaComandaCommand}" />
-
-            <!-- RN-CM-11 -->
-            <Button Grid.Column="1"
-                    Text="🛵  Delivery"
-                    FontSize="16"
-                    HeightRequest="56"
-                    BackgroundColor="#1976D2"
-                    TextColor="White"
-                    CornerRadius="10"
-                    FontAttributes="Bold"
-                    Command="{Binding NovoDeliveryCommand}" />
-
-            <!-- RN-CM-13: balcão — toca nos produtos e cobra; o valor digitado fica lá dentro -->
-            <Button Grid.Column="2"
-                    Text="⚡  Balcão"
-                    FontSize="16"
-                    HeightRequest="56"
-                    BackgroundColor="#FF5722"
-                    TextColor="White"
-                    CornerRadius="10"
-                    FontAttributes="Bold"
-                    Command="{Binding VendaRapidaCommand}" />
-
-            <!-- Fase 2 (docs/10 §2.2, RN-AV-01): avisar o que está acabando; urgente vai na hora para o WhatsApp da dona -->
-            <Button Grid.Row="1"
-                    Grid.ColumnSpan="2"
-                    Text="{Binding TextoEstaAcabando}"
-                    FontSize="16"
-                    HeightRequest="56"
-                    BackgroundColor="#FFB300"
-                    TextColor="#3E2723"
-                    CornerRadius="10"
-                    FontAttributes="Bold"
-                    Command="{Binding EstaAcabandoCommand}" />
-
-            <!-- Fase 2 (docs/10 §2.1, RN-ES-05): contagem semanal do freezer -->
-            <Button Grid.Row="1"
-                    Grid.Column="2"
-                    Text="{Binding TextoContagem}"
-                    FontSize="16"
-                    HeightRequest="56"
-                    BackgroundColor="#EDE7F6"
-                    TextColor="#4527A0"
-                    CornerRadius="10"
-                    FontAttributes="Bold"
-                    Command="{Binding ContagemCommand}" />
-
-            <!-- RN-ES-05: na véspera do pedido, lembrete com atalho (some quando a contagem de hoje é concluída) -->
-            <Border Grid.Row="2"
-                    Grid.ColumnSpan="3"
-                    IsVisible="{Binding LembreteContagem}"
-                    Padding="14,12"
-                    StrokeThickness="2"
-                    Stroke="#4527A0"
-                    BackgroundColor="#EDE7F6"
-                    StrokeShape="RoundRectangle 10">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding ContagemCommand}" />
-                </Border.GestureRecognizers>
-                <Label Text="{Binding TextoLembreteContagem}" FontSize="16" FontAttributes="Bold" TextColor="#4527A0" />
-            </Border>
-        </Grid>
-
-        <CollectionView Grid.Row="3" 
-                        ItemsSource="{Binding Comandas}"
-                        Margin="10">
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Frame Margin="0,0,0,12" Padding="15" CornerRadius="12" HasShadow="True" BorderColor="#E0E0E0">
-
-                        <Frame.GestureRecognizers>
-                            <TapGestureRecognizer 
-                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.VerDetalhesCommand}"
-                                CommandParameter="{Binding .}" />
-                        </Frame.GestureRecognizers>
-
-                        <VerticalStackLayout Spacing="10">
-
-                            <Grid ColumnDefinitions="Auto, *, Auto">
-                                <Grid Grid.Column="0" WidthRequest="40" HeightRequest="40">
-                                    <Ellipse Fill="#03DAC6" />
-                                    <Label Text="{Binding Numero}" 
-                                           HorizontalOptions="Center" VerticalOptions="Center"
-                                           TextColor="White" FontAttributes="Bold"/>
-                                </Grid>
-
-                                <VerticalStackLayout Grid.Column="1" Margin="15,0">
-                                    <Label Text="{Binding NomeCliente, TargetNullValue='Cliente Avulso'}" 
-                                           FontSize="18" FontAttributes="Bold" TextColor="#333"/>
-                                    <Label Text="{Binding CriadaEmLocal, StringFormat='{0:HH:mm}'}" 
-                                           FontSize="12" TextColor="Gray"/>
-                                    <Label Text="🛵 Delivery" IsVisible="{Binding EhDelivery}"
-                                           FontSize="12" FontAttributes="Bold" TextColor="#1976D2"/>
-                                    <Label Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}"
-                                           FontSize="12" TextColor="#555" LineBreakMode="TailTruncation" MaxLines="1"/>
-                                </VerticalStackLayout>
-
-                                <Label Grid.Column="2" 
-                                       Text="{Binding Total, StringFormat='R$ {0:F2}'}" 
-                                       FontSize="18" FontAttributes="Bold" TextColor="#2E7D32" 
-                                       VerticalOptions="Center"/>
-                            </Grid>
-
-                            <BoxView HeightRequest="1" Color="#EEE" HorizontalOptions="Fill"/>
-
-                            <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,5,0,0">
-                                <Button Grid.Column="0" 
-                                        Text="+ Produto" 
-                                        BackgroundColor="#E3F2FD" 
-                                        TextColor="#1976D2"
-                                        FontAttributes="Bold"
-                                        CornerRadius="8"
-                                        HeightRequest="45"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AdicionarProdutoCommand}"
-                                        CommandParameter="{Binding .}"/>
-
-                                <Button Grid.Column="1" 
-                                        Text="Finalizar" 
-                                        BackgroundColor="#2E7D32" 
-                                        TextColor="White"
-                                        FontAttributes="Bold"
-                                        CornerRadius="8"
-                                        HeightRequest="45"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FinalizarComandaCommand}"
-                                        CommandParameter="{Binding .}"/>
-                            </Grid>
-
+                <!-- Quem está no turno e o caixa (C1, C3) -->
+                <Border Style="{StaticResource CartaoDestaque}">
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding NomeAtendente, StringFormat='Olá, {0}'}" TextColor="White" FontSize="22" FontFamily="OpenSansSemibold" />
+                            <Label Text="{Binding EstadoCaixa}" TextColor="White" Opacity="0.9" FontSize="14" />
                         </VerticalStackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
+                            <Label Text="{Binding TotalComandasAbertas}" TextColor="White" FontSize="30" FontFamily="OpenSansSemibold" HorizontalOptions="End" />
+                            <Label Text="comandas abertas" TextColor="White" Opacity="0.9" FontSize="12" HorizontalOptions="End" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
 
-        <!-- Floating button removed; use fixed buttons on topo -->
-    </Grid>
+                <!-- C4 / RN-SY-05: envio sempre visível; toque envia agora (ou pede o PIN) -->
+                <Border Style="{StaticResource FaixaInfo}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding EnviarAgoraCommand}" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="{Binding IndicadorEnvio}" FontSize="14" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorInfo}" />
+                        <Label Text="{Binding MensagemEnvio}" FontSize="12" TextColor="{StaticResource CorTextoSuave}" IsVisible="{Binding TemMensagemEnvio}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- RN-ES-05: na véspera do pedido, lembrete com atalho (some quando a contagem de hoje é concluída) -->
+                <Border Style="{StaticResource FaixaMarca}" IsVisible="{Binding LembreteContagem}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ContagemCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{Binding TextoLembreteContagem}" FontSize="15" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorMarca}" />
+                </Border>
+
+                <!-- RN-CM-13: a venda mais comum (pega, paga e vai) em destaque -->
+                <Button Text="⚡  Balcão — venda rápida"
+                        Style="{StaticResource BotaoPrimario}"
+                        HeightRequest="76"
+                        FontSize="21"
+                        Command="{Binding VendaRapidaCommand}" />
+
+                <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="12" RowSpacing="12">
+                    <Button Grid.Row="0" Grid.Column="0" Text="➕  Nova comanda" Style="{StaticResource BotaoAtalho}" Command="{Binding NovaComandaCommand}" />
+                    <!-- RN-CM-11 -->
+                    <Button Grid.Row="0" Grid.Column="1" Text="🛵  Delivery" Style="{StaticResource BotaoAtalho}" Command="{Binding NovoDeliveryCommand}" />
+                    <!-- Fase 2 (docs/10 §2.2, RN-AV-01): avisar o que está acabando; urgente vai na hora para o WhatsApp da dona -->
+                    <Button Grid.Row="1" Grid.Column="0" Text="{Binding TextoEstaAcabando}" Style="{StaticResource BotaoAtalho}"
+                            BackgroundColor="{StaticResource CorAtencaoFundo}" BorderColor="{StaticResource CorAtencaoFundo}" TextColor="{StaticResource CorAtencao}"
+                            LineBreakMode="TailTruncation"
+                            Command="{Binding EstaAcabandoCommand}" />
+                    <!-- Fase 2 (docs/10 §2.1, RN-ES-05): contagem semanal do freezer -->
+                    <Button Grid.Row="1" Grid.Column="1" Text="{Binding TextoContagem}" Style="{StaticResource BotaoAtalho}" Command="{Binding ContagemCommand}" />
+                </Grid>
+
+                <Label Text="COMANDAS ABERTAS" Style="{StaticResource Legenda}" Margin="4,12,0,0" />
+            </VerticalStackLayout>
+        </CollectionView.Header>
+
+        <CollectionView.EmptyView>
+            <VerticalStackLayout Padding="32,24" Spacing="6">
+                <Label Text="🍦" FontSize="40" HorizontalOptions="Center" />
+                <Label Text="Nenhuma comanda aberta" Style="{StaticResource TituloSecao}" HorizontalOptions="Center" />
+                <Label Text="Cliente rápido? Use o Balcão. Quem vai sentar ou pedir várias coisas ganha uma comanda."
+                       Style="{StaticResource TextoSuave}" HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </CollectionView.EmptyView>
+
+        <CollectionView.ItemTemplate>
+            <DataTemplate>
+                <Border Style="{StaticResource Cartao}" Margin="16,0,16,12">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.VerDetalhesCommand}"
+                            CommandParameter="{Binding .}" />
+                    </Border.GestureRecognizers>
+
+                    <VerticalStackLayout Spacing="14">
+                        <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="14">
+                            <!-- Número da comanda (RN-CM-02) -->
+                            <Border Grid.Column="0" WidthRequest="48" HeightRequest="48" StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 24" BackgroundColor="{StaticResource CorMarcaClara}" VerticalOptions="Start">
+                                <Label Text="{Binding Numero}" FontSize="18" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorMarca}"
+                                       HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding NomeCliente, TargetNullValue='Cliente avulso'}" FontSize="18" FontFamily="OpenSansSemibold"
+                                       TextColor="{StaticResource CorTexto}" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding CriadaEmLocal, StringFormat='Aberta às {0:HH:mm}'}" Style="{StaticResource TextoSuave}" FontSize="13" />
+                                <Border Style="{StaticResource Selo}" BackgroundColor="{StaticResource CorInfoFundo}" IsVisible="{Binding EhDelivery}" Margin="0,4,0,0">
+                                    <Label Text="🛵 Delivery" Style="{StaticResource TextoSelo}" TextColor="{StaticResource CorInfo}" />
+                                </Border>
+                                <Label Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}" Style="{StaticResource TextoSuave}" FontSize="13"
+                                       LineBreakMode="TailTruncation" MaxLines="1" />
+                            </VerticalStackLayout>
+
+                            <Label Grid.Column="2" Text="{Binding Total, StringFormat='R$ {0:F2}'}" Style="{StaticResource Dinheiro}" FontSize="20"
+                                   VerticalOptions="Center" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
+                            <Button Grid.Column="0" Text="+ Produto" Style="{StaticResource BotaoSecundario}" HeightRequest="50"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AdicionarProdutoCommand}"
+                                    CommandParameter="{Binding .}" />
+                            <Button Grid.Column="1" Text="Pagar" Style="{StaticResource BotaoSucesso}" HeightRequest="50"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.FinalizarComandaCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+
+        <CollectionView.Footer>
+            <BoxView HeightRequest="16" Color="Transparent" />
+        </CollectionView.Footer>
+    </CollectionView>
 </ContentPage>

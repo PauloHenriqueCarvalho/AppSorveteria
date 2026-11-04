@@ -10,7 +10,7 @@
 
     <!-- Abas do turno (tela inicial quando já há atendente no aparelho) -->
     <TabBar x:Name="Principal">
-        <ShellContent Title="Comandas" Route="ListarComandasView" ContentTemplate="{DataTemplate views:ListarComandasView}" />
+        <ShellContent Title="Início" Route="ListarComandasView" ContentTemplate="{DataTemplate views:ListarComandasView}" />
         <ShellContent Title="Produtos" Route="ListarProdutosView" ContentTemplate="{DataTemplate views:ListarProdutosView}" />
         <ShellContent Title="Caixa" Route="CaixaView" ContentTemplate="{DataTemplate views:CaixaView}" />
         <ShellContent Title="Turno" Route="HistoricoTurnoView" ContentTemplate="{DataTemplate views:HistoricoTurnoView}" />

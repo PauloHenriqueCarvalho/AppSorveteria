@@ -9,6 +9,8 @@ namespace SorveteriaMaui
         public App(IServiceProvider servicos)
         {
             InitializeComponent();
+            // Tema claro sempre: as cores do Tema.xaml são da marca Verão Tropical e o balcão é bem iluminado
+            UserAppTheme = AppTheme.Light;
             _servicos = servicos;
         }
 

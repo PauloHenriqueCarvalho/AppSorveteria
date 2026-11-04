@@ -35,7 +35,7 @@ Picolé e massa continuam sem sabor, como sempre. Se aparecer "adicionado sem sa
 1. Toque em **Pagar** e escolha a forma: **Dinheiro, Pix, Cartão débito ou Cartão crédito**.
 2. Em **dinheiro**, digite quanto o cliente **entregou**. O app calcula o **troco** sozinho. Se faltar dinheiro, ele não deixa fechar.
 3. O cliente pode pagar **metade em Pix e metade em dinheiro**: registre um pagamento de cada vez até zerar o total.
-4. Toque em **Finalizar**. A venda fica guardada no tablet e é enviada para o painel sozinha.
+4. Pronto: a venda fica guardada no tablet e é enviada para o painel sozinha.
 
 **Errou?** Comanda ainda aberta: remova o item (**Remover**) ou toque em **Cancelar comanda** (pode escrever o motivo). Comanda já finalizada: só a dona desfaz, pelo painel (item "Estornar").
 
@@ -60,7 +60,7 @@ Sem isso, o caixa "não bate" no fim do dia.
 
 ### 5. Está acabando: avisar a dona
 
-Na tela de comandas, toque no botão amarelo **📦 Está acabando**. Dá para avisar mesmo com o caixa fechado.
+Na aba **Início**, toque no botão **📦 Está acabando**. Dá para avisar mesmo com o caixa fechado.
 
 1. **O que**: toque no grupo (ex.: **Picolé ao leite**) e depois no sabor. Ou digite o nome na busca (ex.: "coco", "copo 300"). Não achou? Toque em **Outro** e escreva.
 2. **Quanto tem agora**: use **−** e **+** ou digite o número. Conte na menor unidade (picolé, pote, balde, copo). Não tem nenhum? Toque em **Acabou**.
@@ -84,7 +84,7 @@ Na tela de comandas, toque no botão amarelo **📦 Está acabando**. Dá para a
 
 ### 6. Contagem semanal do freezer
 
-Uma vez por semana, na **véspera do dia do pedido**, alguém conta o que tem no freezer. Nesse dia aparece na tela de comandas (e na aba **Caixa**) o aviso **📋 Hoje é dia de contagem**: toque nele. Nos outros dias, a contagem fica no botão **📋 Contagem**, ao lado do "Está acabando". Dá para contar mesmo com o caixa fechado.
+Uma vez por semana, na **véspera do dia do pedido**, alguém conta o que tem no freezer. Nesse dia aparece na aba **Início** (e na aba **Caixa**) o aviso **📋 Hoje é dia de contagem**: toque nele. Nos outros dias, a contagem fica no botão **📋 Contagem**, ao lado do "Está acabando". Dá para contar mesmo com o caixa fechado.
 
 1. A lista vem na **mesma ordem da planilha**: picolés de fruta, ao leite, Skimo, massas, açaí, potes. Vá item por item, olhando o freezer.
 2. Para cada item, marque **quanto tem agora**:
@@ -97,7 +97,7 @@ Uma vez por semana, na **véspera do dia do pedido**, alguém conta o que tem no
    - Nos **potes**, conte cada sabor certinho: o sistema compara com o que foi vendido com sabor desde a última contagem, e a dona vê as diferenças.
 6. Terminou? Toque em **✅ Concluir contagem** e confirme. **Depois de concluir não dá para mudar.** Item que ficou sem número vai como "não contado" (não vira zero): se acabou, use **Não tem nenhum**. Errou algo depois de concluir? Faça uma nova contagem.
 
-**Sem internet?** Conte do mesmo jeito. A contagem fica no tablet e sobe sozinha para o painel quando a internet voltar ("contagem aguardando envio" aparece no alto da tela de comandas).
+**Sem internet?** Conte do mesmo jeito. A contagem fica no tablet e sobe sozinha para o painel quando a internet voltar ("contagem aguardando envio" aparece no alto da aba **Início**).
 
 **Contagem começada em outro dia** (alguém esqueceu de concluir): ao abrir a tela, o app pergunta se quer **Continuar** essa ou **Começar nova**. Começando uma nova, a antiga fica de lado e não vale.
 

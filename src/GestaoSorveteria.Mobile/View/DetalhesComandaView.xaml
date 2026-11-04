@@ -1,124 +1,108 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SorveteriaMaui.View.DetalhesComandaView"
-             Title="Resumo da Comanda">
+             Title="Comanda">
 
-    <Grid RowDefinitions="Auto, *, Auto" Padding="20">
+    <Grid RowDefinitions="Auto, *, Auto">
 
-        <HorizontalStackLayout Grid.Row="0" Spacing="10" Margin="0,0,0,20">
-            <VerticalStackLayout>
-                <Label Text="{Binding ComandaAtual.NomeCliente, TargetNullValue='Cliente s/ Nome'}" FontSize="24" FontAttributes="Bold"/>
-                <Label Text="{Binding ComandaAtual.Numero, StringFormat='Comanda #{0}'}" TextColor="Gray"/>
-                <!-- RN-CM-11: delivery = marcação + observação -->
-                <Label Text="🛵 Delivery" IsVisible="{Binding ComandaAtual.EhDelivery}" FontAttributes="Bold" TextColor="#1976D2"/>
-                <Label Text="{Binding ComandaAtual.Observacao}" IsVisible="{Binding ComandaAtual.TemObservacao}" TextColor="#555"/>
-                <Button Text="📝 Observação" Command="{Binding EditarObservacaoCommand}"
-                        BackgroundColor="#EEEEEE" TextColor="#333" HeightRequest="40" CornerRadius="8" Margin="0,6,0,0"/>
-            </VerticalStackLayout>
-            <ImageButton Source="edit_icon.png" Command="{Binding EditarNomeCommand}" VerticalOptions="Start" HeightRequest="30"/>
-        </HorizontalStackLayout>
+        <!-- Quem é o cliente e o que tem de especial na comanda -->
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,8" Spacing="12">
+            <Border Style="{StaticResource Cartao}">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="Auto, *" ColumnSpacing="14">
+                        <Border Grid.Column="0" WidthRequest="52" HeightRequest="52" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 26" BackgroundColor="{StaticResource CorMarcaClara}" VerticalOptions="Start">
+                            <Label Text="{Binding ComandaAtual.Numero}" FontSize="20" FontFamily="OpenSansSemibold" TextColor="{StaticResource CorMarca}"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding ComandaAtual.NomeCliente, TargetNullValue='Cliente avulso'}" Style="{StaticResource TituloTela}" FontSize="22" />
+                            <Label Text="{Binding ComandaAtual.Numero, StringFormat='Comanda nº {0}'}" Style="{StaticResource TextoSuave}" />
+                        </VerticalStackLayout>
+                    </Grid>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Itens}">
+                    <!-- RN-CM-11: delivery = marcação + observação -->
+                    <Border Style="{StaticResource Selo}" BackgroundColor="{StaticResource CorInfoFundo}" IsVisible="{Binding ComandaAtual.EhDelivery}">
+                        <Label Text="🛵 Delivery" Style="{StaticResource TextoSelo}" TextColor="{StaticResource CorInfo}" />
+                    </Border>
+                    <Label Text="{Binding ComandaAtual.Observacao}" IsVisible="{Binding ComandaAtual.TemObservacao}" Style="{StaticResource Texto}" />
+
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                        <Button Grid.Column="0" Text="✏️  Nome" Style="{StaticResource BotaoSuave}" HeightRequest="44" FontSize="15" Command="{Binding EditarNomeCommand}" />
+                        <Button Grid.Column="1" Text="📝  Observação" Style="{StaticResource BotaoSuave}" HeightRequest="44" FontSize="15" Command="{Binding EditarObservacaoCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <Grid ColumnDefinitions="*, Auto" Margin="4,4,0,0">
+                <Label Grid.Column="0" Text="ITENS" Style="{StaticResource Legenda}" VerticalOptions="Center" />
+                <Label Grid.Column="1" Text="arraste para o lado para remover" Style="{StaticResource TextoSuave}" FontSize="12" VerticalOptions="Center" />
+            </Grid>
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Itens}" SelectionMode="None">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="32,16" Spacing="6">
+                    <Label Text="Comanda vazia" Style="{StaticResource TituloSecao}" HorizontalOptions="Center" />
+                    <Label Text="Toque em “+ Produto” para lançar o que o cliente pediu." Style="{StaticResource TextoSuave}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <SwipeView>
+                    <SwipeView Margin="16,0,16,10">
                         <SwipeView.RightItems>
                             <SwipeItems>
-                                <SwipeItem Text="Remover" 
-                                           BackgroundColor="Red" 
+                                <SwipeItem Text="Remover"
+                                           BackgroundColor="{StaticResource CorRuim}"
                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemoverItemCommand}"
-                                           CommandParameter="{Binding .}"/>
+                                           CommandParameter="{Binding .}" />
                             </SwipeItems>
                         </SwipeView.RightItems>
 
-                        <Frame Margin="0,0,0,10" Padding="15" CornerRadius="12">
-                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+                        <Border Style="{StaticResource Cartao}" Padding="14">
+                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" RowSpacing="10">
+                                <Label Grid.Row="0" Grid.Column="0" Text="{Binding Descricao}" FontSize="17" FontFamily="OpenSansSemibold"
+                                       TextColor="{StaticResource CorTexto}" VerticalOptions="Center" />
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" Style="{StaticResource Dinheiro}"
+                                       VerticalOptions="Center" />
 
-                                <!-- Nome -->
-                                <Label Grid.Row="0" 
-               Grid.Column="0"
-               Text="{Binding Descricao}" 
-               FontAttributes="Bold"  TextColor="Gray" />
-
-                                <!-- Total -->
-                                <Label Grid.Row="0" 
-               Grid.Column="1"
-               Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" 
-               FontAttributes="Bold"
-               VerticalOptions="Center" TextColor="Gray"/>
-
-                                <!-- Controle de quantidade -->
-                                <HorizontalStackLayout Grid.Row="1" 
-                               Grid.ColumnSpan="2"
-                               Spacing="10"
-                               Margin="0,10,0,0">
-
-                                    <Button Text="−"
-                    WidthRequest="40"
-                    HeightRequest="40"
-                    CornerRadius="20"
-                    BackgroundColor="#EEEEEE"
-                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DiminuirQuantidadeCommand}"
-                    CommandParameter="{Binding .}" />
-
-                                    <!-- RN-ES-04: tocar no número abre o teclado numérico -->
-                                    <Button Text="{Binding Quantidade}"
-                    VerticalOptions="Center"
-                    FontSize="16"
-                    FontAttributes="Bold"
-                    WidthRequest="56"
-                    HeightRequest="40"
-                    CornerRadius="10"
-                    BackgroundColor="White"
-                    BorderColor="#BDBDBD"
-                    BorderWidth="1"
-                    TextColor="#333"
-                    SemanticProperties.Description="Digitar a quantidade"
-                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DigitarQuantidadeCommand}"
-                    CommandParameter="{Binding .}" />
-
-                                    <Button Text="+"
-                    WidthRequest="40"
-                    HeightRequest="40"
-                    CornerRadius="20"
-                    BackgroundColor="#EEEEEE"
-                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AumentarQuantidadeCommand}"
-                    CommandParameter="{Binding .}" />
-
+                                <!-- Quantidade: − número + (tocar no número abre o teclado, RN-ES-04) -->
+                                <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="10">
+                                    <Button Text="−" Style="{StaticResource BotaoRedondo}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DiminuirQuantidadeCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Text="{Binding Quantidade}" Style="{StaticResource BotaoNumero}"
+                                            SemanticProperties.Description="Digitar a quantidade"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DigitarQuantidadeCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Text="+" Style="{StaticResource BotaoRedondo}" BackgroundColor="{StaticResource CorMarcaClara}" TextColor="{StaticResource CorMarca}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AumentarQuantidadeCommand}"
+                                            CommandParameter="{Binding .}" />
                                 </HorizontalStackLayout>
-
                             </Grid>
-                        </Frame>
+                        </Border>
                     </SwipeView>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Frame Grid.Row="2" BackgroundColor="#6200EE" CornerRadius="15" Padding="15">
-            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
-                <HorizontalStackLayout Grid.Row="0" Grid.Column="0" HorizontalOptions="StartAndExpand">
-                    <Label Text="TOTAL" TextColor="White" VerticalOptions="Center" FontAttributes="Bold"/>
-                    <Label Text="{Binding ComandaAtual.Total, StringFormat='R$ {0:F2}'}" TextColor="White" FontSize="24" FontAttributes="Bold" Margin="10,0,0,0"/>
-                </HorizontalStackLayout>
-
-                <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="10" HorizontalOptions="End">
-                    <!-- RN-CM-08 / B10 -->
-                    <Button Text="Cancelar comanda"
-                            BackgroundColor="Transparent"
-                            BorderColor="White"
-                            BorderWidth="1"
-                            TextColor="White"
-                            CornerRadius="10"
-                            HeightRequest="48"
-                            Command="{Binding CancelarComandaCommand}"/>
-                    <Button Text="Pagar" 
-                            BackgroundColor="#FF9800" 
-                            TextColor="White" 
-                            CornerRadius="10"
-                            HeightRequest="48"
-                            Command="{Binding FinalizarComandaCommand}"/>
-                </HorizontalStackLayout>
-            </Grid>
-        </Frame>
+        <!-- Rodapé fixo: total e as ações -->
+        <Border Grid.Row="2" BackgroundColor="{StaticResource CorCartao}" StrokeThickness="0" Padding="16,14"
+                Shadow="{Shadow Brush=Black, Offset='0,-3', Opacity=0.08, Radius=12}">
+            <VerticalStackLayout Spacing="12">
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label Grid.Column="0" Text="TOTAL" Style="{StaticResource Legenda}" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding ComandaAtual.Total, StringFormat='R$ {0:F2}'}" FontSize="30" FontFamily="OpenSansSemibold"
+                           TextColor="{StaticResource CorTexto}" />
+                </Grid>
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
+                    <Button Grid.Column="0" Text="+ Produto" Style="{StaticResource BotaoSecundario}" Command="{Binding AdicionarProdutoCommand}" />
+                    <Button Grid.Column="1" Text="Pagar" Style="{StaticResource BotaoSucesso}" FontSize="19" Command="{Binding FinalizarComandaCommand}" />
+                </Grid>
+                <!-- RN-CM-08 / B10 -->
+                <Button Text="Cancelar comanda" Style="{StaticResource BotaoTexto}" TextColor="{StaticResource CorRuim}" HeightRequest="40" FontSize="15"
+                        Command="{Binding CancelarComandaCommand}" />
+            </VerticalStackLayout>
+        </Border>
     </Grid>
 </ContentPage>
