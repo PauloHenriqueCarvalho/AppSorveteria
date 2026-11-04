@@ -53,6 +53,10 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
       { para: '/configuracoes', texto: 'Configurações', icone: 'configuracao' },
     ],
   },
+  {
+    titulo: 'Ajuda',
+    itens: [{ para: '/sugestoes', texto: 'Sugestões', icone: 'sugestoes' }],
+  },
 ]
 
 const TODOS = GRUPOS.flatMap((g) => g.itens.map((i) => ({ ...i, grupo: g.titulo })))

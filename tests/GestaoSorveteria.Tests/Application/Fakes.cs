@@ -408,3 +408,41 @@ internal static class SaldosFake
             avisos ?? new AvisoRepositoryFake(),
             clock);
 }
+
+internal sealed class SugestaoRepositoryFake : ISugestaoRepository
+{
+    public List<GestaoSorveteria.Domain.Sugestoes.Sugestao> Sugestoes { get; } = new();
+
+    public List<GestaoSorveteria.Domain.Sugestoes.SugestaoImagem> Imagens { get; } = new();
+
+    public Task<GestaoSorveteria.Domain.Sugestoes.Sugestao?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Sugestoes.FirstOrDefault(s => s.Id == id));
+
+    public Task<IReadOnlyList<GestaoSorveteria.Domain.Sugestoes.Sugestao>> ListarAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<GestaoSorveteria.Domain.Sugestoes.Sugestao>>(Sugestoes.OrderByDescending(s => s.AtualizadaEm).ToList());
+
+    public Task<IReadOnlyList<GestaoSorveteria.Domain.Sugestoes.SugestaoImagemInfo>> ListarImagensAsync(
+        IReadOnlyCollection<Guid> sugestaoIds, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<GestaoSorveteria.Domain.Sugestoes.SugestaoImagemInfo>>(Imagens
+            .Where(i => sugestaoIds.Contains(i.SugestaoId))
+            .OrderBy(i => i.EnviadaEm)
+            .Select(i => new GestaoSorveteria.Domain.Sugestoes.SugestaoImagemInfo(i.Id, i.SugestaoId, i.NomeArquivo, i.TipoConteudo, i.TamanhoBytes, i.EnviadaEm))
+            .ToList());
+
+    public Task<GestaoSorveteria.Domain.Sugestoes.SugestaoImagem?> ObterImagemAsync(Guid sugestaoId, Guid imagemId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Imagens.FirstOrDefault(i => i.Id == imagemId && i.SugestaoId == sugestaoId));
+
+    public Task AdicionarAsync(GestaoSorveteria.Domain.Sugestoes.Sugestao sugestao, CancellationToken cancellationToken = default)
+    {
+        Sugestoes.Add(sugestao);
+        return Task.CompletedTask;
+    }
+
+    public Task AdicionarImagemAsync(GestaoSorveteria.Domain.Sugestoes.SugestaoImagem imagem, CancellationToken cancellationToken = default)
+    {
+        Imagens.Add(imagem);
+        return Task.CompletedTask;
+    }
+
+    public void RemoverImagem(GestaoSorveteria.Domain.Sugestoes.SugestaoImagem imagem) => Imagens.Remove(imagem);
+}

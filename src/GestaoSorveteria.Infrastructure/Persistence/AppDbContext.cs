@@ -1,3 +1,4 @@
+using GestaoSorveteria.Domain.Sugestoes;
 using GestaoSorveteria.Domain.Caixas;
 using GestaoSorveteria.Domain.Clima;
 using GestaoSorveteria.Domain.Comandas;
@@ -44,6 +45,11 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     // Clima e calendário (docs/02, seção 9b)
     public DbSet<ClimaDia> ClimaDias => Set<ClimaDia>();
     public DbSet<PrevisaoClima> PrevisoesClima => Set<PrevisaoClima>();
+
+    // Sugestões da dona (RN-SG-*)
+    public DbSet<Sugestao> Sugestoes => Set<Sugestao>();
+    public DbSet<SugestaoComentario> SugestaoComentarios => Set<SugestaoComentario>();
+    public DbSet<SugestaoImagem> SugestaoImagens => Set<SugestaoImagem>();
 
     public void DescartarAlteracoes() => ChangeTracker.Clear();
 

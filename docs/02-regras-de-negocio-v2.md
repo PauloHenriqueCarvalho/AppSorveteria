@@ -195,6 +195,18 @@ Objetivo: guardar desde já, dia a dia, o clima e o calendário ao lado das vend
 | RN-CL-06 | **Clima × vendas** (relatório, até 366 dias, sem passar de hoje; sem datas = últimos 30 dias): cada dia com dia da semana, feriado, clima (RN-CL-02), faturamento, vendas e ticket médio (RN-RL-01), unidades e faturamento por categoria, e quantos avisos **urgentes** o balcão criou no dia (faltou produto: a venda podia ter sido maior; conta a prioridade atual do aviso, e os automáticos dos potes, do sistema, ficam de fora). Resumo: média de faturamento e de vendas por **faixa da máxima** (abaixo de 20 °C, 20–25, 25–30, 30–35 e 35 °C ou mais; o limite fica na faixa de cima) e **com chuva (≥ 1 mm) × sem chuva**, separando dias úteis de fins de semana e feriados (ponto facultativo conta como feriado), sempre com quantos dias entraram na média. Fora das médias: dia sem clima, dia sem venda (loja fechada) e hoje (ainda aberto). Mostra também a previsão mais recente dos próximos 7 dias. Exporta tudo numa planilha | F3+ |
 | RN-CL-07 | **Fonte**: Visual Crossing (plano grátis: uso comercial permitido, 1.000 registros por dia; a loja usa algumas dezenas). Atribuição visível no painel ("Dados do clima: Visual Crossing"). Chave só em variável de ambiente (`Clima__ChaveApi`); sem chave, a coleta fica desligada e o painel explica como ligar. Trocar de fonte não muda as tabelas (cada registro diz de onde veio) | F3+ |
 
+## 9c. Sugestões da dona (04/11/2026)
+
+Canal da dona com o Paulo dentro do painel: o que ela quer mudar ou ganhar no sistema, com imagem quando ajuda, e a conversa sobre o andamento. Só Admin (a dona e o Paulo, cada um com o seu usuário).
+
+| ID | Regra | Fase | Onde |
+|---|---|---|---|
+| RN-SG-01 | **Sugestão**: título (3 a 120), descrição (até 4000), **tipo** (Ideia nova, Mudança no que existe, Problema/erro, Dúvida), **parte do sistema** (Balcão, Painel, Estoque e pedidos, Relatórios, Outro) e **importância** (Baixa, Média, Alta). Nasce **Nova**, com quem pediu e quando | F3 | Domain (`Sugestao`) |
+| RN-SG-02 | Texto e escolhas mudam enquanto a sugestão não está **encerrada** (Feita ou Não vai ser feita). Encerrada: a conversa continua, o resto não muda. Nunca é apagada | F3 | Domain |
+| RN-SG-03 | **Andamento**: Nova → Em análise → Planejada → Feita, ou **Não vai ser feita** (recusada, com o motivo obrigatório). Qualquer passo pode ser escolhido; cada mudança fica registrada na conversa ("Andamento: Nova → Planejada") | F3 | Domain |
+| RN-SG-04 | **Conversa**: mensagens de até 2000 caracteres, com quem escreveu e quando, na ordem. Nunca são apagadas | F3 | Domain |
+| RN-SG-05 | **Imagens**: até 5 por sugestão, JPG, PNG ou WebP de até 2 MB (o painel reduz a foto antes de enviar). Ficam no banco, fora da lista (carregadas uma a uma). Imagem errada sai enquanto a sugestão não está encerrada; anexar e tirar ficam registrados na conversa | F3 | Domain + Application |
+
 ## 10. Perguntas abertas para confirmar com a dona
 
 1. Aceita cartão (maquininha)? Quais bandeiras/formas devem aparecer?

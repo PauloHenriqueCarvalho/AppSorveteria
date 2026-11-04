@@ -482,3 +482,20 @@ Detalhes, limites e variáveis em **docs/07-hospedagem.md**.
 - **Painel:** Cloudflare Pages (site estático). A Vercel Hobby não permite uso comercial.
 - **App:** APK assinado por link fixo; `/api/versao` avisa sobre atualização.
 - **Backup:** `pg_dump` semanal guardado fora da nuvem; o celular mantém as vendas até a API confirmar.
+
+## Sugestões da dona (04/11/2026, RN-SG-01..05)
+
+Tabelas `sugestoes` (título, descrição, tipo, área, importância, status, quem criou, `xmin` para concorrência), `sugestao_comentarios` (conversa, nunca apagada) e `sugestao_imagens` (`conteudo bytea` até 2 MB, JPEG/PNG/WebP; até 5 por sugestão; o painel reduz fotos para 1600 px antes de enviar). Endpoints (Admin):
+
+| Método | Rota | O que faz |
+|---|---|---|
+| GET | `/api/sugestoes` | Lista (abertas primeiro), com contagem de mensagens e imagens |
+| GET | `/api/sugestoes/{id}` | Sugestão com a conversa e as imagens (sem o conteúdo) |
+| POST | `/api/sugestoes` | Cria (`SalvarSugestaoRequest`) |
+| PUT | `/api/sugestoes/{id}` | Edita enquanto não está encerrada |
+| POST | `/api/sugestoes/{id}/comentarios` | Mensagem na conversa |
+| POST | `/api/sugestoes/{id}/status` | Muda o andamento (recusar pede o motivo); registra na conversa |
+| POST | `/api/sugestoes/{id}/imagens` | Anexa uma imagem (`multipart/form-data`, campo `arquivo`) |
+| GET | `/api/sugestoes/{id}/imagens/{imagemId}` | Conteúdo da imagem (o painel busca com o token) |
+| DELETE | `/api/sugestoes/{id}/imagens/{imagemId}` | Tira a imagem (só enquanto não está encerrada) |
+

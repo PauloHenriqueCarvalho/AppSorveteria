@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IConfiguracaoLojaRepository, ConfiguracaoLojaRepository>();
         services.AddScoped<IMovimentoEstoqueRepository, MovimentoEstoqueRepository>();
         services.AddScoped<IClimaRepository, ClimaRepository>();
+        services.AddScoped<ISugestaoRepository, SugestaoRepository>();
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

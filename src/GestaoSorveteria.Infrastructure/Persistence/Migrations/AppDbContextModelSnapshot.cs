@@ -1265,6 +1265,165 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                     b.ToTable("produtos", (string)null);
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.Sugestao", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Area")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("area");
+
+                    b.Property<DateTime>("AtualizadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizada_em");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criada_em");
+
+                    b.Property<Guid>("CriadaPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("criada_por_usuario_id");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("descricao");
+
+                    b.Property<string>("Importancia")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("importancia");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("titulo");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sugestoes");
+
+                    b.HasIndex("AtualizadaEm")
+                        .HasDatabaseName("ix_sugestoes_atualizada_em");
+
+                    b.HasIndex("CriadaPorUsuarioId")
+                        .HasDatabaseName("ix_sugestoes_criada_por_usuario_id");
+
+                    b.ToTable("sugestoes", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.SugestaoComentario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("Em")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("em");
+
+                    b.Property<Guid>("SugestaoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sugestao_id");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("texto");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sugestao_comentarios");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_sugestao_comentarios_usuario_id");
+
+                    b.HasIndex("SugestaoId", "Em")
+                        .HasDatabaseName("ix_sugestao_comentarios_sugestao_id_em");
+
+                    b.ToTable("sugestao_comentarios", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.SugestaoImagem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTime>("EnviadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviada_em");
+
+                    b.Property<string>("NomeArquivo")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("nome_arquivo");
+
+                    b.Property<Guid>("SugestaoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sugestao_id");
+
+                    b.Property<int>("TamanhoBytes")
+                        .HasColumnType("integer")
+                        .HasColumnName("tamanho_bytes");
+
+                    b.Property<string>("TipoConteudo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_conteudo");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sugestao_imagens");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_sugestao_imagens_usuario_id");
+
+                    b.HasIndex("SugestaoId", "EnviadaEm")
+                        .HasDatabaseName("ix_sugestao_imagens_sugestao_id_enviada_em");
+
+                    b.ToTable("sugestao_imagens", (string)null);
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Usuarios.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1555,6 +1714,50 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_produtos_grupos_estoque_grupo_estoque_id");
                 });
 
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.Sugestao", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("CriadaPorUsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sugestoes_usuarios_criada_por_usuario_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.SugestaoComentario", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Sugestoes.Sugestao", null)
+                        .WithMany("Comentarios")
+                        .HasForeignKey("SugestaoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sugestao_comentarios_sugestoes_sugestao_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sugestao_comentarios_usuarios_usuario_id");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.SugestaoImagem", b =>
+                {
+                    b.HasOne("GestaoSorveteria.Domain.Sugestoes.Sugestao", null)
+                        .WithMany()
+                        .HasForeignKey("SugestaoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sugestao_imagens_sugestoes_sugestao_id");
+
+                    b.HasOne("GestaoSorveteria.Domain.Usuarios.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sugestao_imagens_usuarios_usuario_id");
+                });
+
             modelBuilder.Entity("GestaoSorveteria.Domain.Caixas.Caixa", b =>
                 {
                     b.Navigation("Movimentos");
@@ -1575,6 +1778,11 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("GestaoSorveteria.Domain.Estoque.PedidoFornecedor", b =>
                 {
                     b.Navigation("Itens");
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Sugestoes.Sugestao", b =>
+                {
+                    b.Navigation("Comentarios");
                 });
 #pragma warning restore 612, 618
         }

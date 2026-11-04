@@ -30,6 +30,9 @@ import FolhaPedido from './paginas/pedidos/FolhaPedido.tsx'
 import ListaPedidos from './paginas/pedidos/ListaPedidos.tsx'
 import EditarProduto from './paginas/produtos/EditarProduto.tsx'
 import ListaProdutos from './paginas/produtos/ListaProdutos.tsx'
+import DetalheSugestao from './paginas/sugestoes/DetalheSugestao.tsx'
+import ListaSugestoes from './paginas/sugestoes/ListaSugestoes.tsx'
+import NovaSugestao from './paginas/sugestoes/NovaSugestao.tsx'
 import DetalheUsuario from './paginas/usuarios/DetalheUsuario.tsx'
 import ListaUsuarios from './paginas/usuarios/ListaUsuarios.tsx'
 import NovoUsuario from './paginas/usuarios/NovoUsuario.tsx'
@@ -93,6 +96,9 @@ const router = createBrowserRouter([
           { path: 'usuarios/novo', element: <NovoUsuario /> },
           { path: 'usuarios/:id', element: <DetalheUsuario /> },
           { path: 'configuracoes', element: <Configuracoes /> },
+          { path: 'sugestoes', element: <ListaSugestoes /> },
+          { path: 'sugestoes/nova', element: <NovaSugestao /> },
+          { path: 'sugestoes/:id', element: <DetalheSugestao /> },
           { path: '*', element: <NaoEncontrada /> },
         ],
       },

@@ -20,15 +20,19 @@ export function definirAoSessaoTerminar(funcao: (() => void) | null): void {
 interface Opcoes {
   metodo?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   corpo?: unknown
+  /** Envio de arquivo (multipart): vai no lugar do corpo JSON. */
+  formulario?: FormData
+  /** Resposta que não é JSON (ex.: imagem): devolve o Blob. */
+  comoBlob?: boolean
   /** false no login: não manda token e um 401 não encerra a sessão. */
   autenticado?: boolean
 }
 
 export async function requisicao<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
-  const { metodo = 'GET', corpo, autenticado = true } = opcoes
+  const { metodo = 'GET', corpo, formulario, comoBlob = false, autenticado = true } = opcoes
 
-  const cabecalhos: Record<string, string> = { Accept: 'application/json' }
-  if (corpo !== undefined) {
+  const cabecalhos: Record<string, string> = comoBlob ? {} : { Accept: 'application/json' }
+  if (corpo !== undefined && !formulario) {
     cabecalhos['Content-Type'] = 'application/json'
   }
   const sessao = autenticado ? lerSessao() : null
@@ -45,7 +49,7 @@ export async function requisicao<T>(caminho: string, opcoes: Opcoes = {}): Promi
     resposta = await fetch(`${API_URL}${caminho}`, {
       method: metodo,
       headers: cabecalhos,
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      body: formulario ?? (corpo === undefined ? undefined : JSON.stringify(corpo)),
       signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
     })
   } catch {
@@ -64,6 +68,9 @@ export async function requisicao<T>(caminho: string, opcoes: Opcoes = {}): Promi
   }
   if (resposta.status === 204) {
     return undefined as T
+  }
+  if (comoBlob) {
+    return (await resposta.blob()) as T
   }
   return (await resposta.json()) as T
 }

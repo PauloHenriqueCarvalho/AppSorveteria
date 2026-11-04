@@ -2730,3 +2730,90 @@ code {
     justify-self: start;
   }
 }
+
+/* Sugestões da dona (RN-SG-*): miniaturas das imagens e a conversa */
+.sugestao-selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.sugestao-texto {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.sugestao-imagens {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.sugestao-imagem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.sugestao-imagem img,
+.sugestao-imagem-vazia {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cabecalho-tabela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.botao-arquivo {
+  position: relative;
+  align-self: flex-start;
+  cursor: pointer;
+}
+
+.botao-arquivo input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sugestao-conversa {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mensagem {
+  padding: 10px 14px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-cabecalho-tabela);
+  border: 1px solid var(--cor-borda);
+  max-width: 85%;
+}
+
+.mensagem-dona {
+  align-self: flex-end;
+  background: var(--cor-marca-clara);
+  border-color: transparent;
+}
+
+.mensagem-autor {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
