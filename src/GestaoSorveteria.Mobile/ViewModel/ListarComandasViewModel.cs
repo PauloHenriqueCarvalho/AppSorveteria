@@ -341,14 +341,10 @@ public class ListarComandasViewModel : BindableObject
     }
 
     /// <summary>
-    /// RN-CM-13: tela do balcão (cliente que pega, paga e vai embora): toca nos produtos, "Cobrar", forma de pagamento.
-    /// O valor digitado (venda avulsa, RN-CM-10) fica dentro dela.
+    /// RN-CM-13: o balcão é a primeira aba (cliente que pega, paga e vai embora); o botão daqui só leva até ela.
+    /// O valor avulso (RN-CM-10) fica lá dentro.
     /// </summary>
-    private async Task AbrirBalcao()
-    {
-        if (!await GarantirCaixaAberto()) return;
-        await Shell.Current.GoToAsync("BalcaoView");
-    }
+    private static Task AbrirBalcao() => Shell.Current.GoToAsync("//BalcaoView");
 
     /// <summary>Falha aparece para o atendente (B7); depois recarrega a lista com o que está gravado.</summary>
     private async Task<bool> Executar(Func<Task> acao)

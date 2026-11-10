@@ -2,28 +2,40 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
+             xmlns:svc="clr-namespace:SorveteriaMaui.Services"
              x:Class="SorveteriaMaui.View.BalcaoView"
-             Title="Balcão — venda rápida"
+             Title="Balcão"
              BackgroundColor="#F4F4F9">
 
-    <!-- RN-CM-13: à esquerda os botões dos produtos (mais vendidos primeiro); à direita a venda e o "Cobrar".
-         Pote: grade de sabores com "Sem sabor" (RN-ES-09). Depois de cobrar, a tela fica pronta para o próximo cliente. -->
-    <Grid ColumnDefinitions="3*, 2*" ColumnSpacing="0">
+    <!-- RN-CM-13: primeira aba do app. Tablet deitado: produtos à esquerda, venda à direita. Celular em pé (tela estreita):
+         produtos em cima, venda e pagamento embaixo, onde o polegar alcança (o code-behind troca a grade pelo tamanho).
+         Sabor, teclado e troco cobrem só a área dos produtos: a venda e o total continuam à vista. -->
+    <Grid x:Name="Raiz" ColumnDefinitions="3*, 2*" RowDefinitions="*">
 
         <!-- ============ Produtos ============ -->
-        <Grid Grid.Column="0" RowDefinitions="Auto, *" Padding="12,12,6,12">
-            <CollectionView Grid.Row="0"
+        <Grid x:Name="AreaProdutos" Grid.Column="0" RowDefinitions="Auto, Auto, *" Padding="12,12,6,8">
+
+            <!-- C3: caixa fechado não esconde os botões; cobrar pede o caixa -->
+            <Border Grid.Row="0" IsVisible="{Binding CaixaFechado}" Padding="12,10" Margin="0,0,0,8"
+                    StrokeThickness="0" BackgroundColor="#FFF3E0" StrokeShape="RoundRectangle 10">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding AbrirCaixaCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="⚠ Caixa fechado — toque aqui para abrir" FontSize="15" FontAttributes="Bold" TextColor="#E65100" />
+            </Border>
+
+            <CollectionView Grid.Row="1"
                             ItemsSource="{Binding Categorias}"
                             SelectionMode="Single"
                             SelectedItem="{Binding CategoriaSelecionada}"
-                            HeightRequest="48"
-                            Margin="0,0,0,10">
+                            HeightRequest="46"
+                            Margin="0,0,0,8">
                 <CollectionView.ItemsLayout>
                     <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <Border StrokeShape="RoundRectangle 20" Stroke="#6200EE" StrokeThickness="1" Padding="18,10" BackgroundColor="White">
+                        <Border StrokeShape="RoundRectangle 20" Stroke="#6200EE" StrokeThickness="1" Padding="16,9" BackgroundColor="White">
                             <VisualStateManager.VisualStateGroups>
                                 <VisualStateGroup Name="CommonStates">
                                     <VisualState Name="Normal">
@@ -44,18 +56,19 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
-            <Label Grid.Row="1"
+            <Label Grid.Row="2"
                    IsVisible="{Binding SemProdutos}"
                    Margin="10"
                    FontSize="16"
                    TextColor="#555"
                    HorizontalTextAlignment="Center"
                    VerticalOptions="Start"
-                   Text="Nenhum produto neste aparelho. Na aba Produtos, toque em Atualizar (precisa de internet). O valor digitado continua disponível." />
+                   Text="Nenhum produto neste aparelho. Na aba Produtos, toque em Atualizar (precisa de internet). O valor avulso continua disponível." />
 
-            <CollectionView Grid.Row="1" ItemsSource="{Binding Produtos}" SelectionMode="None">
+            <!-- RN-PR-05: na ordem do painel, sempre no mesmo lugar (o atendente decora onde fica cada botão) -->
+            <CollectionView Grid.Row="2" ItemsSource="{Binding Produtos}" SelectionMode="None">
                 <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
+                    <GridItemsLayout x:Name="LayoutProdutos" Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
@@ -63,16 +76,18 @@
                                 Stroke="#E0E0E0"
                                 StrokeThickness="1"
                                 BackgroundColor="White"
-                                Padding="10"
-                                HeightRequest="100">
+                                Padding="8"
+                                HeightRequest="92">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer CommandParameter="{Binding .}"
                                                       Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.TocarProdutoCommand}" />
                             </Border.GestureRecognizers>
                             <VerticalStackLayout VerticalOptions="Center" Spacing="2">
-                                <Label Text="{Binding Nome}" FontSize="17" FontAttributes="Bold" TextColor="#212121"
+                                <Label Text="{Binding Nome}" FontSize="16" FontAttributes="Bold" TextColor="#212121"
                                        HorizontalTextAlignment="Center" LineBreakMode="WordWrap" MaxLines="2" />
-                                <Label Text="{Binding Preco, StringFormat='R$ {0:F2}'}" FontSize="15" FontAttributes="Bold" TextColor="#2E7D32"
+                                <Label Text="{Binding Preco, StringFormat='R$ {0:F2}'}" IsVisible="{Binding TemPrecoFixo}"
+                                       FontSize="15" FontAttributes="Bold" TextColor="#2E7D32" HorizontalTextAlignment="Center" />
+                                <Label Text="digitar valor" IsVisible="{Binding PermiteValorLivre}" FontSize="13" TextColor="#E65100"
                                        HorizontalTextAlignment="Center" />
                                 <Label Text="sabor" IsVisible="{Binding PedeSaborNaVenda}" FontSize="12" TextColor="#6200EE"
                                        HorizontalTextAlignment="Center" />
@@ -83,96 +98,165 @@
             </CollectionView>
         </Grid>
 
-        <!-- ============ Grade de sabores (cobre os produtos; a venda à direita continua visível) ============ -->
-        <Grid Grid.Column="0"
+        <!-- ============ Grade de sabores (RN-ES-09) ============ -->
+        <Grid x:Name="AreaSabores"
+              Grid.Column="0"
               IsVisible="{Binding EscolhendoSabor}"
               BackgroundColor="#F4F4F9"
               RowDefinitions="Auto, *"
-              Padding="12,12,6,12">
-            <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" ColumnSpacing="10" Margin="0,0,0,10">
+              Padding="12,12,6,8">
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" ColumnSpacing="8" Margin="0,0,0,10">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                    <Label Text="{Binding TituloSabor}" FontSize="20" FontAttributes="Bold" TextColor="#212121" />
-                    <Label Text="Qual sabor? Com fila, toque em Sem sabor." FontSize="14" TextColor="#616161" />
+                    <Label Text="{Binding TituloSabor}" FontSize="18" FontAttributes="Bold" TextColor="#212121" LineBreakMode="WordWrap" />
+                    <Label Text="Qual sabor? Com fila, Sem sabor." FontSize="13" TextColor="#616161" />
                 </VerticalStackLayout>
-                <!-- RN-ES-09: pular o sabor — a venda entra sem baixa de estoque e a contagem semanal corrige -->
-                <Button Grid.Column="1"
-                        Text="Sem sabor"
-                        FontSize="16"
-                        FontAttributes="Bold"
-                        HeightRequest="56"
-                        Padding="18,0"
-                        CornerRadius="10"
-                        BackgroundColor="#6200EE"
-                        TextColor="White"
-                        VerticalOptions="Center"
+                <!-- Pular o sabor: a venda entra sem baixa de estoque e a contagem semanal corrige -->
+                <Button Grid.Column="1" Text="Sem sabor" FontSize="15" FontAttributes="Bold" HeightRequest="54" Padding="14,0"
+                        CornerRadius="10" BackgroundColor="#6200EE" TextColor="White" VerticalOptions="Center"
                         Command="{Binding SemSaborCommand}" />
-                <Button Grid.Column="2"
-                        Text="Voltar"
-                        FontSize="16"
-                        FontAttributes="Bold"
-                        HeightRequest="56"
-                        Padding="18,0"
-                        CornerRadius="10"
-                        BackgroundColor="#F0F0F0"
-                        TextColor="#333"
-                        VerticalOptions="Center"
+                <Button Grid.Column="2" Text="Voltar" FontSize="15" FontAttributes="Bold" HeightRequest="54" Padding="14,0"
+                        CornerRadius="10" BackgroundColor="#E0E0E0" TextColor="#333" VerticalOptions="Center"
                         Command="{Binding CancelarSaborCommand}" />
             </Grid>
 
             <CollectionView Grid.Row="1" ItemsSource="{Binding Sabores}" SelectionMode="None">
                 <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
+                    <GridItemsLayout x:Name="LayoutSabores" Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:SaborParaEscolher">
-                        <Border StrokeShape="RoundRectangle 12"
-                                Stroke="#6200EE"
-                                StrokeThickness="2"
-                                BackgroundColor="White"
-                                Padding="10"
-                                HeightRequest="80">
+                        <Border StrokeShape="RoundRectangle 12" Stroke="#6200EE" StrokeThickness="2" BackgroundColor="White"
+                                Padding="8" HeightRequest="76">
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer CommandParameter="{Binding .}"
                                                       Command="{Binding EscolherSaborCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}" />
                             </Border.GestureRecognizers>
-                            <Label Text="{Binding Nome}"
-                                   FontSize="17"
-                                   FontAttributes="Bold"
-                                   TextColor="#4527A0"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   VerticalOptions="Center"
-                                   LineBreakMode="WordWrap"
-                                   MaxLines="2" />
+                            <Label Text="{Binding Nome}" FontSize="16" FontAttributes="Bold" TextColor="#4527A0"
+                                   HorizontalTextAlignment="Center" VerticalTextAlignment="Center" VerticalOptions="Center"
+                                   LineBreakMode="WordWrap" MaxLines="2" />
                         </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </Grid>
 
-        <!-- ============ Venda ============ -->
-        <Border Grid.Column="1"
+        <!-- ============ Teclado: self-service e valor avulso (RN-PR-02, RN-CM-03/10) ============ -->
+        <Grid x:Name="AreaTeclado"
+              Grid.Column="0"
+              IsVisible="{Binding DigitandoValor}"
+              BackgroundColor="#F4F4F9"
+              RowDefinitions="Auto, Auto, Auto, *, Auto"
+              RowSpacing="6"
+              Padding="12,12,6,8">
+            <Label Grid.Row="0" Text="{Binding TituloValor}" FontSize="18" FontAttributes="Bold" TextColor="#212121" />
+            <Label Grid.Row="1" Text="{Binding TextoValorDigitado}" FontSize="40" FontAttributes="Bold" TextColor="#2E7D32"
+                   HorizontalTextAlignment="End" />
+            <Label Grid.Row="2" Text="{Binding ErroValor}" FontSize="14" TextColor="#C62828" />
+
+            <!-- Em centavos, como na maquininha: 1-5-5-0 = R$ 15,50 -->
+            <Grid Grid.Row="3" ColumnDefinitions="*, *, *" RowDefinitions="*, *, *, *" ColumnSpacing="8" RowSpacing="8">
+                <Grid.Resources>
+                    <Style TargetType="Button">
+                        <Setter Property="FontSize" Value="24" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                        <Setter Property="CornerRadius" Value="12" />
+                        <Setter Property="BackgroundColor" Value="White" />
+                        <Setter Property="TextColor" Value="#212121" />
+                        <Setter Property="BorderColor" Value="#E0E0E0" />
+                        <Setter Property="BorderWidth" Value="1" />
+                        <Setter Property="MinimumHeightRequest" Value="52" />
+                    </Style>
+                </Grid.Resources>
+                <Button Grid.Row="0" Grid.Column="0" Text="1" Command="{Binding TeclaCommand}" CommandParameter="1" />
+                <Button Grid.Row="0" Grid.Column="1" Text="2" Command="{Binding TeclaCommand}" CommandParameter="2" />
+                <Button Grid.Row="0" Grid.Column="2" Text="3" Command="{Binding TeclaCommand}" CommandParameter="3" />
+                <Button Grid.Row="1" Grid.Column="0" Text="4" Command="{Binding TeclaCommand}" CommandParameter="4" />
+                <Button Grid.Row="1" Grid.Column="1" Text="5" Command="{Binding TeclaCommand}" CommandParameter="5" />
+                <Button Grid.Row="1" Grid.Column="2" Text="6" Command="{Binding TeclaCommand}" CommandParameter="6" />
+                <Button Grid.Row="2" Grid.Column="0" Text="7" Command="{Binding TeclaCommand}" CommandParameter="7" />
+                <Button Grid.Row="2" Grid.Column="1" Text="8" Command="{Binding TeclaCommand}" CommandParameter="8" />
+                <Button Grid.Row="2" Grid.Column="2" Text="9" Command="{Binding TeclaCommand}" CommandParameter="9" />
+                <Button Grid.Row="3" Grid.Column="0" Text="00" Command="{Binding TeclaCommand}" CommandParameter="00" />
+                <Button Grid.Row="3" Grid.Column="1" Text="0" Command="{Binding TeclaCommand}" CommandParameter="0" />
+                <Button Grid.Row="3" Grid.Column="2" Text="⌫" Command="{Binding ApagarTeclaCommand}"
+                        SemanticProperties.Description="Apagar o último número" />
+            </Grid>
+
+            <Grid Grid.Row="4" ColumnDefinitions="*, 2*" ColumnSpacing="8" Margin="0,4,0,0">
+                <Button Grid.Column="0" Text="Voltar" FontSize="16" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                        BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding CancelarValorCommand}" />
+                <Button Grid.Column="1" Text="Adicionar" FontSize="18" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                        BackgroundColor="#2E7D32" TextColor="White" Command="{Binding ConfirmarValorCommand}" />
+            </Grid>
+        </Grid>
+
+        <!-- ============ Dinheiro: quanto o cliente entregou (RN-PG-03) ============ -->
+        <Grid x:Name="AreaTroco"
+              Grid.Column="0"
+              IsVisible="{Binding EscolhendoTroco}"
+              BackgroundColor="#F4F4F9"
+              RowDefinitions="Auto, Auto, *, Auto"
+              RowSpacing="8"
+              Padding="12,12,6,8">
+            <Label Grid.Row="0" Text="{Binding TituloTroco}" FontSize="20" FontAttributes="Bold" TextColor="#212121" />
+            <Label Grid.Row="1" Text="Quanto o cliente entregou? O troco aparece depois." FontSize="14" TextColor="#616161" />
+
+            <CollectionView Grid.Row="2" ItemsSource="{Binding Notas}" SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout x:Name="LayoutNotas" Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="svc:NotaParaTroco">
+                        <Border StrokeShape="RoundRectangle 12" Stroke="#2E7D32" StrokeThickness="2" BackgroundColor="White"
+                                Padding="8" HeightRequest="76">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer CommandParameter="{Binding .}"
+                                                      Command="{Binding NotaCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="{Binding Texto}" FontSize="18" FontAttributes="Bold" TextColor="#1B5E20"
+                                   HorizontalTextAlignment="Center" VerticalTextAlignment="Center" VerticalOptions="Center" />
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Grid Grid.Row="3" ColumnDefinitions="*, *" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="Voltar" FontSize="16" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                        BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding CancelarTrocoCommand}" />
+                <Button Grid.Column="1" Text="Outro valor" FontSize="16" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                        BackgroundColor="White" BorderColor="#2E7D32" BorderWidth="1" TextColor="#2E7D32"
+                        Command="{Binding OutroValorRecebidoCommand}" />
+            </Grid>
+        </Grid>
+
+        <!-- ============ Venda e pagamento ============ -->
+        <Border x:Name="PainelVenda"
+                Grid.Column="1"
                 BackgroundColor="White"
                 StrokeThickness="0"
-                Padding="14"
+                Padding="12"
                 Shadow="{Shadow Brush=Black, Offset='-3,0', Opacity=0.1}">
-            <Grid RowDefinitions="Auto, *, Auto, Auto" RowSpacing="10">
-                <Label Grid.Row="0" Text="Venda do cliente" FontSize="20" FontAttributes="Bold" TextColor="#212121" />
+            <Grid RowDefinitions="Auto, *, Auto, Auto, Auto" RowSpacing="8">
+
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto">
+                    <Label Grid.Column="0" Text="Venda" FontSize="18" FontAttributes="Bold" TextColor="#212121" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding TextoTotal}" FontSize="26" FontAttributes="Bold" TextColor="#2E7D32" VerticalOptions="Center" />
+                </Grid>
 
                 <Label Grid.Row="1"
                        IsVisible="{Binding SemItens}"
-                       Text="Toque nos produtos para montar a venda."
-                       FontSize="15"
+                       Text="Toque nos produtos. Tocar de novo soma mais um."
+                       FontSize="14"
                        TextColor="#757575"
                        VerticalOptions="Start" />
 
-                <CollectionView Grid.Row="1" ItemsSource="{Binding Itens}" SelectionMode="None">
+                <CollectionView x:Name="ListaItens" Grid.Row="1" ItemsSource="{Binding Itens}" SelectionMode="None">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:LinhaDoBalcao">
-                            <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="6" Padding="0,6">
+                            <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="6" Padding="0,4">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
                                     <Label Text="{Binding Descricao}" FontSize="15" FontAttributes="Bold" TextColor="#333"
-                                           LineBreakMode="WordWrap" MaxLines="2" />
+                                           LineBreakMode="TailTruncation" MaxLines="1" />
                                     <Label Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" FontSize="14" TextColor="#2E7D32" />
                                 </VerticalStackLayout>
                                 <Button Grid.Column="1" Text="−" WidthRequest="44" HeightRequest="44" CornerRadius="22"
@@ -180,7 +264,7 @@
                                         Command="{Binding MenosUmCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
                                 <!-- RN-ES-04: tocar no número abre o teclado -->
-                                <Button Grid.Column="2" Text="{Binding Quantidade}" WidthRequest="52" HeightRequest="44" CornerRadius="10"
+                                <Button Grid.Column="2" Text="{Binding Quantidade}" WidthRequest="50" HeightRequest="44" CornerRadius="10"
                                         BackgroundColor="White" BorderColor="#BDBDBD" BorderWidth="1" TextColor="#333" FontSize="18"
                                         FontAttributes="Bold" Padding="0"
                                         Command="{Binding DigitarQuantidadeCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
@@ -194,38 +278,41 @@
                     </CollectionView.ItemTemplate>
                 </CollectionView>
 
-                <Grid Grid.Row="2" ColumnDefinitions="*, *" ColumnSpacing="10">
-                    <Button Grid.Column="0"
-                            Text="✏️ Valor digitado"
-                            FontSize="15"
-                            HeightRequest="52"
-                            CornerRadius="10"
-                            BackgroundColor="#FFF3E0"
-                            TextColor="#E65100"
-                            FontAttributes="Bold"
-                            Command="{Binding ValorDigitadoCommand}" />
-                    <Button Grid.Column="1"
-                            Text="Limpar"
-                            FontSize="15"
-                            HeightRequest="52"
-                            CornerRadius="10"
-                            BackgroundColor="#F0F0F0"
-                            TextColor="#333"
-                            FontAttributes="Bold"
-                            IsEnabled="{Binding TemItens}"
+                <!-- Valor avulso sempre à mão (RN-CM-10) -->
+                <Grid Grid.Row="2" ColumnDefinitions="2*, *" ColumnSpacing="8">
+                    <Button Grid.Column="0" Text="✏️ Valor avulso" FontSize="15" HeightRequest="48" CornerRadius="10"
+                            BackgroundColor="#FFF3E0" TextColor="#E65100" FontAttributes="Bold"
+                            Command="{Binding ValorAvulsoCommand}" />
+                    <Button Grid.Column="1" Text="Limpar" FontSize="15" HeightRequest="48" CornerRadius="10"
+                            BackgroundColor="#F0F0F0" TextColor="#333" FontAttributes="Bold"
                             Command="{Binding LimparCommand}" />
                 </Grid>
 
-                <Button Grid.Row="3"
-                        Text="{Binding TextoCobrar}"
-                        FontSize="22"
-                        HeightRequest="72"
-                        CornerRadius="12"
-                        BackgroundColor="#2E7D32"
-                        TextColor="White"
-                        FontAttributes="Bold"
-                        IsEnabled="{Binding TemItens}"
-                        Command="{Binding CobrarCommand}" />
+                <!-- Pagamento em 1 toque: a forma já grava a venda (dinheiro pergunta antes quanto o cliente entregou) -->
+                <Grid x:Name="GradePagamento" Grid.Row="3" ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="8" RowSpacing="8">
+                    <Grid.Resources>
+                        <Style TargetType="Button">
+                            <Setter Property="FontSize" Value="18" />
+                            <Setter Property="FontAttributes" Value="Bold" />
+                            <Setter Property="HeightRequest" Value="58" />
+                            <Setter Property="CornerRadius" Value="12" />
+                            <Setter Property="TextColor" Value="White" />
+                            <Setter Property="Padding" Value="4,0" />
+                        </Style>
+                    </Grid.Resources>
+                    <Button x:Name="BotaoPix" Grid.Row="0" Grid.Column="0" Text="Pix" BackgroundColor="#00897B"
+                            Command="{Binding PagarCommand}" CommandParameter="Pix" />
+                    <Button x:Name="BotaoDebito" Grid.Row="0" Grid.Column="1" Text="Débito" BackgroundColor="#1565C0"
+                            Command="{Binding PagarCommand}" CommandParameter="CartaoDebito" />
+                    <Button x:Name="BotaoCredito" Grid.Row="1" Grid.Column="0" Text="Crédito" BackgroundColor="#4527A0"
+                            Command="{Binding PagarCommand}" CommandParameter="CartaoCredito" />
+                    <Button x:Name="BotaoDinheiro" Grid.Row="1" Grid.Column="1" Text="Dinheiro" BackgroundColor="#2E7D32"
+                            Command="{Binding PagarCommand}" CommandParameter="Dinheiro" />
+                </Grid>
+
+                <Button Grid.Row="4" Text="Dividir pagamento" FontSize="14" HeightRequest="40" Padding="0"
+                        BackgroundColor="Transparent" TextColor="#6200EE" FontAttributes="Bold"
+                        Command="{Binding DividirCommand}" />
             </Grid>
         </Border>
     </Grid>

@@ -191,7 +191,7 @@ public class LoginViewModel : BindableObject
             Pin = string.Empty;
             await (Renovar
                 ? Shell.Current.GoToAsync("..")
-                : Shell.Current.GoToAsync($"//{nameof(ListarComandasView)}"));
+                : Shell.Current.GoToAsync($"//{nameof(BalcaoView)}"));
         }
         catch (ApiException ex)
         {
