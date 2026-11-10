@@ -58,29 +58,6 @@ public sealed class ComandaRepository(BancoLocal banco)
             abertas);
     }
 
-    /// <summary>
-    /// RN-CM-13: quantas unidades de cada produto saíram nas comandas pagas deste aparelho. Ordena os botões do balcão
-    /// (mais vendidos primeiro). Item livre (sem produto) fica de fora.
-    /// </summary>
-    public async Task<Dictionary<Guid, long>> QuantidadeVendidaPorProdutoAsync()
-    {
-        var db = await banco.ConexaoAsync();
-        var linhas = await db.QueryAsync<VendidoPorProduto>(
-            "SELECT i.produto_id AS ProdutoId, SUM(i.quantidade) AS Quantidade FROM itens_comanda i " +
-            "JOIN comandas c ON c.id = i.comanda_id " +
-            "WHERE i.produto_id IS NOT NULL AND c.status = ? " +
-            "GROUP BY i.produto_id",
-            (int)Dominio.StatusComanda.Fechada);
-        return linhas.ToDictionary(l => l.ProdutoId, l => l.Quantidade);
-    }
-
-    /// <summary>Linha do <see cref="QuantidadeVendidaPorProdutoAsync"/> (sqlite-net preenche pelas colunas do SELECT).</summary>
-    private sealed class VendidoPorProduto
-    {
-        public Guid ProdutoId { get; set; }
-        public long Quantidade { get; set; }
-    }
-
     // ---------------------------------------------------------------- fila de envio (C4)
 
     public async Task<List<Pagamento>> ListarPagamentosAsync(Guid comandaId)

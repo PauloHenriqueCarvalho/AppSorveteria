@@ -29,7 +29,7 @@ public class PaymentService : IPaymentService
 
         if (opcao == Dividir)
         {
-            return await PerguntarDivididoAsync(total);
+            return await DividirAsync(total);
         }
 
         if (opcao is null || !Formas.TryGetValue(opcao, out var forma))
@@ -42,6 +42,8 @@ public class PaymentService : IPaymentService
         return pagamento is null ? null : [pagamento.Value];
     }
 
+    public Task<IReadOnlyList<DadosPagamento>?> PerguntarDivididoAsync(decimal total) => DividirAsync(total);
+
     public Task MostrarTrocoAsync(decimal troco) =>
         Shell.Current.DisplayAlertAsync("Troco", $"Troco a devolver: R$ {troco:F2}", "OK");
 
@@ -49,7 +51,7 @@ public class PaymentService : IPaymentService
     /// RN-PG-02: várias formas na mesma comanda (ex.: metade Pix, metade dinheiro). Pergunta forma e valor
     /// até cobrir o total; a soma exata e o troco são conferidos pelo Domain ao fechar (RN-CM-07, RN-PG-03).
     /// </summary>
-    private static async Task<IReadOnlyList<DadosPagamento>?> PerguntarDivididoAsync(decimal total)
+    private static async Task<IReadOnlyList<DadosPagamento>?> DividirAsync(decimal total)
     {
         var pagina = Shell.Current;
         var pagamentos = new List<DadosPagamento>();

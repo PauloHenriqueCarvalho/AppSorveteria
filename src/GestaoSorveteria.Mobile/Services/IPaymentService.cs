@@ -11,5 +11,8 @@ public interface IPaymentService
     /// </summary>
     Task<IReadOnlyList<DadosPagamento>?> PerguntarPagamentosAsync(decimal total);
 
+    /// <summary>RN-PG-02: direto no "Dividir pagamento" (o balcão já mostra as formas em botões). Nulo = cancelou.</summary>
+    Task<IReadOnlyList<DadosPagamento>?> PerguntarDivididoAsync(decimal total);
+
     Task MostrarTrocoAsync(decimal troco);
 }
