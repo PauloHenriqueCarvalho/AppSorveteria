@@ -20,8 +20,8 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
   - **Self-service**: toque no botão e digite o valor da balança no teclado da tela, sem vírgula (1-5-5-0 = R$ 15,50). Depois **Adicionar**.
   - **✏️ Valor avulso**: um valor sem produto, pelo mesmo teclado. Está sempre na tela.
   - **Promoção** (ex.: 20 picolés por R$ 37): toque no botão da promoção.
-  - Errou um item? Use o **−** ao lado dele. Pagou metade em cada forma? **Dividir pagamento**.
-- **⚖️ Self-service (peso)**: digite o **valor que a balança mostrou** (em reais).
+  - Errou um item? Use o **−** ao lado dele (no self-service e no valor avulso, o **×**). Pagou metade em cada forma? **Dividir pagamento**.
+- **⚖️ Self-service (peso) dentro de uma comanda**: digite o **valor que a balança mostrou** (em reais, ex.: 15,50). No Balcão é pelo teclado da tela, sem vírgula.
 - **🛵 Delivery**: igual à comanda, com a observação de endereço/telefone.
 
 **Pote com sabor** (Pote 1L, 2L, 5L e potes de açaí — na lista aparece "escolhe o sabor"):

@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:SorveteriaMaui.ViewModel"
-             xmlns:svc="clr-namespace:SorveteriaMaui.Services"
+             xmlns:dom="clr-namespace:GestaoSorveteria.Domain.Comandas;assembly=GestaoSorveteria.Domain"
              x:Class="SorveteriaMaui.View.BalcaoView"
              Title="Balcão"
              BackgroundColor="#F4F4F9">
@@ -206,7 +206,7 @@
                     <GridItemsLayout x:Name="LayoutNotas" Orientation="Vertical" Span="3" VerticalItemSpacing="10" HorizontalItemSpacing="10" />
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="svc:NotaParaTroco">
+                    <DataTemplate x:DataType="dom:NotaParaTroco">
                         <Border StrokeShape="RoundRectangle 12" Stroke="#2E7D32" StrokeThickness="2" BackgroundColor="White"
                                 Padding="8" HeightRequest="76">
                             <Border.GestureRecognizers>
@@ -259,19 +259,25 @@
                                            LineBreakMode="TailTruncation" MaxLines="1" />
                                     <Label Text="{Binding Subtotal, StringFormat='R$ {0:F2}'}" FontSize="14" TextColor="#2E7D32" />
                                 </VerticalStackLayout>
-                                <Button Grid.Column="1" Text="−" WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                <Button Grid.Column="1" Text="−" IsVisible="{Binding PodeMudarQuantidade}" WidthRequest="44" HeightRequest="44" CornerRadius="22"
                                         BackgroundColor="#F0F0F0" TextColor="#333" FontSize="20" FontAttributes="Bold" Padding="0"
                                         Command="{Binding MenosUmCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
                                 <!-- RN-ES-04: tocar no número abre o teclado -->
-                                <Button Grid.Column="2" Text="{Binding Quantidade}" WidthRequest="50" HeightRequest="44" CornerRadius="10"
+                                <Button Grid.Column="2" Text="{Binding Quantidade}" IsVisible="{Binding PodeMudarQuantidade}" WidthRequest="50" HeightRequest="44" CornerRadius="10"
                                         BackgroundColor="White" BorderColor="#BDBDBD" BorderWidth="1" TextColor="#333" FontSize="18"
                                         FontAttributes="Bold" Padding="0"
                                         Command="{Binding DigitarQuantidadeCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
-                                <Button Grid.Column="3" Text="+" WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                <Button Grid.Column="3" Text="+" IsVisible="{Binding PodeMudarQuantidade}" WidthRequest="44" HeightRequest="44" CornerRadius="22"
                                         BackgroundColor="#E3F2FD" TextColor="#1976D2" FontSize="20" FontAttributes="Bold" Padding="0"
                                         Command="{Binding MaisUmCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
+                                        CommandParameter="{Binding .}" />
+                                <!-- Self-service e valor avulso: sem +/− (dobraria o valor); o × tira a linha -->
+                                <Button Grid.Column="3" Text="×" IsVisible="{Binding ValorLivre}" WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        BackgroundColor="#FFEBEE" TextColor="#C62828" FontSize="20" FontAttributes="Bold" Padding="0"
+                                        SemanticProperties.Description="Tirar este valor da venda"
+                                        Command="{Binding MenosUmCommand, Source={RelativeSource AncestorType={x:Type vm:BalcaoViewModel}}}"
                                         CommandParameter="{Binding .}" />
                             </Grid>
                         </DataTemplate>

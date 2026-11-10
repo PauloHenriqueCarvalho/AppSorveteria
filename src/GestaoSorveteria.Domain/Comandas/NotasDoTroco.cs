@@ -1,6 +1,6 @@
 using GestaoSorveteria.Domain.Common;
 
-namespace SorveteriaMaui.Services;
+namespace GestaoSorveteria.Domain.Comandas;
 
 /// <summary>Botão do "quanto o cliente entregou" no dinheiro do balcão (RN-CM-13, RN-PG-03).</summary>
 public sealed record NotaParaTroco(decimal Valor, string Texto);

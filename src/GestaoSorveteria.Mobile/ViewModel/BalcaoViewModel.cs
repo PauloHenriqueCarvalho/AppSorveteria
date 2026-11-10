@@ -5,6 +5,8 @@ using GestaoSorveteria.Domain.Estoque;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
+using NotaParaTroco = GestaoSorveteria.Domain.Comandas.NotaParaTroco;
+using NotasDoTroco = GestaoSorveteria.Domain.Comandas.NotasDoTroco;
 using ComandaDominio = GestaoSorveteria.Domain.Comandas.Comanda;
 using DadosPagamento = GestaoSorveteria.Domain.Comandas.DadosPagamento;
 using FormaPagamento = GestaoSorveteria.Domain.Comandas.FormaPagamento;
@@ -31,6 +33,9 @@ public sealed class LinhaDoBalcao : BindableObject
     public string Descricao { get; }
     public decimal PrecoUnitario { get; }
     public bool ValorLivre { get; }
+
+    /// <summary>Self-service e valor avulso ficam em 1: o "+" dobraria o valor da balança. Para mudar, tira e digita de novo.</summary>
+    public bool PodeMudarQuantidade => !ValorLivre;
 
     private int _quantidade = 1;
     public int Quantidade
@@ -77,6 +82,12 @@ public class BalcaoViewModel : BindableObject
     private List<Produto> _todos = new();
     private int _versaoTotal;
     private bool _cobrando;
+
+    /// <summary>Entre o toque na forma de pagamento e a gravação (caixa e total pelo Domain): segura toques repetidos.</summary>
+    private bool _preparandoPagamento;
+
+    /// <summary>Os itens que deram o total do dinheiro aberto: o troco paga exatamente essa venda.</summary>
+    private List<ItemDoBalcao> _itensDoTroco = [];
 
     public ObservableCollection<Produto> Produtos { get; } = new();
     public ObservableCollection<string> Categorias { get; } = new() { Todos };
@@ -128,7 +139,7 @@ public class BalcaoViewModel : BindableObject
     public string TextoTotal => $"R$ {Total:F2}";
 
     /// <summary>Algum painel cobre os botões (sabor, teclado ou troco): toques nos produtos e no pagamento esperam.</summary>
-    private bool Ocupado => EscolhendoSabor || DigitandoValor || EscolhendoTroco || _cobrando;
+    private bool Ocupado => EscolhendoSabor || DigitandoValor || EscolhendoTroco || _cobrando || _preparandoPagamento;
 
     // ---------------------------------------------------------------- RN-ES-09: grade de sabores, só nos potes
 
@@ -314,6 +325,8 @@ public class BalcaoViewModel : BindableObject
             return;
         }
 
+        if (Ocupado) return; // outro painel abriu enquanto os sabores carregavam
+
         if (sabores.PedeSabor && sabores.Sabores.Count > 0)
         {
             _produtoDoSabor = produto;
@@ -432,7 +445,7 @@ public class BalcaoViewModel : BindableObject
 
     private void AlterarQuantidade(LinhaDoBalcao? linha, int quantidade)
     {
-        if (linha is null || _cobrando) return;
+        if (linha is null || Ocupado || !linha.PodeMudarQuantidade && quantidade > 0) return;
         if (quantidade <= 0)
         {
             Itens.Remove(linha);
@@ -447,7 +460,7 @@ public class BalcaoViewModel : BindableObject
 
     private async Task DigitarQuantidade(LinhaDoBalcao? linha)
     {
-        if (linha is null || _cobrando) return;
+        if (linha is null || Ocupado || !linha.PodeMudarQuantidade) return;
         if (await PedirQuantidade.PerguntarAsync(linha.Descricao, linha.Quantidade) is { } quantidade)
         {
             AlterarQuantidade(linha, quantidade); // RN-ES-04
@@ -456,7 +469,7 @@ public class BalcaoViewModel : BindableObject
 
     private async Task Limpar()
     {
-        if (!TemItens || _cobrando) return;
+        if (!TemItens || Ocupado) return;
         if (await Shell.Current.DisplayAlertAsync("Limpar", "Tirar todos os itens desta venda? Nada foi cobrado.", "Limpar", "Voltar"))
         {
             LimparVenda();
@@ -487,8 +500,9 @@ public class BalcaoViewModel : BindableObject
         {
             total = await _comandas.TotalDoBalcaoAsync(itens);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Sorveteria] Total do balcão pela soma das linhas: {ex.Message}");
             total = Moeda.Arredondar(Itens.Sum(l => l.Subtotal));
         }
 
@@ -506,27 +520,58 @@ public class BalcaoViewModel : BindableObject
     /// </summary>
     private async Task Pagar(string? forma)
     {
-        if (!TemItens || Ocupado || !Enum.TryParse<FormaPagamento>(forma, out var formaPagamento)) return;
+        if (!Enum.TryParse<FormaPagamento>(forma, out var formaPagamento) || !PodeComecarPagamento()) return;
 
-        var total = await TotalParaCobrarAsync();
-        if (total is null) return;
-
-        if (formaPagamento == FormaPagamento.Dinheiro)
+        _preparandoPagamento = true;
+        try
         {
-            _totalDoTroco = total.Value;
-            OnPropertyChanged(nameof(TituloTroco));
-            Notas = NotasDoTroco.Para(total.Value);
-            EscolhendoTroco = true;
-            return;
+            var conta = await ContaParaCobrarAsync();
+            if (conta is null || _cobrando || !TemItens) return;
+
+            if (formaPagamento == FormaPagamento.Dinheiro)
+            {
+                _itensDoTroco = conta.Value.Itens;
+                _totalDoTroco = conta.Value.Total;
+                OnPropertyChanged(nameof(TituloTroco));
+                Notas = NotasDoTroco.Para(conta.Value.Total);
+                EscolhendoTroco = true;
+                return;
+            }
+
+            await GravarAsync(conta.Value.Itens, [new DadosPagamento(formaPagamento, conta.Value.Total)]);
+        }
+        finally
+        {
+            _preparandoPagamento = false;
+        }
+    }
+
+    /// <summary>
+    /// Tocou numa forma de pagamento com o teclado ou o sabor aberto: avisa o que falta, em vez de não fazer nada.
+    /// Venda vazia ou já cobrando: ignora.
+    /// </summary>
+    private bool PodeComecarPagamento()
+    {
+        if (!TemItens || _cobrando || _preparandoPagamento || EscolhendoTroco) return false;
+        if (DigitandoValor)
+        {
+            AvisoRapido.Mostrar("Toque em Adicionar (ou Voltar) antes de cobrar");
+            return false;
         }
 
-        await GravarAsync([new DadosPagamento(formaPagamento, total.Value)]);
+        if (EscolhendoSabor)
+        {
+            AvisoRapido.Mostrar("Escolha o sabor (ou Sem sabor) antes de cobrar");
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>RN-PG-03: o cliente entregou esse valor (≥ total); o troco é calculado pelo Domain ao fechar.</summary>
     private async Task ReceberDinheiro(decimal? recebido)
     {
-        if (!EscolhendoTroco || recebido is null) return;
+        if (!EscolhendoTroco || recebido is null || _cobrando) return;
         var total = _totalDoTroco;
         if (recebido.Value < total)
         {
@@ -534,14 +579,15 @@ public class BalcaoViewModel : BindableObject
             return;
         }
 
+        var itens = _itensDoTroco;
         FecharTroco();
-        await GravarAsync([new DadosPagamento(FormaPagamento.Dinheiro, total, recebido.Value)]);
+        await GravarAsync(itens, [new DadosPagamento(FormaPagamento.Dinheiro, total, recebido.Value)]);
     }
 
     /// <summary>Nota que não está nos botões (ex.: R$ 70 em notas misturadas): digita quanto o cliente entregou.</summary>
     private async Task OutroValorRecebido()
     {
-        if (!EscolhendoTroco) return;
+        if (!EscolhendoTroco || _cobrando) return;
         var texto = await Shell.Current.DisplayPromptAsync(TituloTroco, "Quanto o cliente entregou?", "Confirmar", "Cancelar",
             keyboard: Keyboard.Telephone);
         if (string.IsNullOrWhiteSpace(texto)) return;
@@ -559,41 +605,53 @@ public class BalcaoViewModel : BindableObject
     {
         EscolhendoTroco = false;
         Notas = [];
+        _itensDoTroco = [];
     }
 
     /// <summary>RN-PG-02: metade Pix, metade dinheiro etc. Usa o mesmo diálogo da comanda.</summary>
     private async Task Dividir()
     {
-        if (!TemItens || Ocupado) return;
-        var total = await TotalParaCobrarAsync();
-        if (total is null) return;
+        if (!PodeComecarPagamento()) return;
 
-        var pagamentos = await _pagamento.PerguntarDivididoAsync(total.Value);
-        if (pagamentos is null) return;
-        await GravarAsync(pagamentos);
+        _preparandoPagamento = true;
+        try
+        {
+            var conta = await ContaParaCobrarAsync();
+            if (conta is null) return;
+
+            var pagamentos = await _pagamento.PerguntarDivididoAsync(conta.Value.Total);
+            if (pagamentos is null) return;
+            await GravarAsync(conta.Value.Itens, pagamentos);
+        }
+        finally
+        {
+            _preparandoPagamento = false;
+        }
     }
 
-    /// <summary>Caixa aberto (RN-CX-03) e total pelo Domain. Nulo = não dá para cobrar agora (o motivo já apareceu).</summary>
-    private async Task<decimal?> TotalParaCobrarAsync()
+    /// <summary>
+    /// Caixa aberto (RN-CX-03) e total pelo Domain, com a lista de itens que deu esse total: é ela que é gravada, nunca
+    /// uma lista mexida depois. Nulo = não dá para cobrar agora (o motivo já apareceu).
+    /// </summary>
+    private async Task<(decimal Total, List<ItemDoBalcao> Itens)?> ContaParaCobrarAsync()
     {
         if (!await GarantirCaixaAberto()) return null;
 
         var itens = Itens.Select(l => l.ParaVenda()).ToList();
         decimal total = 0;
-        return await Operacao.CarregarAsync(async () => total = await _comandas.TotalDoBalcaoAsync(itens)) ? total : null;
+        return await Operacao.CarregarAsync(async () => total = await _comandas.TotalDoBalcaoAsync(itens)) ? (total, itens) : null;
     }
 
     /// <summary>
     /// RN-CM-13 / RN-CM-07: uma única operação abre a comanda, lança os itens e fecha com o pagamento. Se falhar, os itens
     /// continuam na tela. O troco aparece só depois de gravado (B7).
     /// </summary>
-    private async Task GravarAsync(IReadOnlyList<DadosPagamento> pagamentos)
+    private async Task GravarAsync(IReadOnlyList<ItemDoBalcao> itens, IReadOnlyList<DadosPagamento> pagamentos)
     {
-        if (_cobrando || !TemItens) return;
+        if (_cobrando || itens.Count == 0) return;
         _cobrando = true;
         try
         {
-            var itens = Itens.Select(l => l.ParaVenda()).ToList();
             ComandaDominio? venda = null;
             if (await Operacao.GravarAsync(async () => venda = await _comandas.VenderNoBalcaoAsync(itens, pagamentos))
                 && venda is not null)
