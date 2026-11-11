@@ -517,6 +517,11 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("forma");
 
+                    b.Property<string>("PixTxid")
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)")
+                        .HasColumnName("pix_txid");
+
                     b.Property<decimal>("Troco")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
@@ -540,6 +545,9 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Forma")
                         .HasDatabaseName("ix_pagamentos_forma");
+
+                    b.HasIndex("PixTxid")
+                        .HasDatabaseName("ix_pagamentos_pix_txid");
 
                     b.ToTable("pagamentos", (string)null);
                 });
@@ -1183,6 +1191,78 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasName("pk_configuracao_loja");
 
                     b.ToTable("configuracao_loja", (string)null);
+                });
+
+            modelBuilder.Entity("GestaoSorveteria.Domain.Pix.CobrancaPix", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AtualizadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizada_em");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criada_em");
+
+                    b.Property<string>("EndToEndId")
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)")
+                        .HasColumnName("end_to_end_id");
+
+                    b.Property<DateTime>("ExpiraEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expira_em");
+
+                    b.Property<DateTime?>("PagaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paga_em");
+
+                    b.Property<string>("PixCopiaECola")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("pix_copia_ecola");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Txid")
+                        .IsRequired()
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)")
+                        .HasColumnName("txid");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
+
+                    b.Property<decimal?>("ValorPago")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor_pago");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cobrancas_pix");
+
+                    b.HasIndex("CriadaEm")
+                        .HasDatabaseName("ix_cobrancas_pix_criada_em");
+
+                    b.HasIndex("Txid")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cobrancas_pix_txid");
+
+                    b.ToTable("cobrancas_pix", (string)null);
                 });
 
             modelBuilder.Entity("GestaoSorveteria.Domain.Produtos.Produto", b =>
