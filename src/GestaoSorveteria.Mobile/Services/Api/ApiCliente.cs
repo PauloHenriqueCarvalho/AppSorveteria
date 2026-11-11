@@ -7,6 +7,7 @@ using GestaoSorveteria.Contracts.Auth;
 using GestaoSorveteria.Contracts.Avisos;
 using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Estoque;
+using GestaoSorveteria.Contracts.Pix;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Contracts.Sync;
 
