@@ -66,6 +66,13 @@ public sealed class ComandaRepository(BancoLocal banco)
         return await db.Table<Pagamento>().Where(p => p.ComandaId == comandaId).ToListAsync();
     }
 
+    /// <summary>RN-PX-05: este Pix integrado já virou venda neste aparelho? (o app pode ter morrido entre gravar e esquecer o pendente)</summary>
+    public async Task<bool> ExistePagamentoComPixTxidAsync(string txid)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Pagamento>().Where(p => p.PixTxid == txid).CountAsync() > 0;
+    }
+
     /// <summary>Comandas fechadas/canceladas do caixa ainda não confirmadas pela API, mais antigas primeiro (até <paramref name="maximo"/>).</summary>
     public async Task<List<Comanda>> ListarPendentesEnvioAsync(Guid caixaId, int maximo)
     {

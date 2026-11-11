@@ -255,20 +255,39 @@
 
             <Label Grid.Row="3" Text="{Binding MensagemPix}" FontSize="15" TextColor="#424242" HorizontalTextAlignment="Center" />
 
-            <!-- Esperando: desistir cancela o QR Code no banco; à mão cancela e grava como Pix conferido no celular -->
-            <Grid Grid.Row="4" ColumnDefinitions="*, *" ColumnSpacing="8" IsVisible="{Binding PixEsperando}">
-                <Button Grid.Column="0" Text="Cliente desistiu" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
-                        BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding DesistirPixCommand}" />
-                <Button Grid.Column="1" Text="Pix à mão" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
-                        BackgroundColor="White" BorderColor="#00897B" BorderWidth="1" TextColor="#00695C"
-                        Command="{Binding PixAMaoCommand}" />
-            </Grid>
-            <Grid Grid.Row="4" ColumnDefinitions="*, *" ColumnSpacing="8" IsVisible="{Binding PixVenceu}">
-                <Button Grid.Column="0" Text="Voltar" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
-                        BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding FecharPixCommand}" />
-                <Button Grid.Column="1" Text="Gerar outro" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
-                        BackgroundColor="#00897B" TextColor="White" Command="{Binding GerarOutroPixCommand}" />
-            </Grid>
+            <!-- Cada estado tem os seus botões; nunca fica sem saída -->
+            <VerticalStackLayout Grid.Row="4" Spacing="8">
+                <Button Text="Cobrar de outro jeito" IsVisible="{Binding PixGerando}" FontSize="15" FontAttributes="Bold" HeightRequest="56"
+                        CornerRadius="10" BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding SairDoPixGerandoCommand}" />
+
+                <!-- Esperando: desistir cancela o QR Code no banco; à mão cancela e grava como Pix conferido no celular -->
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="8" IsVisible="{Binding PixEsperando}">
+                    <Button Grid.Column="0" Text="Cliente desistiu" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                            BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding DesistirPixCommand}" />
+                    <Button Grid.Column="1" Text="Pix à mão" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                            BackgroundColor="White" BorderColor="#00897B" BorderWidth="1" TextColor="#00695C"
+                            Command="{Binding PixAMaoCommand}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="8" IsVisible="{Binding PixVenceu}">
+                    <Button Grid.Column="0" Text="Voltar" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                            BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding FecharPixCommand}" />
+                    <Button Grid.Column="1" Text="Gerar outro" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                            BackgroundColor="#00897B" TextColor="White" Command="{Binding GerarOutroPixCommand}" />
+                </Grid>
+
+                <!-- Pago com valor diferente: não oferece cobrar de novo -->
+                <Button Text="Voltar" IsVisible="{Binding PixConferir}" FontSize="15" FontAttributes="Bold" HeightRequest="56"
+                        CornerRadius="10" BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding FecharPixCommand}" />
+
+                <!-- Pago sem venda gravada (ou sessão vencida): tentar de novo ou sair com o Pix guardado -->
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="8" IsVisible="{Binding PixNaoGravou}">
+                    <Button Grid.Column="0" Text="Sair (fica guardado)" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                            BackgroundColor="#E0E0E0" TextColor="#333" Command="{Binding SairDoPixGuardadoCommand}" />
+                    <Button Grid.Column="1" Text="Tentar de novo" FontSize="15" FontAttributes="Bold" HeightRequest="56" CornerRadius="10"
+                            BackgroundColor="#00897B" TextColor="White" Command="{Binding TentarPixDeNovoCommand}" />
+                </Grid>
+            </VerticalStackLayout>
         </Grid>
 
         <!-- ============ Venda e pagamento ============ -->
