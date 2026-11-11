@@ -547,7 +547,9 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_pagamentos_forma");
 
                     b.HasIndex("PixTxid")
-                        .HasDatabaseName("ix_pagamentos_pix_txid");
+                        .IsUnique()
+                        .HasDatabaseName("ix_pagamentos_pix_txid")
+                        .HasFilter("pix_txid IS NOT NULL");
 
                     b.ToTable("pagamentos", (string)null);
                 });
@@ -1251,6 +1253,12 @@ namespace GestaoSorveteria.Infrastructure.Persistence.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("valor_pago");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_cobrancas_pix");
