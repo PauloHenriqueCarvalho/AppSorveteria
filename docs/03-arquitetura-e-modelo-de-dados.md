@@ -316,7 +316,7 @@ itens_comanda       + item_estoque_id FK uuid null        -- sabor do pote (RN-E
 
 ```
 cobrancas_pix (id uuid PK — gerado pelo app por tentativa, txid varchar(35) único = id sem hífens, usuario_id uuid,
-               valor numeric(12,2), status varchar(20) Ativa|Concluida|Removida|Expirada, pix_copia_e_cola varchar(512),
+               valor numeric(12,2), status varchar(20) Ativa|Concluida|Removida|Expirada, pix_copia_ecola varchar(512),
                criada_em, expira_em, atualizada_em timestamptz, paga_em timestamptz?, end_to_end_id varchar(35)?,
                valor_pago numeric(12,2)?)                                                          -- RN-PX-02/03
 pagamentos + pix_txid varchar(35)?                                                                    -- RN-PX-05
