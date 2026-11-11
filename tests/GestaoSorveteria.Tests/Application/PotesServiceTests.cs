@@ -168,6 +168,21 @@ public class PotesServiceTests
     }
 
     [Fact]
+    public async Task Sync_PoteNuncaContado_BaixaMasNaoAvisa()
+    {
+        // RN-AV-04: sem a primeira contagem o saldo não tem base (começa em 0 e fica negativo) — avisar "acabou" encheria
+        // o resumo da dona e o pedido de potes que podem estar no freezer. A baixa fica registrada; a contagem corrige.
+        var morango = ItemEstoque.Criar(_pote1L.Id, _fabrica.Id, "Morango", UnidadeCompra.Unidade, 1, 14m, 3, minimoUnidades: 2);
+        _estoque.Itens.Add(morango);
+        await AbrirCaixa();
+
+        Assert.Equal(StatusSync.Aceita, await Enviar(VendaDe(_pote, 1, morango)));
+
+        Assert.Equal(-1, await SaldoDe(morango));
+        Assert.Empty(_avisos.Avisos);
+    }
+
+    [Fact]
     public async Task Sync_VendaComSaborRejeitadaPeloTotal_NaoBaixaNemAvisa()
     {
         await AbrirCaixa();

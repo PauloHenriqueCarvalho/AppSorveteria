@@ -37,6 +37,10 @@ public class Produto
     [Column("permite_valor_livre")]
     public bool PermiteValorLivre { get; set; }
 
+    /// <summary>Para a tela do balcão (RN-CM-13): mostra o preço no botão; valor livre mostra "digitar valor". Nunca gravado.</summary>
+    [Ignore]
+    public bool TemPrecoFixo => !PermiteValorLivre;
+
     [Indexed, Column("ativo")]
     public bool Ativo { get; set; } = true;
 

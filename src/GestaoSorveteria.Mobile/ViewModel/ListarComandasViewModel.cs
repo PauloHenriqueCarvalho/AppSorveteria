@@ -209,7 +209,7 @@ public class ListarComandasViewModel : BindableObject
         NovoDeliveryCommand = new Command(async () => await AbrirDelivery());
         AdicionarProdutoCommand = new Command<Comanda>(async (c) => await Navegar("SelecaoProdutoView", c));
         FinalizarComandaCommand = new Command<Comanda>(async (c) => await FecharComanda(c));
-        VendaRapidaCommand = new Command(async () => await ExecutarVendaRapida());
+        VendaRapidaCommand = new Command(async () => await AbrirBalcao());
         VerDetalhesCommand = new Command<Comanda>(async (c) => await Navegar("DetalhesComandaView", c));
         // A lista é carregada no OnAppearing da tela.
     }
@@ -340,36 +340,11 @@ public class ListarComandasViewModel : BindableObject
         }
     }
 
-    private async Task ExecutarVendaRapida()
-    {
-        if (!await GarantirCaixaAberto()) return;
-
-        string resultado = await Shell.Current.DisplayPromptAsync(
-            "Venda Rápida",
-            "Valor da Venda:",
-            "Confirmar",
-            "Cancelar",
-            keyboard: Keyboard.Telephone);
-
-        if (string.IsNullOrWhiteSpace(resultado)) return;
-
-        if (!Conversoes.TentarLerDinheiro(resultado, out decimal valor) || valor <= 0) // RN-CM-03: item livre > 0
-        {
-            await Shell.Current.DisplayAlertAsync("Atenção", "Valor inválido.", "OK");
-            return;
-        }
-
-        var pagamentos = await _paymentService.PerguntarPagamentosAsync(valor);
-        if (pagamentos is null) return;
-
-        // RN-CM-10 / B1: abre, lança "Venda avulsa" e fecha numa gravação só
-        GestaoSorveteria.Domain.Comandas.Comanda? venda = null;
-        if (await Executar(async () => venda = await _comandas.VendaRapidaAsync(valor, pagamentos))
-            && venda is { TotalTroco: > 0 })
-        {
-            await _paymentService.MostrarTrocoAsync(venda.TotalTroco); // B7: só depois de gravado
-        }
-    }
+    /// <summary>
+    /// RN-CM-13: o balcão é a primeira aba (cliente que pega, paga e vai embora); o botão daqui só leva até ela.
+    /// O valor avulso (RN-CM-10) fica lá dentro.
+    /// </summary>
+    private static Task AbrirBalcao() => Shell.Current.GoToAsync("//BalcaoView");
 
     /// <summary>Falha aparece para o atendente (B7); depois recarrega a lista com o que está gravado.</summary>
     private async Task<bool> Executar(Func<Task> acao)

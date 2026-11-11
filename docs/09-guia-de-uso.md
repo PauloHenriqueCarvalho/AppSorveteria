@@ -16,14 +16,19 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
 ### 2. Vender
 
 - **➕ Nova comanda**: para quem senta ou pede mais de uma coisa. Toque nos produtos para adicionar (tocar de novo aumenta a quantidade). Para muitas unidades (ex.: 50 picolés), **toque no número da quantidade** e digite. Use **📝 Observação** para recados ("sem calda").
-- **⚡ Venda rápida**: um produto, pagamento na hora. Vai direto para o pagamento.
-- **⚖️ Self-service (peso)**: digite o **valor que a balança mostrou** (em reais).
+- **Balcão** (a primeira aba, onde o app abre): para o cliente que pega, paga e vai embora. Os produtos aparecem em **botões grandes**, sempre no mesmo lugar (a ordem é a do painel). Toque no produto (tocar de novo soma mais um) e depois **direto na forma de pagamento**: **Pix**, **Débito** ou **Crédito** já registram a venda. No **Dinheiro**, toque no que o cliente entregou (**Exato** ou a nota, ex.: R$ 50) e o app mostra o troco. Pronto: a tela fica limpa para o próximo cliente.
+  - **Self-service**: toque no botão e digite o valor da balança no teclado da tela, sem vírgula (1-5-5-0 = R$ 15,50). Depois **Adicionar**.
+  - **✏️ Valor avulso**: um valor sem produto, pelo mesmo teclado. Está sempre na tela.
+  - **Promoção** (ex.: 20 picolés por R$ 37): toque no botão da promoção.
+  - Errou um item? Use o **−** ao lado dele (no self-service e no valor avulso, o **×**). Pagou metade em cada forma? **Dividir pagamento**.
+- **⚖️ Self-service (peso) dentro de uma comanda**: digite o **valor que a balança mostrou** (em reais, ex.: 15,50). No Balcão é pelo teclado da tela, sem vírgula.
 - **🛵 Delivery**: igual à comanda, com a observação de endereço/telefone.
 
 **Pote com sabor** (Pote 1L, 2L, 5L e potes de açaí — na lista aparece "escolhe o sabor"):
 
 1. Toque no pote. Aparecem os **sabores**, na ordem da planilha.
 2. Toque no sabor. Pronto: o pote entra na comanda com o sabor ("Pote 1L · Flocos").
+   **Fila no balcão?** Toque em **Sem sabor**. A venda entra certinha; só o estoque daquele pote fica para a contagem da semana acertar. Quando der, escolha o sabor: assim a dona sabe o que vende mais e o pedido sai mais certo.
 3. Mais de um do mesmo sabor? Ajuste a **quantidade** embaixo antes de tocar no sabor (ou use **+** na comanda depois). Sabores diferentes ficam em linhas separadas.
 4. Tocou no pote errado? **Voltar** (nada é lançado).
 

@@ -173,7 +173,7 @@ public sealed class SaldoEstoqueService
 
     /// <summary>
     /// RN-AV-04: pote que zerou vira aviso Urgente; que chegou no mínimo, Alta (autor "Sistema"), na hora da venda
-    /// (<paramref name="emUtc"/>). Item com aviso aberto não ganha outro: a prioridade só sobe, e a quantidade só acompanha o
+    /// (<paramref name="emUtc"/>). Só pote que já foi contado alguma vez: antes disso o saldo não tem base. Item com aviso aberto não ganha outro: a prioridade só sobe, e a quantidade só acompanha o
     /// saldo enquanto a última informação for do sistema (o que a atendente informou fica).
     /// </summary>
     public async Task AvisarPeloSaldoAsync(
@@ -187,7 +187,15 @@ public sealed class SaldoEstoqueService
             return;
         }
 
-        var saldos = await SaldosAsync(itemEstoqueIds, aindaNaoGravados, cancellationToken);
+        // O saldo só vale depois da primeira contagem (como em SaldoEsperadoNaContagemAsync): pote nunca contado não avisa.
+        var contados = await _contagens.UltimaContagemPorItemAsync(_clock.UtcNow.AddMinutes(1), cancellationToken);
+        var comBase = itemEstoqueIds.Where(contados.ContainsKey).ToList();
+        if (comBase.Count == 0)
+        {
+            return;
+        }
+
+        var saldos = await SaldosAsync(comBase, aindaNaoGravados, cancellationToken);
         foreach (var (itemId, saldo) in saldos)
         {
             var item = await _estoque.ObterItemAsync(itemId, cancellationToken);

@@ -10,6 +10,8 @@
 
     <!-- Abas do turno (tela inicial quando já há atendente no aparelho) -->
     <TabBar x:Name="Principal">
+        <!-- RN-CM-13: o balcão é a primeira aba — o cliente que pega, paga e vai embora é a maioria -->
+        <ShellContent Title="Balcão" Route="BalcaoView" ContentTemplate="{DataTemplate views:BalcaoView}" />
         <ShellContent Title="Comandas" Route="ListarComandasView" ContentTemplate="{DataTemplate views:ListarComandasView}" />
         <ShellContent Title="Produtos" Route="ListarProdutosView" ContentTemplate="{DataTemplate views:ListarProdutosView}" />
         <ShellContent Title="Caixa" Route="CaixaView" ContentTemplate="{DataTemplate views:CaixaView}" />

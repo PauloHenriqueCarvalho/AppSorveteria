@@ -100,19 +100,31 @@
         </CollectionView>
 
         <!-- RN-ES-09: grade de sabores, só nos potes. Cobre a busca e a lista; a quantidade (embaixo) continua valendo.
-             1 toque no sabor lança o pote; "Voltar" não lança nada. -->
+             1 toque no sabor (ou em "Sem sabor") lança o pote; "Voltar" não lança nada. -->
         <Grid Grid.Row="0"
               Grid.RowSpan="2"
               IsVisible="{Binding EscolhendoSabor}"
               BackgroundColor="#F4F4F9"
               RowDefinitions="Auto, *"
               Padding="15,15,15,5">
-            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="0,0,0,10">
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" ColumnSpacing="10" Margin="0,0,0,10">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
                     <Label Text="{Binding TituloSabor}" FontSize="22" FontAttributes="Bold" TextColor="#212121" />
-                    <Label Text="Qual sabor? Toque no sabor para adicionar." FontSize="15" TextColor="#616161" />
+                    <Label Text="Qual sabor? Com fila, toque em Sem sabor." FontSize="15" TextColor="#616161" />
                 </VerticalStackLayout>
+                <!-- RN-ES-09: pular o sabor — entra sem baixa de estoque e a contagem semanal corrige -->
                 <Button Grid.Column="1"
+                        Text="Sem sabor"
+                        FontSize="16"
+                        FontAttributes="Bold"
+                        HeightRequest="56"
+                        Padding="20,0"
+                        CornerRadius="10"
+                        BackgroundColor="#6200EE"
+                        TextColor="White"
+                        VerticalOptions="Center"
+                        Command="{Binding SemSaborCommand}" />
+                <Button Grid.Column="2"
                         Text="Voltar"
                         FontSize="16"
                         FontAttributes="Bold"

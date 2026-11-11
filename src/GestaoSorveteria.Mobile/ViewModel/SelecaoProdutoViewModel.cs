@@ -118,6 +118,9 @@ public class SelecaoProdutoViewModel : BindableObject
     /// <summary>"Voltar" (ou o botão voltar do aparelho): fecha a grade sem lançar nada.</summary>
     public ICommand CancelarSaborCommand { get; }
 
+    /// <summary>RN-ES-09: "Sem sabor" lança o pote sem sabor (com fila no balcão); a contagem semanal corrige o estoque.</summary>
+    public ICommand SemSaborCommand { get; }
+
     // Comandos chamados pela Interface (XAML)
     public ICommand SelecionarProdutoCommand { get; }
     public ICommand PrecoManualCommand { get; }
@@ -135,6 +138,7 @@ public class SelecaoProdutoViewModel : BindableObject
         PrecoManualCommand = new Command(async () => await AdicionarPrecoManual());
         EscolherSaborCommand = new Command<SaborParaEscolher>(async (s) => await EscolherSabor(s));
         CancelarSaborCommand = new Command(FecharGradeDeSabores);
+        SemSaborCommand = new Command(async () => await SemSabor());
 
         AumentarQtdeCommand = new Command(() => Quantidade++);
         DiminuirQtdeCommand = new Command(() => { if (Quantidade > 1) Quantidade--; });
@@ -260,6 +264,22 @@ public class SelecaoProdutoViewModel : BindableObject
         finally
         {
             FecharGradeDeSabores(); // deu certo ou não (o alerta já apareceu): volta para a lista de produtos
+        }
+    }
+
+    async Task SemSabor()
+    {
+        var produto = _produtoDoSabor;
+        if (ComandaAtual == null || produto is null) return;
+        _produtoDoSabor = null;
+
+        try
+        {
+            await Lancar(produto, saborId: null, descricao: produto.Nome, complemento: " sem sabor");
+        }
+        finally
+        {
+            FecharGradeDeSabores();
         }
     }
 
