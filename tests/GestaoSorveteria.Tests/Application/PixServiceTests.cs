@@ -21,6 +21,7 @@ public class PixServiceTests
         public int Criacoes { get; private set; }
         public bool ForaDoAr { get; set; }
         public bool Configurado { get; set; } = true;
+        public bool RecusaCancelar { get; set; }
         public string Nome => "Fake";
         public int ExpiracaoSegundos => 600;
         public NovaCobrancaPix? UltimaCriada { get; private set; }
@@ -49,7 +50,7 @@ public class PixServiceTests
         {
             Falhar();
             var atual = Banco[txid];
-            if (atual.Situacao.Status == StatusCobrancaPix.Ativa)
+            if (atual.Situacao.Status == StatusCobrancaPix.Ativa && !RecusaCancelar)
             {
                 atual = atual with { Situacao = new SituacaoCobrancaPix(StatusCobrancaPix.Removida) };
                 Banco[txid] = atual;
@@ -250,5 +251,41 @@ public class PixServiceTests
         var dto = await a.Servico.CancelarAsync(criada.Id, Ct);
 
         Assert.True(dto.Paga);
+    }
+
+    [Fact]
+    public async Task CancelarAsync_BancoNaoRemoveu_LancaEContinuaAtiva()
+    {
+        var a = Criar();
+        var criada = await a.Servico.CriarAsync(new CriarCobrancaPixRequest(Guid.NewGuid(), 10m), Atendente, Ct);
+        a.Banco.RecusaCancelar = true;
+
+        await Assert.ThrowsAsync<ProvedorPixException>(() => a.Servico.CancelarAsync(criada.Id, Ct));
+
+        Assert.Equal(StatusCobrancaPix.Ativa, a.Repositorio.Cobrancas[0].Status);
+    }
+
+    [Fact]
+    public async Task CriarAsync_ValorComTresCasas_LancaSemChamarOBanco()
+    {
+        var a = Criar();
+
+        await Assert.ThrowsAsync<DomainException>(() => a.Servico.CriarAsync(new CriarCobrancaPixRequest(Guid.NewGuid(), 10.005m), Atendente, Ct));
+
+        Assert.Equal(0, a.Banco.Criacoes);
+    }
+
+    [Fact]
+    public async Task CriarAsync_OutroPedidoGravouPrimeiro_DevolveAGravada()
+    {
+        // O segundo pedido com o mesmo Id chega antes do primeiro gravar: a gravação dele viola o índice único
+        var a = Criar();
+        var id = Guid.NewGuid();
+        a.Uow.FalharNaConfirmacao = 1;
+
+        var dto = await a.Servico.CriarAsync(new CriarCobrancaPixRequest(id, 10m), Atendente, Ct);
+
+        Assert.Equal(1, a.Uow.Descartes);
+        Assert.Equal(id.ToString("N"), dto.Txid);
     }
 }

@@ -172,7 +172,7 @@ Depois (a combinar): anotação do dia pela dona (evento na cidade, feriado muni
 Pedido depois do teste na loja: Pix com QR Code do valor exato e confirmação automática, sem conferir no celular (docs/02, seção 5a; docs/03, seção 5b). Conta da loja: Inter PJ. TEF (cartão integrado à maquininha Inter Pag/Granito) fica para depois de perguntar custos à Inter Pag.
 
 - [x] Domain: `CobrancaPix` (txid do Id, situações, concluída final, expiração, cancelar), txid no pagamento só em Pix (RN-PX-02…06) + testes
-- [x] Application + Infrastructure: `PixService` (idempotente pelo Id, consulta enquanto ativa, cancelar que respeita pago no último segundo), `IProvedorPix` com Inter (mTLS + OAuth2, padrão do Banco Central), Simulado (fora de produção) e Desligado, tabela `cobrancas_pix` e `pagamentos.pix_txid` (migração `PixIntegrado`), endpoints `/api/pix/*`, banco fora do ar → 503 (RN-PX-01)
+- [x] Application + Infrastructure: `PixService` (idempotente pelo Id, consulta enquanto ativa, cancelar que respeita pago no último segundo), `IProvedorPix` com Inter (mTLS + OAuth2, padrão do Banco Central), Simulado (só em Development) e Desligado, tabela `cobrancas_pix` e `pagamentos.pix_txid` (migração `PixIntegrado`), endpoints `/api/pix/*`, banco fora do ar → 503 (RN-PX-01)
 - [ ] App: no Balcão, "Pix" mostra o QR Code com o valor e espera o banco; pago → grava a venda com o txid; "Cliente desistiu" e "Sem internet: Pix à mão"; cobrança pendente sobrevive a fechar o app
 - [ ] Painel: situação do Pix integrado em Configurações e "Pix conferido pelo banco" nas vendas
 - [ ] Ligar em produção: a dona cria a integração no Internet Banking do Inter PJ (cob.write e cob.read), variáveis `Pix__*` no Render (docs/07), teste com um Pix de R$ 0,01

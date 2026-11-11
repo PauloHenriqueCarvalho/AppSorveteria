@@ -54,5 +54,8 @@ public interface IComandaRepository
     /// <summary>Algum desses Ids já existe como item ou pagamento (sincronização: vira rejeição, não 409).</summary>
     Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 
+    /// <summary>RN-PX-05: algum destes txids de Pix integrado já pagou outra venda?</summary>
+    Task<bool> ExistePagamentoComTxidAsync(IReadOnlyCollection<string> txids, CancellationToken cancellationToken = default);
+
     Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default);
 }

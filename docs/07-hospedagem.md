@@ -131,7 +131,7 @@ A API cria a cobrança com o valor exato no banco da loja e consulta até o clie
 
 Ao subir, o log da API diz `Pix integrado: Inter` ou o motivo de estar desligado (ex.: "falta Pix:CertificadoPem", "o certificado não abriu"). **Teste:** um Pix de R$ 0,01 pelo app do balcão e conferir no extrato.
 
-**Testar sem banco** (emulador, tablet de teste, nunca em produção): `Pix__Provedor=Simulado` na API local (`dotnet user-secrets set "Pix:Provedor" "Simulado" --project src/GestaoSorveteria.Server`). Toda cobrança fica paga depois de 8 s (`Pix__SimuladoPagaEmSegundos`). Em `Production` o Simulado é desligado sozinho.
+**Testar sem banco** (emulador, tablet de teste, nunca em produção): `Pix__Provedor=Simulado` na API local (`dotnet user-secrets set "Pix:Provedor" "Simulado" --project src/GestaoSorveteria.Server`). Toda cobrança fica paga depois de 8 s (`Pix__SimuladoPagaEmSegundos`). Fora de `Development` o Simulado é desligado sozinho.
 
 ## Backup no piloto
 

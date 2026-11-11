@@ -148,6 +148,9 @@ internal sealed class ComandaRepository : IComandaRepository
         && (await _db.ItensComanda.AnyAsync(i => ids.Contains(i.Id), cancellationToken)
             || await _db.Pagamentos.AnyAsync(p => ids.Contains(p.Id), cancellationToken));
 
+    public async Task<bool> ExistePagamentoComTxidAsync(IReadOnlyCollection<string> txids, CancellationToken cancellationToken = default) =>
+        txids.Count > 0 && await _db.Pagamentos.AnyAsync(p => p.PixTxid != null && txids.Contains(p.PixTxid), cancellationToken);
+
     public async Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default) =>
         await _db.Comandas.AddAsync(comanda, cancellationToken);
 }

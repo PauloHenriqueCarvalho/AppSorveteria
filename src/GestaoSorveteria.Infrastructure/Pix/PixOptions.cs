@@ -13,7 +13,7 @@ public sealed class PixOptions
     public const string ProvedorInter = "Inter";
     public const string ProvedorSimulado = "Simulado";
 
-    /// <summary>"Inter", "Simulado" (só fora de produção) ou vazio = desligado.</summary>
+    /// <summary>"Inter", "Simulado" (só em Development) ou vazio = desligado.</summary>
     public string Provedor { get; set; } = string.Empty;
 
     /// <summary>"Producao" ou "Sandbox" (o sandbox do Inter tem credenciais próprias).</summary>
@@ -53,9 +53,10 @@ public sealed class PixOptions
 
     /// <summary>
     /// O Pix integrado é opcional: configuração errada não pode impedir a API de subir nem a venda (o app volta ao Pix à mão).
-    /// Simulado em produção é desligado — ele "confirma" pagamentos que não existem.
+    /// Simulado só em Development (lista de permissão: um "Staging" ou nome errado no ambiente não liga) — ele "confirma"
+    /// pagamentos que não existem.
     /// </summary>
-    public IReadOnlyList<string> Normalizar(bool producao)
+    public IReadOnlyList<string> Normalizar(bool permitirSimulado)
     {
         var avisos = new List<string>();
         Provedor = (Provedor ?? string.Empty).Trim();
@@ -73,9 +74,9 @@ public sealed class PixOptions
         if (string.Equals(Provedor, ProvedorSimulado, StringComparison.OrdinalIgnoreCase))
         {
             Provedor = ProvedorSimulado;
-            if (producao)
+            if (!permitirSimulado)
             {
-                avisos.Add("Pix:Provedor = Simulado não é aceito em produção; Pix integrado desligado.");
+                avisos.Add("Pix:Provedor = Simulado só é aceito em Development; Pix integrado desligado.");
                 Provedor = string.Empty;
             }
         }

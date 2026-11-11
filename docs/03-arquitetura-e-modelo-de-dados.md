@@ -212,7 +212,7 @@ Convenções: tabelas e colunas em `snake_case`; chaves `uuid`; dinheiro `numeri
 | valor | numeric(12,2) | abate da comanda |
 | valor_recebido | numeric(12,2) | dinheiro entregue |
 | troco | numeric(12,2) | |
-| pix_txid | varchar(35)? | RN-PX-05: txid da cobrança do Pix integrado que pagou; nulo no Pix conferido à mão. Índice |
+| pix_txid | varchar(35)? | RN-PX-05: txid da cobrança do Pix integrado que pagou; nulo no Pix conferido à mão. Índice único quando preenchido |
 
 Índices além dos citados: `comandas(caixa_id)`, `comandas(status)`, `comandas(fechada_em)`, `itens_comanda(comanda_id)`, `pagamentos(comanda_id)`, `movimentos_caixa(caixa_id)`.
 
@@ -331,7 +331,7 @@ Endpoints (atendente ou dona; banco fora do ar → **503** com a mensagem pronta
 | GET | `/api/pix/cobrancas/{id}` | situação atual; enquanto ativa pergunta ao banco; `paga` = concluída com o valor exato (RN-PX-03/04) |
 | POST | `/api/pix/cobrancas/{id}/cancelar` | remove no banco; se já foi paga, volta paga (RN-PX-06) |
 
-Banco: `IProvedorPix` (Application) → `InterProvedorPix` (Infrastructure: OAuth2 client_credentials com certificado mTLS, `PUT/GET/PATCH /pix/v2/cob/{txid}` do padrão do Banco Central, token em memória), `SimuladoProvedorPix` (fora de produção) ou `DesligadoProvedorPix`. Confirmação por **consulta** (o app pergunta a cada poucos segundos enquanto mostra o QR Code); webhook fica para depois, porque a API grátis dorme.
+Banco: `IProvedorPix` (Application) → `InterProvedorPix` (Infrastructure: OAuth2 client_credentials com certificado mTLS, `PUT/GET/PATCH /pix/v2/cob/{txid}` do padrão do Banco Central, token em memória), `SimuladoProvedorPix` (só em Development) ou `DesligadoProvedorPix`. Confirmação por **consulta** (o app pergunta a cada poucos segundos enquanto mostra o QR Code); webhook fica para depois, porque a API grátis dorme.
 
 ## 5a. Clima e calendário (base para estimar vendas)
 

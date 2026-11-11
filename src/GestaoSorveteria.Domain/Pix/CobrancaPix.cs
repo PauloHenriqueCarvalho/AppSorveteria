@@ -115,7 +115,8 @@ public sealed class CobrancaPix : Entity
         {
             case StatusCobrancaPix.Concluida:
                 Status = StatusCobrancaPix.Concluida;
-                ValorPago = situacao.ValorPago is { } pago ? Guard.Dinheiro(pago, "o valor pago", permiteZero: false) : Valor;
+                // RN-PX-04: só o valor que o banco informou; sem ele a venda não é liberada (o app manda conferir no banco)
+                ValorPago = situacao.ValorPago is { } pago ? Guard.Dinheiro(pago, "o valor pago", permiteZero: false) : null;
                 PagaEm = situacao.PagaEm is { } quando ? Guard.Utc(quando, "a hora do pagamento") : agora;
                 EndToEndId = Guard.TextoOpcional(situacao.EndToEndId, "o identificador do Pix", TamanhoMaximoEndToEndId);
                 break;

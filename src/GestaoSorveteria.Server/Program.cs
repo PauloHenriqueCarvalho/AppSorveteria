@@ -86,9 +86,9 @@ builder.Services.AddScoped<ClimaService>();
 builder.Services.AddScoped<ClimaVendasService>();
 builder.Services.AddHostedService<ColetaClimaEmSegundoPlano>();
 
-// ---------- Pix integrado (docs/02, seção 6b; docs/07): Inter, Simulado (fora de produção) ou desligado ----------
+// ---------- Pix integrado (docs/02, seção 5a; docs/07): Inter, Simulado (só em Development) ou desligado ----------
 var pix = builder.Configuration.GetSection(PixOptions.Secao).Get<PixOptions>() ?? new PixOptions();
-builder.Services.AddProvedorPix(pix, builder.Environment.IsProduction());
+builder.Services.AddProvedorPix(pix, permitirSimulado: builder.Environment.IsDevelopment());
 builder.Services.AddScoped<PixService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------

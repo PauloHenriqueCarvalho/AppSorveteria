@@ -125,32 +125,39 @@ public sealed class InterProvedorPix : IProvedorPix
 
     private async Task<HttpResponseMessage> EnviarAsync(HttpMethod metodo, string caminho, object? corpo, CancellationToken cancellationToken)
     {
-        var token = await TokenAsync(cancellationToken);
-        using var pedido = new HttpRequestMessage(metodo, caminho);
-        pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        if (!string.IsNullOrWhiteSpace(_opcoes.ContaCorrente))
+        for (var tentativa = 1; ; tentativa++)
         {
-            pedido.Headers.Add("x-conta-corrente", _opcoes.ContaCorrente.Trim());
-        }
-
-        if (corpo is not null)
-        {
-            pedido.Content = JsonContent.Create(corpo, corpo.GetType(), options: Json);
-        }
-
-        try
-        {
-            var resposta = await _http.SendAsync(pedido, cancellationToken);
-            if (resposta.StatusCode == HttpStatusCode.Unauthorized)
+            var token = await TokenAsync(cancellationToken);
+            using var pedido = new HttpRequestMessage(metodo, caminho);
+            pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            if (!string.IsNullOrWhiteSpace(_opcoes.ContaCorrente))
             {
-                _token = null; // token revogado/vencido antes da hora: o próximo pedido pega outro
+                pedido.Headers.Add("x-conta-corrente", _opcoes.ContaCorrente.Trim());
             }
 
-            return resposta;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
-        {
-            throw new ProvedorPixException("O banco não respondeu. Confira a internet e tente de novo.", ex);
+            if (corpo is not null)
+            {
+                pedido.Content = JsonContent.Create(corpo, corpo.GetType(), options: Json);
+            }
+
+            HttpResponseMessage resposta;
+            try
+            {
+                resposta = await _http.SendAsync(pedido, cancellationToken);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+            {
+                throw new ProvedorPixException("O banco não respondeu. Confira a internet e tente de novo.", ex);
+            }
+
+            if (resposta.StatusCode != HttpStatusCode.Unauthorized || tentativa > 1)
+            {
+                return resposta;
+            }
+
+            // Token revogado ou vencido antes da hora: pega outro e repete uma vez
+            resposta.Dispose();
+            _token = null;
         }
     }
 
@@ -238,14 +245,28 @@ public sealed class InterProvedorPix : IProvedorPix
             _ => throw new ProvedorPixException($"Situação da cobrança Pix desconhecida: {cob.Status}."),
         };
 
-        var pix = cob.Pix?.FirstOrDefault();
-        decimal? pago = pix?.Valor is { } textoPago && decimal.TryParse(textoPago, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? v : null;
-        DateTime? horario = pix?.Horario is { } h && DateTimeOffset.TryParse(h, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var d)
-            ? d.UtcDateTime
-            : null;
+        // RN-PX-04: soma de todos os Pix recebidos na cobrança; qualquer valor ilegível deixa o pago desconhecido (não libera)
+        var recebidos = cob.Pix ?? [];
+        decimal? pago = recebidos.Count == 0 ? null : 0m;
+        DateTime? horario = null;
+        string? endToEnd = null;
+        foreach (var recebido in recebidos)
+        {
+            pago = recebido.Valor is { } texto && decimal.TryParse(texto, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) && pago is { } soma
+                ? soma + v
+                : null;
+            var quando = recebido.Horario is { } h && DateTimeOffset.TryParse(h, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var d)
+                ? d.UtcDateTime
+                : (DateTime?)null;
+            if (horario is null || quando > horario)
+            {
+                horario = quando ?? horario;
+                endToEnd = recebido.EndToEndId ?? endToEnd;
+            }
+        }
 
         var situacao = status == StatusCobrancaPix.Concluida
-            ? new SituacaoCobrancaPix(status, pix?.EndToEndId, pago, horario)
+            ? new SituacaoCobrancaPix(status, endToEnd, pago, horario)
             : new SituacaoCobrancaPix(status);
         return new CobrancaNoBanco(cob.Txid, valor, cob.PixCopiaECola ?? string.Empty, situacao);
     }

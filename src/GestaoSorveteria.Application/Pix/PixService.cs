@@ -46,6 +46,12 @@ public sealed class PixService(
             return ParaDto(existente);
         }
 
+        // Antes de chamar o banco: valor com mais de 2 casas viraria outro valor lá (arredondado) e uma cobrança órfã
+        if (request.Valor <= 0 || !Moeda.TemNoMaximoDuasCasas(request.Valor))
+        {
+            throw new DomainException("O valor do Pix precisa ser maior que zero e ter no máximo 2 casas decimais.");
+        }
+
         var txid = CobrancaPix.TxidDe(request.Id);
         var nomeLoja = (await configuracao.ObterAsync(cancellationToken))?.NomeLoja ?? ConfiguracaoLoja.NomePadrao;
         var descricao = Limitar($"{nomeLoja} — compra no balcão");
@@ -59,7 +65,23 @@ public sealed class PixService(
         var cobranca = CobrancaPix.Criar(
             request.Id, usuarioId, request.Valor, noBanco.PixCopiaECola, noBanco.Situacao, clock.UtcNow, provedor.ExpiracaoSegundos);
         await cobrancas.AdicionarAsync(cobranca, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Dois pedidos com o mesmo Id ao mesmo tempo (o app repete enquanto a API acorda): o outro gravou primeiro.
+            unitOfWork.DescartarAlteracoes();
+            var gravada = await cobrancas.ObterPorIdAsync(request.Id, cancellationToken);
+            if (gravada is null || gravada.Valor != request.Valor)
+            {
+                throw;
+            }
+
+            return ParaDto(gravada);
+        }
+
         return ParaDto(cobranca);
     }
 
@@ -94,12 +116,14 @@ public sealed class PixService(
         if (cobranca.Status == StatusCobrancaPix.Ativa)
         {
             var noBanco = await provedor.CancelarAsync(cobranca.Txid, cancellationToken);
-            cobranca.AtualizarPeloBanco(noBanco.Situacao, clock.UtcNow);
-            if (cobranca.Status == StatusCobrancaPix.Ativa)
+            if (noBanco.Situacao.Status == StatusCobrancaPix.Ativa)
             {
-                cobranca.Cancelar(clock.UtcNow);
+                // O banco não removeu: o QR Code ainda vale. Marcar removida aqui faria a API parar de consultar e um
+                // pagamento feito depois nunca apareceria (RN-PX-03/06). Fica ativa; o app tenta de novo ou espera.
+                throw new ProvedorPixException("O banco não confirmou o cancelamento do Pix. O QR Code ainda vale: tente cancelar de novo.");
             }
 
+            cobranca.AtualizarPeloBanco(noBanco.Situacao, clock.UtcNow);
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

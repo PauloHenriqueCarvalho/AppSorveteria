@@ -24,6 +24,10 @@ internal sealed class CobrancaPixConfiguration : IEntityTypeConfiguration<Cobran
         builder.Property(c => c.ValorPago).HasPrecision(12, 2);
         builder.Ignore(c => c.PagaComValorCerto);
 
+        // Consultar e cancelar ao mesmo tempo: sem isto, um cancelar com a cobrança desatualizada gravaria Removida por
+        // cima de uma Concluída. xmin muda a cada UPDATE: o segundo falha com 409 (mesmo padrão do caixa).
+        builder.Property<uint>("Versao").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
+
         builder.HasIndex(c => c.Txid).IsUnique();
         builder.HasIndex(c => c.CriadaEm);
     }

@@ -68,13 +68,13 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// RN-PX-01: Pix integrado. Inter (com certificado mTLS), Simulado (fora de produção) ou desligado. Configuração errada
+    /// RN-PX-01: Pix integrado. Inter (com certificado mTLS), Simulado (só em Development) ou desligado. Configuração errada
     /// desliga o Pix integrado (o app volta ao Pix à mão) em vez de derrubar a API. HttpClient próprio, sem o log do
     /// IHttpClientFactory: o token vai nos cabeçalhos e o client_secret no corpo.
     /// </summary>
-    public static IServiceCollection AddProvedorPix(this IServiceCollection services, PixOptions opcoes, bool producao)
+    public static IServiceCollection AddProvedorPix(this IServiceCollection services, PixOptions opcoes, bool permitirSimulado)
     {
-        opcoes.Normalizar(producao);
+        opcoes.Normalizar(permitirSimulado);
         services.AddSingleton(opcoes);
         switch (opcoes.Provedor)
         {

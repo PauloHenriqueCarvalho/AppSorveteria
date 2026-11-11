@@ -174,4 +174,16 @@ public class CobrancaPixTests
 
         Assert.Null(Assert.Single(comanda.Pagamentos).PixTxid);
     }
+
+    [Fact]
+    public void AtualizarPeloBanco_ConcluidaSemValorInformado_NaoLiberaVenda()
+    {
+        var cobranca = Ativa();
+
+        cobranca.AtualizarPeloBanco(new SituacaoCobrancaPix(StatusCobrancaPix.Concluida), Cenario.Agora);
+
+        Assert.Equal(StatusCobrancaPix.Concluida, cobranca.Status);
+        Assert.Null(cobranca.ValorPago);
+        Assert.False(cobranca.PagaComValorCerto);
+    }
 }

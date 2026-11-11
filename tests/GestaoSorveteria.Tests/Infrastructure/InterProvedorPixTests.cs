@@ -170,6 +170,49 @@ public class InterProvedorPixTests
 
         Assert.Empty(banco.Pedidos);
     }
+
+    [Fact]
+    public async Task Token_RecusadoNoMeioDoCaminho_PegaOutroERepeteUmaVez()
+    {
+        var banco = new BancoFake()
+            .Responder(HttpStatusCode.OK, Token)
+            .Responder(HttpStatusCode.Unauthorized, "{}")
+            .Responder(HttpStatusCode.OK, Token.Replace("tk-1", "tk-2"))
+            .Responder(HttpStatusCode.OK, CobAtiva);
+
+        var cob = await Provedor(banco).ConsultarAsync(Txid, Ct);
+
+        Assert.Equal(StatusCobrancaPix.Ativa, cob.Situacao.Status);
+        Assert.Equal("Bearer tk-2", banco.Pedidos[3].Autorizacao);
+    }
+
+    [Fact]
+    public async Task ConsultarAsync_DoisPixNaCobranca_SomaOsValores()
+    {
+        var dois = $$"""
+            {"txid":"{{Txid}}","status":"CONCLUIDA","valor":{"original":"23.50"},"pixCopiaECola":"000201abc",
+             "pix":[{"endToEndId":"E1","valor":"20.00","horario":"2026-11-11T15:01:00Z"},
+                    {"endToEndId":"E2","valor":"3.50","horario":"2026-11-11T15:02:00Z"}]}
+            """;
+        var banco = new BancoFake().Responder(HttpStatusCode.OK, Token).Responder(HttpStatusCode.OK, dois);
+
+        var cob = await Provedor(banco).ConsultarAsync(Txid, Ct);
+
+        Assert.Equal(23.50m, cob.Situacao.ValorPago);
+        Assert.Equal("E2", cob.Situacao.EndToEndId);
+    }
+
+    [Fact]
+    public async Task ConsultarAsync_ConcluidaSemPix_ValorPagoDesconhecido()
+    {
+        var semPix = CobAtiva.Replace("\"ATIVA\"", "\"CONCLUIDA\"");
+        var banco = new BancoFake().Responder(HttpStatusCode.OK, Token).Responder(HttpStatusCode.OK, semPix);
+
+        var cob = await Provedor(banco).ConsultarAsync(Txid, Ct);
+
+        Assert.Equal(StatusCobrancaPix.Concluida, cob.Situacao.Status);
+        Assert.Null(cob.Situacao.ValorPago);
+    }
 }
 
 /// <summary>RN-PX-01: configuração do Pix integrado; erro desliga em vez de derrubar a API.</summary>
@@ -180,7 +223,7 @@ public class PixOptionsTests
     {
         var opcoes = new PixOptions { Provedor = "inter", ClientId = "a", ClientSecret = "b", CertificadoPem = "c", ChavePrivadaPem = "d", Chave = "e" };
 
-        opcoes.Normalizar(producao: true);
+        opcoes.Normalizar(permitirSimulado: false);
 
         Assert.Equal(PixOptions.ProvedorInter, opcoes.Provedor);
         Assert.Empty(opcoes.Avisos);
@@ -191,28 +234,28 @@ public class PixOptionsTests
     {
         var opcoes = new PixOptions { Provedor = "Inter", ClientId = "a", ClientSecret = "b", Chave = "e" };
 
-        opcoes.Normalizar(producao: true);
+        opcoes.Normalizar(permitirSimulado: false);
 
         Assert.Equal(string.Empty, opcoes.Provedor);
         Assert.Contains(opcoes.Avisos, a => a.Contains("CertificadoPem"));
     }
 
     [Fact]
-    public void Normalizar_SimuladoEmProducao_Desliga()
+    public void Normalizar_SimuladoForaDeDevelopment_Desliga()
     {
         var opcoes = new PixOptions { Provedor = "Simulado" };
 
-        opcoes.Normalizar(producao: true);
+        opcoes.Normalizar(permitirSimulado: false);
 
         Assert.Equal(string.Empty, opcoes.Provedor);
     }
 
     [Fact]
-    public void Normalizar_SimuladoForaDeProducao_Liga()
+    public void Normalizar_SimuladoEmDevelopment_Liga()
     {
         var opcoes = new PixOptions { Provedor = "simulado" };
 
-        opcoes.Normalizar(producao: false);
+        opcoes.Normalizar(permitirSimulado: true);
 
         Assert.Equal(PixOptions.ProvedorSimulado, opcoes.Provedor);
     }
@@ -222,7 +265,7 @@ public class PixOptionsTests
     {
         var opcoes = new PixOptions { ExpiracaoSegundos = 5 };
 
-        opcoes.Normalizar(producao: false);
+        opcoes.Normalizar(permitirSimulado: true);
 
         Assert.Equal(CobrancaPix.ExpiracaoPadraoSegundos, opcoes.ExpiracaoSegundos);
     }
