@@ -54,6 +54,19 @@ services:
       # Chave do Visual Crossing (clima do dia e previsão, RN-CL-07; conta grátis, docs/07). Vazia = coleta desligada.
       - key: Clima__ChaveApi
         sync: false
+      # Pix integrado (docs/07, "Pix integrado"): vazio = desligado, o app cobra o Pix à mão
+      - key: Pix__Provedor
+        sync: false
+      - key: Pix__ClientId
+        sync: false
+      - key: Pix__ClientSecret
+        sync: false
+      - key: Pix__CertificadoPem
+        sync: false
+      - key: Pix__ChavePrivadaPem
+        sync: false
+      - key: Pix__Chave
+        sync: false
 
       # Piloto: um único serviço, sem réplicas → a API aplica as migrações ao subir (docs/07).
       # Em produção paga voltar a "false" e rodar "dotnet ef database update" no deploy.

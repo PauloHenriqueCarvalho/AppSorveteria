@@ -174,7 +174,7 @@ public sealed class SyncService
                 i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal, sabores.GetValueOrDefault(i.Id))).ToList(),
             dto.Total,
             pagamentos.Select(p => new DadosPagamento(
-                TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco)).ToList(),
+                TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco, PixTxid: p.PixTxid)).ToList(),
             dto.FechadaEm,
             dto.CanceladaEm,
             dto.MotivoCancelamento);

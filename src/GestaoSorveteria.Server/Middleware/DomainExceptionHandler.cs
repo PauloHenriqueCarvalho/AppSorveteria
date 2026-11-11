@@ -1,3 +1,4 @@
+using GestaoSorveteria.Application.Abstractions;
 using GestaoSorveteria.Application.Common;
 using GestaoSorveteria.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
@@ -11,7 +12,8 @@ namespace GestaoSorveteria.Server.Middleware;
 /// Converte exceções conhecidas em ProblemDetails (RFC 9457):
 /// DomainException → 400 · EntidadeNaoEncontradaException → 404 · AcessoNegadoException → 403 ·
 /// violação de índice único no PostgreSQL (ex.: dois caixas abertos ao mesmo tempo) ou alteração concorrente
-/// do mesmo registro (token de concorrência, ex.: dois fechamentos do mesmo caixa) → 409.
+/// do mesmo registro (token de concorrência, ex.: dois fechamentos do mesmo caixa) → 409 ·
+/// ProvedorPixException (banco do Pix integrado fora do ar ou recusando) → 503, com a mensagem pronta (RN-PX-01).
 /// Qualquer outra exceção segue para o tratamento padrão (500 sem detalhes em produção).
 /// </summary>
 public sealed class DomainExceptionHandler : IExceptionHandler
@@ -38,6 +40,7 @@ public sealed class DomainExceptionHandler : IExceptionHandler
             DbUpdateException { InnerException: PostgresException { SqlState: ViolacaoUnicidadePostgres } } =>
                 (StatusCodes.Status409Conflict, "Conflito", MensagemConflito),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflito", MensagemConflito),
+            ProvedorPixException => (StatusCodes.Status503ServiceUnavailable, "Banco do Pix indisponível", exception.Message),
             _ => (0, string.Empty, string.Empty),
         };
 

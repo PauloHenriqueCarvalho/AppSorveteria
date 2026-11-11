@@ -10,6 +10,7 @@ using GestaoSorveteria.Application.Contagens;
 using GestaoSorveteria.Application.Estoque;
 using GestaoSorveteria.Application.Loja;
 using GestaoSorveteria.Application.Pedidos;
+using GestaoSorveteria.Application.Pix;
 using GestaoSorveteria.Application.Produtos;
 using GestaoSorveteria.Application.Relatorios;
 using GestaoSorveteria.Application.Sync;
@@ -17,6 +18,7 @@ using GestaoSorveteria.Application.Usuarios;
 using GestaoSorveteria.Domain.Repositories;
 using GestaoSorveteria.Infrastructure;
 using GestaoSorveteria.Infrastructure.Clima;
+using GestaoSorveteria.Infrastructure.Pix;
 using GestaoSorveteria.Infrastructure.Seed;
 using GestaoSorveteria.Server.Clima;
 using GestaoSorveteria.Server.Configuracao;
@@ -83,6 +85,11 @@ builder.Services.AddScoped<ColetaClimaService>();
 builder.Services.AddScoped<ClimaService>();
 builder.Services.AddScoped<ClimaVendasService>();
 builder.Services.AddHostedService<ColetaClimaEmSegundoPlano>();
+
+// ---------- Pix integrado (docs/02, seção 6b; docs/07): Inter, Simulado (fora de produção) ou desligado ----------
+var pix = builder.Configuration.GetSection(PixOptions.Secao).Get<PixOptions>() ?? new PixOptions();
+builder.Services.AddProvedorPix(pix, builder.Environment.IsProduction());
+builder.Services.AddScoped<PixService>();
 
 // ---------- Versão mínima do app (GET /api/versao) ----------
 var appVersao = builder.Configuration.GetSection(AppVersaoOptions.Secao).Get<AppVersaoOptions>() ?? new AppVersaoOptions();
@@ -196,6 +203,13 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+foreach (var aviso in pix.Avisos)
+{
+    app.Logger.LogWarning("Pix: {Aviso}", aviso);
+}
+
+app.Logger.LogInformation("Pix integrado: {Provedor}", string.IsNullOrEmpty(pix.Provedor) ? "desligado" : pix.Provedor);
 
 await app.PrepararBancoAsync();
 
