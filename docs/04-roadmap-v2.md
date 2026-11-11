@@ -173,7 +173,7 @@ Pedido depois do teste na loja: Pix com QR Code do valor exato e confirmação a
 
 - [x] Domain: `CobrancaPix` (txid do Id, situações, concluída final, expiração, cancelar), txid no pagamento só em Pix (RN-PX-02…06) + testes
 - [x] Application + Infrastructure: `PixService` (idempotente pelo Id, consulta enquanto ativa, cancelar que respeita pago no último segundo), `IProvedorPix` com Inter (mTLS + OAuth2, padrão do Banco Central), Simulado (só em Development) e Desligado, tabela `cobrancas_pix` e `pagamentos.pix_txid` (migração `PixIntegrado`), endpoints `/api/pix/*`, banco fora do ar → 503 (RN-PX-01)
-- [ ] App: no Balcão, "Pix" mostra o QR Code com o valor e espera o banco; pago → grava a venda com o txid; "Cliente desistiu" e "Sem internet: Pix à mão"; cobrança pendente sobrevive a fechar o app
+- [x] App: no Balcão, "Pix" mostra o QR Code com o valor (QRCoder) e consulta a cada 2,5 s; pago → grava a venda com o txid; "Cliente desistiu", "Pix à mão", "Gerar outro"; falhou ao criar → oferece o Pix à mão; cobrança pendente guardada no aparelho e retomada ao voltar ao Balcão (pago → grava a venda) — falta testar no tablet com `Pix__Provedor=Simulado`
 - [ ] Painel: situação do Pix integrado em Configurações e "Pix conferido pelo banco" nas vendas
 - [ ] Ligar em produção: a dona cria a integração no Internet Banking do Inter PJ (cob.write e cob.read), variáveis `Pix__*` no Render (docs/07), teste com um Pix de R$ 0,01
 

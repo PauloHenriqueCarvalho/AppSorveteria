@@ -168,7 +168,7 @@ public sealed class ComandaRepository(BancoLocal banco)
             linha.Id, linha.CaixaId, linha.UsuarioId, linha.Numero, linha.Tipo, linha.Status,
             linha.CriadaEm, linha.CriadaEm, linha.Observacao,
             itens.Select(i => new Dominio.DadosItem(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.ItemEstoqueId)), // RN-ES-09: o sabor volta com a linha
-            pagamentos.Select(p => new Dominio.DadosPagamento(p.Forma, p.Valor, p.ValorRecebido, p.Id)),
+            pagamentos.Select(p => new Dominio.DadosPagamento(p.Forma, p.Valor, p.ValorRecebido, p.Id, PixTxid: p.PixTxid)),
             linha.FechadaEm, linha.CanceladaEm, linha.MotivoCancelamento);
     }
 
@@ -268,6 +268,7 @@ public sealed class ComandaRepository(BancoLocal banco)
                     Valor = pagamento.Valor,
                     ValorRecebido = pagamento.ValorRecebido,
                     Troco = pagamento.Troco,
+                    PixTxid = pagamento.PixTxid,
                     PagoEm = comanda.FechadaEm ?? DateTime.UtcNow,
                 });
             }

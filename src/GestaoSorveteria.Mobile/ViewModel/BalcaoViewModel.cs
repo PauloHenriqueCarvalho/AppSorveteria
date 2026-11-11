@@ -5,6 +5,8 @@ using GestaoSorveteria.Domain.Estoque;
 using SorveteriaMaui.Data;
 using SorveteriaMaui.Model;
 using SorveteriaMaui.Services;
+using SorveteriaMaui.Services.Api;
+using GestaoSorveteria.Contracts.Pix;
 using NotaParaTroco = GestaoSorveteria.Domain.Comandas.NotaParaTroco;
 using NotasDoTroco = GestaoSorveteria.Domain.Comandas.NotasDoTroco;
 using ComandaDominio = GestaoSorveteria.Domain.Comandas.Comanda;
@@ -78,6 +80,7 @@ public class BalcaoViewModel : BindableObject
     private readonly ItemEstoqueRepository _itensEstoque;
     private readonly CaixaAppService _caixa;
     private readonly IPaymentService _pagamento;
+    private readonly ApiCliente _api;
 
     private List<Produto> _todos = new();
     private int _versaoTotal;
@@ -139,7 +142,7 @@ public class BalcaoViewModel : BindableObject
     public string TextoTotal => $"R$ {Total:F2}";
 
     /// <summary>Algum painel cobre os botões (sabor, teclado ou troco): toques nos produtos e no pagamento esperam.</summary>
-    private bool Ocupado => EscolhendoSabor || DigitandoValor || EscolhendoTroco || _cobrando || _preparandoPagamento;
+    private bool Ocupado => EscolhendoSabor || DigitandoValor || EscolhendoTroco || EscolhendoPix || _cobrando || _preparandoPagamento;
 
     // ---------------------------------------------------------------- RN-ES-09: grade de sabores, só nos potes
 
@@ -235,10 +238,91 @@ public class BalcaoViewModel : BindableObject
     public ICommand CancelarTrocoCommand { get; }
     public ICommand DividirCommand { get; }
     public ICommand AbrirCaixaCommand { get; }
+    public ICommand DesistirPixCommand { get; }
+    public ICommand PixAMaoCommand { get; }
+    public ICommand GerarOutroPixCommand { get; }
+    public ICommand FecharPixCommand { get; }
+
+    // ---------------------------------------------------------------- Pix integrado (RN-PX-01…06)
+
+    /// <summary>De quanto em quanto o app pergunta se o cliente pagou.</summary>
+    private static readonly TimeSpan IntervaloConsultaPix = TimeSpan.FromSeconds(2.5);
+
+    /// <summary>Situação do servidor vale por alguns minutos (a dona pode ligar/desligar no Render).</summary>
+    private static readonly TimeSpan ValidadeSituacaoPix = TimeSpan.FromMinutes(5);
+
+    private bool _pixLigado;
+    private DateTime _situacaoPixEm = DateTime.MinValue;
+    private PixPendente? _pixAtual;
+    private CancellationTokenSource? _consultaPix;
+
+    private bool _escolhendoPix;
+    /// <summary>Painel do QR Code aberto: cobre os produtos; a venda e o total continuam à vista.</summary>
+    public bool EscolhendoPix
+    {
+        get => _escolhendoPix;
+        set { _escolhendoPix = value; OnPropertyChanged(); }
+    }
+
+    private string _tituloPix = string.Empty;
+    public string TituloPix
+    {
+        get => _tituloPix;
+        set { _tituloPix = value; OnPropertyChanged(); }
+    }
+
+    private ImageSource? _qrCodePix;
+    public ImageSource? QrCodePix
+    {
+        get => _qrCodePix;
+        set { _qrCodePix = value; OnPropertyChanged(); OnPropertyChanged(nameof(TemQrCodePix)); }
+    }
+
+    public bool TemQrCodePix => QrCodePix is not null;
+
+    private string _mensagemPix = string.Empty;
+    public string MensagemPix
+    {
+        get => _mensagemPix;
+        set { _mensagemPix = value; OnPropertyChanged(); }
+    }
+
+    private bool _pixEsperando;
+    /// <summary>Esperando o cliente pagar (mostra "Cliente desistiu" e "Pix à mão").</summary>
+    public bool PixEsperando
+    {
+        get => _pixEsperando;
+        set { _pixEsperando = value; OnPropertyChanged(); }
+    }
+
+    private bool _pixVenceu;
+    /// <summary>QR Code vencido ou removido pelo banco: oferece "Gerar outro".</summary>
+    public bool PixVenceu
+    {
+        get => _pixVenceu;
+        set { _pixVenceu = value; OnPropertyChanged(); }
+    }
+
+    private bool _pixGerando;
+    /// <summary>Esperando o banco devolver o QR Code (o servidor pode estar acordando).</summary>
+    public bool PixGerando
+    {
+        get => _pixGerando;
+        set { _pixGerando = value; OnPropertyChanged(); }
+    }
+
+    private bool _pixSimulado;
+    /// <summary>Servidor de teste: o "pagamento" é de mentira (faixa amarela no QR Code).</summary>
+    public bool PixSimulado
+    {
+        get => _pixSimulado;
+        set { _pixSimulado = value; OnPropertyChanged(); }
+    }
 
     public BalcaoViewModel(ComandaAppService comandas, ProdutoRepository produtos, ItemEstoqueRepository itensEstoque,
-        CaixaAppService caixa, IPaymentService pagamento)
+        CaixaAppService caixa, IPaymentService pagamento, ApiCliente api)
     {
+        _api = api;
         _comandas = comandas;
         _produtos = produtos;
         _itensEstoque = itensEstoque;
@@ -270,6 +354,10 @@ public class BalcaoViewModel : BindableObject
         CancelarTrocoCommand = new Command(FecharTroco);
         DividirCommand = new Command(async () => await Dividir());
         AbrirCaixaCommand = new Command(async () => await Shell.Current.GoToAsync("//CaixaView"));
+        DesistirPixCommand = new Command(async () => await DesistirPix(gravarAMao: false));
+        PixAMaoCommand = new Command(async () => await DesistirPix(gravarAMao: true));
+        GerarOutroPixCommand = new Command(async () => await GerarOutroPix());
+        FecharPixCommand = new Command(VoltarDoPixVencido);
     }
 
     /// <summary>
@@ -278,6 +366,7 @@ public class BalcaoViewModel : BindableObject
     /// </summary>
     public async Task AoAparecerAsync()
     {
+        _ = AtualizarSituacaoPixAsync();
         await Operacao.CarregarAsync(async () =>
         {
             var caixa = await _caixa.ObterAbertoLinhaAsync();
@@ -307,6 +396,8 @@ public class BalcaoViewModel : BindableObject
                 AplicarFiltro();
             });
         });
+
+        await RetomarPixPendenteAsync();
     }
 
     private async Task TocarProduto(Produto? produto)
@@ -479,6 +570,7 @@ public class BalcaoViewModel : BindableObject
     /// <summary>Voltar do aparelho com venda montada: descarta depois de confirmar (nada foi gravado nem pago).</summary>
     public void LimparVenda()
     {
+        if (EscolhendoPix) return; // com Pix na tela, só "Cliente desistiu" ou "Pix à mão" saem (o QR Code ainda vale)
         FecharGradeDeSabores();
         FecharTeclado();
         FecharTroco();
@@ -528,6 +620,12 @@ public class BalcaoViewModel : BindableObject
             var conta = await ContaParaCobrarAsync();
             if (conta is null || _cobrando || !TemItens) return;
 
+            if (formaPagamento == FormaPagamento.Pix && _pixLigado)
+            {
+                await IniciarPixAsync(conta.Value.Total, conta.Value.Itens);
+                return;
+            }
+
             if (formaPagamento == FormaPagamento.Dinheiro)
             {
                 _itensDoTroco = conta.Value.Itens;
@@ -552,7 +650,7 @@ public class BalcaoViewModel : BindableObject
     /// </summary>
     private bool PodeComecarPagamento()
     {
-        if (!TemItens || _cobrando || _preparandoPagamento || EscolhendoTroco) return false;
+        if (!TemItens || _cobrando || _preparandoPagamento || EscolhendoTroco || EscolhendoPix) return false;
         if (DigitandoValor)
         {
             AvisoRapido.Mostrar("Toque em Adicionar (ou Voltar) antes de cobrar");
@@ -646,9 +744,9 @@ public class BalcaoViewModel : BindableObject
     /// RN-CM-13 / RN-CM-07: uma única operação abre a comanda, lança os itens e fecha com o pagamento. Se falhar, os itens
     /// continuam na tela. O troco aparece só depois de gravado (B7).
     /// </summary>
-    private async Task GravarAsync(IReadOnlyList<ItemDoBalcao> itens, IReadOnlyList<DadosPagamento> pagamentos)
+    private async Task<bool> GravarAsync(IReadOnlyList<ItemDoBalcao> itens, IReadOnlyList<DadosPagamento> pagamentos)
     {
-        if (_cobrando || itens.Count == 0) return;
+        if (_cobrando || itens.Count == 0) return false;
         _cobrando = true;
         try
         {
@@ -664,7 +762,11 @@ public class BalcaoViewModel : BindableObject
                 {
                     await _pagamento.MostrarTrocoAsync(venda.TotalTroco);
                 }
+
+                return true;
             }
+
+            return false;
         }
         finally
         {
@@ -690,6 +792,305 @@ public class BalcaoViewModel : BindableObject
         }
 
         return false;
+    }
+
+    // ---------------------------------------------------------------- Pix integrado (RN-PX-01…06)
+
+    /// <summary>RN-PX-01: pergunta ao servidor se o Pix integrado está ligado. Sem internet = desligado (Pix à mão).</summary>
+    private async Task AtualizarSituacaoPixAsync()
+    {
+        if (DateTime.UtcNow - _situacaoPixEm < ValidadeSituacaoPix) return;
+        try
+        {
+            var situacao = await _api.ObterSituacaoPixAsync();
+            _pixLigado = situacao.Ligado;
+            PixSimulado = situacao.Ligado && situacao.Provedor == "Simulado";
+            _situacaoPixEm = DateTime.UtcNow;
+        }
+        catch (Exception ex)
+        {
+            // Offline, servidor dormindo ou sessão vencida: segue com o Pix à mão até a próxima tentativa
+            System.Diagnostics.Debug.WriteLine($"[Sorveteria] Situação do Pix integrado indisponível: {ex.Message}");
+            _pixLigado = false;
+        }
+    }
+
+    /// <summary>RN-PX-02: cria a cobrança com o valor exato e mostra o QR Code. Falhou → oferece o Pix à mão.</summary>
+    private async Task IniciarPixAsync(decimal total, List<ItemDoBalcao> itens)
+    {
+        var pendente = new PixPendente(Guid.NewGuid(), total, itens, DateTime.UtcNow);
+        PixPendenteGuardado.Guardar(pendente);
+        _pixAtual = pendente;
+        AbrirPainelPix(total, "Gerando o QR Code…");
+
+        CobrancaPixDto cobranca;
+        try
+        {
+            cobranca = await _api.CriarCobrancaPixAsync(new CriarCobrancaPixRequest(pendente.CobrancaId, total));
+        }
+        catch (ApiException ex)
+        {
+            PixPendenteGuardado.Limpar();
+            _pixAtual = null;
+            FecharPix();
+            await OferecerPixAMaoAsync(itens, total, $"O Pix com QR Code não funcionou agora: {ex.Message}");
+            return;
+        }
+
+        MostrarCobranca(cobranca);
+        IniciarConsulta();
+    }
+
+    /// <summary>
+    /// App fechou com um Pix na tela: pergunta ao banco. Pago → grava a venda guardada; ainda valendo → volta o QR Code;
+    /// vencido ou cancelado → esquece (o cliente não pagou).
+    /// </summary>
+    private async Task RetomarPixPendenteAsync()
+    {
+        if (EscolhendoPix || PixPendenteGuardado.Ler() is not { } pendente) return;
+
+        CobrancaPixDto cobranca;
+        try
+        {
+            cobranca = await _api.ConsultarCobrancaPixAsync(pendente.CobrancaId);
+        }
+        catch (ApiException ex) when (ex.Status == 404)
+        {
+            PixPendenteGuardado.Limpar(); // nunca chegou ao banco
+            return;
+        }
+        catch (ApiException)
+        {
+            AvisoRapido.Mostrar($"Há um Pix de R$ {pendente.Total:F2} a conferir. Abra o Balcão de novo com internet.");
+            return;
+        }
+
+        _pixAtual = pendente;
+        if (cobranca.Paga)
+        {
+            await ConcluirPixPagoAsync(cobranca, retomado: true);
+            return;
+        }
+
+        if (cobranca.Status == "Ativa")
+        {
+            AbrirPainelPix(pendente.Total, string.Empty);
+            MostrarCobranca(cobranca);
+            IniciarConsulta();
+            return;
+        }
+
+        PixPendenteGuardado.Limpar();
+        _pixAtual = null;
+        if (cobranca.Status == "Concluida")
+        {
+            await Shell.Current.DisplayAlertAsync("Confira no banco",
+                $"O banco recebeu R$ {cobranca.ValorPago:F2} num Pix de R$ {cobranca.Valor:F2}. A venda não foi gravada: confira no app do banco.", "OK");
+        }
+    }
+
+    private void AbrirPainelPix(decimal total, string mensagem)
+    {
+        TituloPix = $"Pix — R$ {total:F2}";
+        MensagemPix = mensagem;
+        QrCodePix = null;
+        PixVenceu = false;
+        PixEsperando = false;
+        PixGerando = true;
+        EscolhendoPix = true;
+    }
+
+    private void MostrarCobranca(CobrancaPixDto cobranca)
+    {
+        try
+        {
+            QrCodePix ??= GeradorQrCode.Gerar(cobranca.PixCopiaECola);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Sorveteria] QR Code do Pix: {ex.Message}");
+        }
+
+        var minutos = Math.Max(1, (int)Math.Ceiling((cobranca.ExpiraEm - DateTime.UtcNow).TotalMinutes));
+        MensagemPix = $"Aguardando o cliente pagar… (vale por {minutos} min)";
+        PixGerando = false;
+        PixEsperando = true;
+    }
+
+    /// <summary>RN-PX-03: pergunta a cada poucos segundos enquanto o QR Code está na tela.</summary>
+    private void IniciarConsulta()
+    {
+        PararConsulta();
+        var cancelamento = new CancellationTokenSource();
+        _consultaPix = cancelamento;
+        _ = ConsultarAteTerminarAsync(cancelamento.Token);
+    }
+
+    private void PararConsulta()
+    {
+        _consultaPix?.Cancel();
+        _consultaPix = null;
+    }
+
+    private async Task ConsultarAteTerminarAsync(CancellationToken cancelamento)
+    {
+        while (!cancelamento.IsCancellationRequested && _pixAtual is { } atual)
+        {
+            try
+            {
+                await Task.Delay(IntervaloConsultaPix, cancelamento);
+                var cobranca = await _api.ConsultarCobrancaPixAsync(atual.CobrancaId, cancelamento);
+                if (cancelamento.IsCancellationRequested) return;
+
+                if (cobranca.Paga)
+                {
+                    PararConsulta();
+                    await MainThread.InvokeOnMainThreadAsync(() => ConcluirPixPagoAsync(cobranca, retomado: false));
+                    return;
+                }
+
+                if (cobranca.Status is "Removida" or "Expirada")
+                {
+                    PararConsulta();
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        PixPendenteGuardado.Limpar();
+                        QrCodePix = null;
+                        PixEsperando = false;
+                        PixVenceu = true;
+                        MensagemPix = "Este QR Code venceu e não foi pago. Gere outro ou cobre de outro jeito.";
+                    });
+                    return;
+                }
+
+                if (cobranca.Status == "Concluida")
+                {
+                    // RN-PX-04: pago com valor diferente — não libera a venda
+                    PararConsulta();
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        PixPendenteGuardado.Limpar();
+                        PixEsperando = false;
+                        PixVenceu = true;
+                        MensagemPix = $"O banco recebeu R$ {cobranca.ValorPago:F2}, diferente do total. Confira no app do banco antes de continuar.";
+                    });
+                    return;
+                }
+
+                MainThread.BeginInvokeOnMainThread(() => MostrarCobranca(cobranca));
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (ApiException ex)
+            {
+                // Banco ou internet oscilando: continua tentando, o QR Code ainda vale
+                MainThread.BeginInvokeOnMainThread(() => MensagemPix = $"Sem resposta agora ({ex.Message}). Tentando de novo…");
+            }
+        }
+    }
+
+    /// <summary>RN-PX-04/05: pago com o valor exato → grava a venda com o txid. Falhou a gravação → o Pix fica guardado.</summary>
+    private async Task ConcluirPixPagoAsync(CobrancaPixDto cobranca, bool retomado)
+    {
+        var atual = _pixAtual;
+        if (atual is null) return;
+
+        var gravou = await GravarAsync(atual.Itens, [new DadosPagamento(FormaPagamento.Pix, atual.Total, PixTxid: cobranca.Txid)]);
+        if (!gravou)
+        {
+            MensagemPix = "O Pix foi pago, mas a venda não foi gravada. Resolva o aviso e volte ao Balcão: o app tenta de novo.";
+            PixEsperando = false;
+            return;
+        }
+
+        PixPendenteGuardado.Limpar();
+        _pixAtual = null;
+        FecharPix();
+        AvisoRapido.Mostrar(retomado
+            ? $"Pix de R$ {atual.Total:F2} que estava pendente foi recebido: venda gravada"
+            : $"Pix recebido ✓ R$ {atual.Total:F2}");
+    }
+
+    /// <summary>
+    /// RN-PX-06: "Cliente desistiu" cancela o QR Code no banco e volta para a venda; "Pix à mão" cancela e grava como Pix
+    /// conferido no celular. Pago no último segundo → grava a venda como paga, nunca cancela.
+    /// </summary>
+    private async Task DesistirPix(bool gravarAMao)
+    {
+        if (_pixAtual is not { } atual || _cobrando) return;
+        PararConsulta();
+
+        CobrancaPixDto? cobranca = null;
+        try
+        {
+            cobranca = await _api.CancelarCobrancaPixAsync(atual.CobrancaId);
+        }
+        catch (ApiException ex) when (ex.Status == 404)
+        {
+            // nunca chegou ao banco: nada a cancelar
+        }
+        catch (ApiException ex)
+        {
+            var seguir = await Shell.Current.DisplayAlertAsync("Não deu para cancelar no banco",
+                $"{ex.Message}\n\nO QR Code ainda pode ser pago. Continuar mesmo assim?", "Continuar", "Voltar ao QR Code");
+            if (!seguir)
+            {
+                IniciarConsulta();
+                return;
+            }
+        }
+
+        if (cobranca?.Paga == true)
+        {
+            await ConcluirPixPagoAsync(cobranca, retomado: false);
+            return;
+        }
+
+        PixPendenteGuardado.Limpar();
+        _pixAtual = null;
+        FecharPix();
+        if (gravarAMao)
+        {
+            await GravarAsync(atual.Itens, [new DadosPagamento(FormaPagamento.Pix, atual.Total)]);
+        }
+    }
+
+    private async Task GerarOutroPix()
+    {
+        if (_pixAtual is not { } atual || _cobrando) return;
+        FecharPix();
+        _pixAtual = null;
+        await IniciarPixAsync(atual.Total, atual.Itens);
+    }
+
+    /// <summary>QR Code vencido ou pago com outro valor: volta para a venda (os itens continuam na tela).</summary>
+    private void VoltarDoPixVencido()
+    {
+        if (!PixVenceu) return;
+        _pixAtual = null;
+        PixPendenteGuardado.Limpar();
+        FecharPix();
+    }
+
+    private void FecharPix()
+    {
+        PararConsulta();
+        PixGerando = false;
+        EscolhendoPix = false;
+        PixEsperando = false;
+        PixVenceu = false;
+        QrCodePix = null;
+        MensagemPix = string.Empty;
+    }
+
+    private async Task OferecerPixAMaoAsync(List<ItemDoBalcao> itens, decimal total, string motivo)
+    {
+        if (await Shell.Current.DisplayAlertAsync("Pix", $"{motivo}\n\nCobrar o Pix à mão (conferindo no celular)?", "Cobrar à mão", "Voltar"))
+        {
+            await GravarAsync(itens, [new DadosPagamento(FormaPagamento.Pix, total)]);
+        }
     }
 
     private static ModoControle? ModoDoGrupo(IReadOnlyDictionary<Guid, ModoControle> modos, Produto produto) =>

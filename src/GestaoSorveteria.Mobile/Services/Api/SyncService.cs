@@ -410,7 +410,7 @@ public sealed class SyncService(
             c.Id, c.CaixaId, c.UsuarioId, c.Numero, c.Tipo.ToString(), c.Status.ToString(), c.Total, c.CriadaEm,
             // RN-ES-09: o sabor do pote vai na linha; a comanda fechada baixa o saldo dele no servidor
             itens.Select(i => new ItemComandaSyncDto(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.Subtotal, i.ItemEstoqueId)).ToList(),
-            pagamentos.Select(p => new PagamentoSyncDto(p.Id, p.Forma.ToString(), p.Valor, p.ValorRecebido, p.Troco)).ToList(),
+            pagamentos.Select(p => new PagamentoSyncDto(p.Id, p.Forma.ToString(), p.Valor, p.ValorRecebido, p.Troco, p.PixTxid)).ToList(),
             c.Observacao, c.FechadaEm, c.CanceladaEm, c.MotivoCancelamento);
     }
 

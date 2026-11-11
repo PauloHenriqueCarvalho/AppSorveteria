@@ -108,6 +108,34 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
         return await LerAsync(resposta, ApiJsonContext.Default.ResumoDoDiaResponse, cancellationToken);
     }
 
+    /// <summary>GET /api/pix/situacao — o Pix integrado está ligado no servidor? (RN-PX-01)</summary>
+    public async Task<PixSituacaoDto> ObterSituacaoPixAsync(CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, "/api/pix/situacao", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.PixSituacaoDto, cancellationToken);
+    }
+
+    /// <summary>POST /api/pix/cobrancas — cria (ou devolve, mesmo Id) a cobrança com o valor exato (RN-PX-02).</summary>
+    public async Task<CobrancaPixDto> CriarCobrancaPixAsync(CriarCobrancaPixRequest request, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync(HttpMethod.Post, "/api/pix/cobrancas", request, ApiJsonContext.Default.CriarCobrancaPixRequest, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.CobrancaPixDto, cancellationToken);
+    }
+
+    /// <summary>GET /api/pix/cobrancas/{id} — situação atual; o servidor pergunta ao banco enquanto ativa (RN-PX-03).</summary>
+    public async Task<CobrancaPixDto> ConsultarCobrancaPixAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Get, $"/api/pix/cobrancas/{id}", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.CobrancaPixDto, cancellationToken);
+    }
+
+    /// <summary>POST /api/pix/cobrancas/{id}/cancelar — remove no banco; paga no último segundo volta paga (RN-PX-06).</summary>
+    public async Task<CobrancaPixDto> CancelarCobrancaPixAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var resposta = await EnviarAsync<object>(HttpMethod.Post, $"/api/pix/cobrancas/{id}/cancelar", null, null, autenticado: true, cancellationToken);
+        return await LerAsync(resposta, ApiJsonContext.Default.CobrancaPixDto, cancellationToken);
+    }
+
     /// <summary>Envia a requisição; 2xx volta para o chamador ler, qualquer outra vira <see cref="ApiException"/>.</summary>
     internal async Task<HttpResponseMessage> EnviarAsync<TCorpo>(
         HttpMethod metodo, string rota, TCorpo? corpo, JsonTypeInfo<TCorpo>? tipoCorpo, bool autenticado, CancellationToken cancellationToken)
@@ -180,6 +208,8 @@ public sealed class ApiCliente(ConfiguracaoApi configuracao, SessaoUsuario sessa
             HttpStatusCode.TooManyRequests => new ApiException("Muitas tentativas. Aguarde 1 minuto e tente de novo.", status),
             HttpStatusCode.BadRequest or HttpStatusCode.NotFound or HttpStatusCode.Conflict =>
                 new ApiException(MensagemDoProblema(problema) ?? "O servidor recusou a operação.", status),
+            // RN-PX-01: banco do Pix fora do ar — a API já manda a mensagem pronta
+            HttpStatusCode.ServiceUnavailable when MensagemDoProblema(problema) is { } detalhe => new ApiIndisponivelException(detalhe, status),
             _ when status >= 500 => new ApiIndisponivelException(
                 "O servidor está com problema no momento. Tente de novo em alguns minutos.", status),
             _ => new ApiException(MensagemDoProblema(problema) ?? $"O servidor respondeu com erro {status}.", status),
