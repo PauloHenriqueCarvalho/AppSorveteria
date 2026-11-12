@@ -20,6 +20,7 @@ Uma página para quem está no balcão e para a dona. Guarde impressa perto do t
   - **Self-service**: toque no botão e digite o valor da balança no teclado da tela, sem vírgula (1-5-5-0 = R$ 15,50). Depois **Adicionar**.
   - **✏️ Valor avulso**: um valor sem produto, pelo mesmo teclado. Está sempre na tela.
   - **Promoção** (ex.: 20 picolés por R$ 37): toque no botão da promoção.
+  - **Pix com QR Code** (quando o Pix integrado estiver ligado): toque em **Pix** e vire a tela para o cliente. Ele paga pelo app do banco e, em poucos segundos, aparece **Pix recebido ✓**: a venda já está gravada, ninguém precisa conferir no celular. Cliente mudou de ideia? **Cliente desistiu** (o QR Code deixa de valer). Pagou pelo Pix da loja de outro jeito ou caiu a internet? **Pix à mão**. QR Code venceu (10 min)? **Gerar outro**.
   - Errou um item? Use o **−** ao lado dele (no self-service e no valor avulso, o **×**). Pagou metade em cada forma? **Dividir pagamento**.
 - **⚖️ Self-service (peso) dentro de uma comanda**: digite o **valor que a balança mostrou** (em reais, ex.: 15,50). No Balcão é pelo teclado da tela, sem vírgula.
 - **🛵 Delivery**: igual à comanda, com a observação de endereço/telefone.

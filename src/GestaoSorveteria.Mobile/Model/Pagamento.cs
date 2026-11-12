@@ -28,6 +28,10 @@ public class Pagamento
     [Column("troco_centavos")]
     public long TrocoCentavos { get; set; }
 
+    /// <summary>RN-PX-05: txid da cobrança do Pix integrado que pagou; nulo no Pix conferido à mão e nas outras formas.</summary>
+    [Column("pix_txid")]
+    public string? PixTxid { get; set; }
+
     [Column("pago_em")]
     public DateTime PagoEm { get => _pagoEm; set => _pagoEm = ComoUtc(value); }
 

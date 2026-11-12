@@ -66,6 +66,13 @@ public sealed class ComandaRepository(BancoLocal banco)
         return await db.Table<Pagamento>().Where(p => p.ComandaId == comandaId).ToListAsync();
     }
 
+    /// <summary>RN-PX-05: este Pix integrado já virou venda neste aparelho? (o app pode ter morrido entre gravar e esquecer o pendente)</summary>
+    public async Task<bool> ExistePagamentoComPixTxidAsync(string txid)
+    {
+        var db = await banco.ConexaoAsync();
+        return await db.Table<Pagamento>().Where(p => p.PixTxid == txid).CountAsync() > 0;
+    }
+
     /// <summary>Comandas fechadas/canceladas do caixa ainda não confirmadas pela API, mais antigas primeiro (até <paramref name="maximo"/>).</summary>
     public async Task<List<Comanda>> ListarPendentesEnvioAsync(Guid caixaId, int maximo)
     {
@@ -168,7 +175,7 @@ public sealed class ComandaRepository(BancoLocal banco)
             linha.Id, linha.CaixaId, linha.UsuarioId, linha.Numero, linha.Tipo, linha.Status,
             linha.CriadaEm, linha.CriadaEm, linha.Observacao,
             itens.Select(i => new Dominio.DadosItem(i.Id, i.ProdutoId, i.Descricao, i.Quantidade, i.PrecoUnitario, i.ItemEstoqueId)), // RN-ES-09: o sabor volta com a linha
-            pagamentos.Select(p => new Dominio.DadosPagamento(p.Forma, p.Valor, p.ValorRecebido, p.Id)),
+            pagamentos.Select(p => new Dominio.DadosPagamento(p.Forma, p.Valor, p.ValorRecebido, p.Id, PixTxid: p.PixTxid)),
             linha.FechadaEm, linha.CanceladaEm, linha.MotivoCancelamento);
     }
 
@@ -268,6 +275,7 @@ public sealed class ComandaRepository(BancoLocal banco)
                     Valor = pagamento.Valor,
                     ValorRecebido = pagamento.ValorRecebido,
                     Troco = pagamento.Troco,
+                    PixTxid = pagamento.PixTxid,
                     PagoEm = comanda.FechadaEm ?? DateTime.UtcNow,
                 });
             }
