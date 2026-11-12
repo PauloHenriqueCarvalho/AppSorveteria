@@ -72,6 +72,8 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLiteNetExtensions" Version="2.1.0" />
+		<!-- RN-PX-02: QR Code do Pix integrado gerado no aparelho (PNG, sem System.Drawing) -->
+		<PackageReference Include="QRCoder" Version="1.6.0" />
 	</ItemGroup>
 
 	<!-- Mesmas regras no celular e na API: total, troco e caixa vêm do Domain; DTOs de sincronização vêm do Contracts. -->

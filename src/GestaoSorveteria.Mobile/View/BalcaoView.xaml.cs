@@ -38,7 +38,7 @@ public partial class BalcaoView : ContentPage
 
         Raiz.ColumnDefinitions.Clear();
         Raiz.RowDefinitions.Clear();
-        Grid[] areasDeCima = [AreaProdutos, AreaSabores, AreaTeclado, AreaTroco];
+        Grid[] areasDeCima = [AreaProdutos, AreaSabores, AreaTeclado, AreaTroco, AreaPix];
 
         if (compacto)
         {
@@ -121,6 +121,11 @@ public partial class BalcaoView : ContentPage
         if (BindingContext is not BalcaoViewModel vm)
         {
             return base.OnBackButtonPressed();
+        }
+
+        if (vm.EscolhendoPix)
+        {
+            return true; // o QR Code ainda vale: só sai por "Cliente desistiu", "Pix à mão" ou "Voltar" (vencido)
         }
 
         if (vm.EscolhendoSabor)

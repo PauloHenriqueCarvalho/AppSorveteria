@@ -3,6 +3,7 @@ using GestaoSorveteria.Contracts.Auth;
 using GestaoSorveteria.Contracts.Avisos;
 using GestaoSorveteria.Contracts.Contagens;
 using GestaoSorveteria.Contracts.Estoque;
+using GestaoSorveteria.Contracts.Pix;
 using GestaoSorveteria.Contracts.Produtos;
 using GestaoSorveteria.Contracts.Sync;
 
@@ -44,4 +45,8 @@ public sealed record ProblemaApi(string? Title, string? Detail, int? Status, Dic
 [JsonSerializable(typeof(SyncContagensRequest))]
 [JsonSerializable(typeof(ContagemSyncDto))]
 [JsonSerializable(typeof(LinhaContagemSyncDto))]
+// RN-PX: Pix integrado do balcão
+[JsonSerializable(typeof(PixSituacaoDto))]
+[JsonSerializable(typeof(CriarCobrancaPixRequest))]
+[JsonSerializable(typeof(CobrancaPixDto))]
 internal sealed partial class ApiJsonContext : JsonSerializerContext;

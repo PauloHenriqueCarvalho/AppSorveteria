@@ -108,6 +108,9 @@ public sealed class ComandaAppService(
     /// digitado como "Venda avulsa") e fecha com o pagamento numa única gravação. Se algo for recusado, nada é gravado (não
     /// sobra comanda aberta).
     /// </summary>
+    /// <summary>RN-PX-05: o Pix integrado com este txid já foi gravado como venda aqui?</summary>
+    public Task<bool> JaRegistrouPixAsync(string txid) => comandas.ExistePagamentoComPixTxidAsync(txid);
+
     public Task<Comanda> VenderNoBalcaoAsync(IReadOnlyList<ItemDoBalcao> itens, IReadOnlyList<DadosPagamento> pagamentos) =>
         DepoisEnviar(UmaPorVezAsync(async () =>
         {
