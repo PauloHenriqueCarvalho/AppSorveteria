@@ -363,4 +363,45 @@ public class SyncComandasTests
 
         Assert.All(resposta.Resultados, r => Assert.Equal(StatusSync.Rejeitada, r.Status));
     }
+
+    [Fact]
+    public async Task ReceberComandas_PixIntegradoComTxid_AceitaEGuardaOTxid()
+    {
+        await AbrirCaixa();
+        const string txid = "0f8b6c2a1d3e4f509a7b2c4d6e8f0a1b";
+        var dto = Fechada(18m, [new PagamentoSyncDto(Guid.NewGuid(), "Pix", 18m, 18m, 0m, PixTxid: txid)], Item(null, "Venda avulsa", 1, 18m));
+
+        var resposta = await Enviar(dto);
+
+        Assert.Equal(StatusSync.Aceita, resposta.Resultados[0].Status);
+        Assert.Equal(txid, Assert.Single(_comandas.Comandas[0].Pagamentos).PixTxid);
+    }
+
+    [Fact]
+    public async Task ReceberComandas_TxidEmCartao_Rejeita()
+    {
+        await AbrirCaixa();
+        var dto = Fechada(18m, [new PagamentoSyncDto(Guid.NewGuid(), "CartaoDebito", 18m, 18m, 0m, PixTxid: "0f8b6c2a1d3e4f509a7b2c4d6e8f0a1b")],
+            Item(null, "Venda avulsa", 1, 18m));
+
+        var resposta = await Enviar(dto);
+
+        Assert.Equal(StatusSync.Rejeitada, resposta.Resultados[0].Status);
+        Assert.Contains("RN-PX-05", resposta.Resultados[0].Motivo);
+    }
+
+    [Fact]
+    public async Task ReceberComandas_TxidQueJaPagouOutraVenda_Rejeita()
+    {
+        await AbrirCaixa();
+        const string txid = "0f8b6c2a1d3e4f509a7b2c4d6e8f0a1b";
+        await Enviar(Fechada(18m, [new PagamentoSyncDto(Guid.NewGuid(), "Pix", 18m, 18m, 0m, PixTxid: txid)], Item(null, "Venda avulsa", 1, 18m)));
+
+        var segunda = Fechada(18m, [new PagamentoSyncDto(Guid.NewGuid(), "Pix", 18m, 18m, 0m, PixTxid: txid)], Item(null, "Venda avulsa", 1, 18m))
+            with { Numero = 99 };
+        var resposta = await Enviar(segunda);
+
+        Assert.Equal(StatusSync.Rejeitada, resposta.Resultados[0].Status);
+        Assert.Contains("já pagou outra venda", resposta.Resultados[0].Motivo);
+    }
 }

@@ -87,6 +87,9 @@ internal sealed class ComandasEmMemoria : IComandaRepository
     public Task<bool> ExisteItemOuPagamentoAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
         Task.FromResult(Comandas.Any(c => c.Itens.Any(i => ids.Contains(i.Id)) || c.Pagamentos.Any(p => ids.Contains(p.Id))));
 
+    public Task<bool> ExistePagamentoComTxidAsync(IReadOnlyCollection<string> txids, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Comandas.Any(c => c.Pagamentos.Any(p => p.PixTxid is not null && txids.Contains(p.PixTxid))));
+
     public Task AdicionarAsync(Comanda comanda, CancellationToken cancellationToken = default)
     {
         Comandas.Add(comanda);

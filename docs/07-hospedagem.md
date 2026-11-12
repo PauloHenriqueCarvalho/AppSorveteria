@@ -46,6 +46,7 @@
 | `Cors__PainelOrigem` | URL do painel no Cloudflare Pages, só esquema e domínio (ex.: `https://sorveteria-painel.pages.dev`). Várias origens: separar por `;`. Vazio = nenhum site chama a API pelo navegador |
 | `Database__MigrateOnStartup` | `true` **só no piloto** (um único serviço, sem réplicas); em produção paga voltar a `false` e rodar `dotnet ef database update` no deploy |
 | `Clima__ChaveApi` | chave do **Visual Crossing** (clima do dia e previsão, RN-CL-07). Vazia = coleta desligada; o resto do sistema não muda |
+| `Pix__*` | **Pix integrado** (RN-PX-01), seção "Pix integrado" abaixo. Vazio = desligado; o app cobra o Pix à mão, como antes |
 
 O `Dockerfile` da raiz já está pronto: o Render faz o build a partir dele e informa a porta pela variável `PORT`, que o `Program.cs` já lê. Health check: `/health`.
 
@@ -108,6 +109,29 @@ A API guarda o clima de cada dia e a previsão para cruzar com as vendas (docs/0
 4. Conferir em Configurações a "Última coleta". Erro de chave aparece ali ("A chave do serviço de clima foi recusada").
 
 A coleta roda quando a API está acordada (ao ligar e a cada 3 h). A API dormindo não perde dias: na próxima rodada ela busca o que faltou. Para testar local: `dotnet user-secrets set "Clima:ChaveApi" "<chave>" --project src/GestaoSorveteria.Server`.
+
+## Pix integrado (Inter PJ)
+
+A API cria a cobrança com o valor exato no banco da loja e consulta até o cliente pagar (docs/02, seção 5a). As credenciais ficam **só no Render**: nunca no app, no painel, no Git ou em mensagem.
+
+**1. A dona cria a integração** (o login do Internet Banking é dela): Internet Banking do Inter PJ (no computador, entra pelo QR Code) → **Soluções para sua empresa** → **Nova integração** → nome "Sistema da sorveteria" → permissões **Emissão e consulta de cobranças Pix** (`cob.write`, `cob.read`) — só essas. Depois de criada: baixar o **certificado e a chave** (um .zip com um `.crt` e um `.key`) e copiar o **Client ID** e o **Client Secret**. O certificado vale **1 ano**: na véspera de vencer, criar outra integração e trocar as variáveis (anotar a data no Trello).
+
+**2. Passar para o Render** (Environment → Add Environment Variable). O conteúdo dos arquivos vai inteiro, com as linhas `-----BEGIN…-----` e `-----END…-----`:
+
+| Variável | Valor |
+|---|---|
+| `Pix__Provedor` | `Inter` (vazio = desligado) |
+| `Pix__ClientId` / `Pix__ClientSecret` | da integração |
+| `Pix__CertificadoPem` | conteúdo do `.crt` |
+| `Pix__ChavePrivadaPem` | conteúdo do `.key` |
+| `Pix__Chave` | a chave Pix da conta que recebe (CNPJ, e-mail, telefone ou aleatória) |
+| `Pix__ContaCorrente` | opcional: número da conta, só se a integração enxergar mais de uma |
+| `Pix__Ambiente` | `Producao` (padrão) ou `Sandbox` (credenciais do sandbox do Inter, `developers.inter.co/sandbox`) |
+| `Pix__ExpiracaoSegundos` | opcional, padrão `600` (10 min) |
+
+Ao subir, o log da API diz `Pix integrado: Inter` ou o motivo de estar desligado (ex.: "falta Pix:CertificadoPem", "o certificado não abriu"). **Teste:** um Pix de R$ 0,01 pelo app do balcão e conferir no extrato.
+
+**Testar sem banco** (emulador, tablet de teste, nunca em produção): `Pix__Provedor=Simulado` na API local (`dotnet user-secrets set "Pix:Provedor" "Simulado" --project src/GestaoSorveteria.Server`). Toda cobrança fica paga depois de 8 s (`Pix__SimuladoPagaEmSegundos`). Fora de `Development` o Simulado é desligado sozinho.
 
 ## Backup no piloto
 

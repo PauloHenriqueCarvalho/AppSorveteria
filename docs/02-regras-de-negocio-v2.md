@@ -74,6 +74,19 @@ Legenda de fase: **F1** sistema básico · **F2** estoque inteligente · **F3** 
 | RN-PG-04 | Troco é calculado pelo sistema, nunca digitado | F1 | Domain |
 | RN-PG-05 | Só pagamentos em dinheiro entram no "esperado" do caixa; Pix e cartão entram no faturamento, não na gaveta | F1 | Domain (`Caixa.Fechar`) |
 
+### 5a. Pix integrado (cobrança com QR Code e confirmação automática)
+
+Pedido do Paulo em 11/11/2026, depois do teste na loja: 27 das 92 vendas do domingo foram Pix, conferidas de olho no celular. Conta da loja: **Inter PJ** (API Pix padrão do Banco Central). O cartão continua na maquininha; a integração com a maquininha (TEF) fica para depois.
+
+| ID | Regra | Fase | Onde |
+|---|---|---|---|
+| RN-PX-01 | O Pix integrado é **opcional e do servidor**: liga quando a API tem as credenciais da integração do banco (Client ID, Secret, certificado e chave Pix — variáveis de ambiente, nunca no app, no painel ou no Git). Desligado, sem internet ou com o banco fora do ar, o app cobra o Pix **como antes** (conferido à mão) — a venda nunca para por causa do banco. Provedor "Simulado" (paga sozinho em alguns segundos) só liga com a API em **Development**, para testar o app | F3 | API (`IProvedorPix`, `PixOptions`) |
+| RN-PX-02 | No balcão, o Pix integrado cria uma **cobrança com o valor exato da venda** (QR Code dinâmico) válida por **10 minutos**. O app gera o Id de cada tentativa e o txid sai dele (32 letras e números): pedir de novo com o mesmo Id devolve a mesma cobrança (idempotente). Mudou a venda, nova tentativa, novo Id | F3 | Domain (`CobrancaPix`), API |
+| RN-PX-03 | Quem diz se o dinheiro entrou é o **banco**: a API consulta a cobrança enquanto ela está ativa. Situações: Ativa, **Concluída** (final; nada a desfaz), Removida (desistência ou removida pelo banco) e Expirada (vencida há mais de 1 minuto). Removida ou expirada só muda se o banco disser que foi paga | F3 | Domain, API |
+| RN-PX-04 | A venda só é gravada quando a cobrança está **concluída com o valor exato**. Pago é a **soma dos Pix que o banco informou** na cobrança; pago com valor diferente, ou concluída sem o valor informado, não libera a venda: o app avisa para conferir no banco | F3 | Domain (`PagaComValorCerto`), App |
+| RN-PX-05 | O pagamento Pix da venda leva o **txid** da cobrança paga (conferência com o extrato e com `cobrancas_pix`). Só pagamento em Pix pode ter txid; txid fora do padrão (26 a 35 letras e números) é recusado. **Um txid paga uma venda só**: a sincronização recusa a comanda cujo Pix já pagou outra (com motivo, sem travar a fila) e o banco tem índice único. Pix conferido à mão continua sem txid | F3 | Domain (`Pagamento.PixTxid`), Sync |
+| RN-PX-06 | Desistir do Pix integrado (cliente vai pagar de outro jeito) **remove a cobrança no banco** — o QR Code deixa de valer. Se o cliente pagou no último segundo, o banco responde concluída e a venda é gravada como paga, nunca cancelada. Se o banco não confirmar a remoção, a cobrança **continua ativa** (o QR Code ainda vale) e o app tenta de novo. Nada é apagado: a cobrança fica registrada como removida | F3 | Domain, API, App |
+
 ## 6. Estoque, avisos e pedidos ao fornecedor (Fase 2)
 
 Desenho e motivo em **docs/10** (revisto em 14/10). A loja compra sorvete **pronto** da fábrica (os pais da dona) e insumos de outros fornecedores; costuma ter **um freezer só**. A venda no balcão não pode ficar mais lenta: picolé não pede sabor.

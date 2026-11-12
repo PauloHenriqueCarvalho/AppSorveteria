@@ -140,10 +140,12 @@ public sealed record ItemComandaSyncDto(
 /// <summary>
 /// RN-PG-01/03. <paramref name="Forma"/>: "Dinheiro", "Pix", "CartaoDebito" ou "CartaoCredito".
 /// <paramref name="Troco"/> é o calculado no celular; a API recalcula e rejeita se não bater (RN-PG-04).
+/// <paramref name="PixTxid"/>: txid da cobrança do Pix integrado que pagou (RN-PX-05); nulo no Pix conferido à mão.
 /// </summary>
 public sealed record PagamentoSyncDto(
     Guid Id,
     string? Forma,
     decimal Valor,
     decimal ValorRecebido,
-    decimal Troco);
+    decimal Troco,
+    string? PixTxid = null);

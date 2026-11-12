@@ -146,6 +146,10 @@ public sealed class SyncService
         Guard(filhos.Distinct().Count() != filhos.Count, "A comanda tem itens ou pagamentos com Id repetido.");
         Guard(await _comandas.ExisteItemOuPagamentoAsync(filhos, cancellationToken),
             "Um item ou pagamento desta comanda já foi usado em outra comanda.");
+        var txids = pagamentos.Select(p => p.PixTxid?.Trim()).OfType<string>().Where(t => t.Length > 0).ToList();
+        Guard(txids.Distinct().Count() != txids.Count, "O mesmo Pix aparece duas vezes nesta comanda (RN-PX-05).");
+        Guard(await _comandas.ExistePagamentoComTxidAsync(txids, cancellationToken),
+            "Este Pix integrado já pagou outra venda (RN-PX-05). Confira no extrato do banco.");
         foreach (var produtoId in itens.Select(i => i.ProdutoId).OfType<Guid>().Distinct())
         {
             await ExigirProdutoAsync(produtoId, produtosConhecidos, cancellationToken);
@@ -174,7 +178,7 @@ public sealed class SyncService
                 i.Id, i.ProdutoId, i.Descricao ?? string.Empty, i.Quantidade, i.PrecoUnitario, i.Subtotal, sabores.GetValueOrDefault(i.Id))).ToList(),
             dto.Total,
             pagamentos.Select(p => new DadosPagamento(
-                TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco)).ToList(),
+                TextoEnum.Converter<FormaPagamento>(p.Forma, "Forma de pagamento"), p.Valor, p.ValorRecebido, p.Id, TrocoInformado: p.Troco, PixTxid: p.PixTxid)).ToList(),
             dto.FechadaEm,
             dto.CanceladaEm,
             dto.MotivoCancelamento);
